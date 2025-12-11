@@ -1,0 +1,10 @@
+Package: EasyProtein
+Type: Package
+Title: An interactive and reproducible platform for comprehensive proteomics data analysis
+Version: 0.1.0
+Author: Yunhui Kong
+Maintainer: kongyunhui1@gmail.com
+Description: an interactive and reproducible platform for comprehensive proteomics data analysis
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true

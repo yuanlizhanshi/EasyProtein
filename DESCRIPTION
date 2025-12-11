@@ -1,10 +1,15 @@
 Package: EasyProtein
 Type: Package
-Title: An interactive and reproducible platform for comprehensive proteomics data analysis
-Version: 0.1.0
-Author: Yunhui Kong
-Maintainer: kongyunhui1@gmail.com
-Description: an interactive and reproducible platform for comprehensive proteomics data analysis
-License: What license is it under?
+Title: An Interactive and Reproducible Platform for Comprehensive Proteomics Data Analysis
+Version: 0.1.2
+Authors@R: 
+    c(
+      person("Yunhui Kong", role =c("aut","cre"),email = "kongyunhui1@gamil.com")
+      )
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: An Interactive and Reproducible Platform for Comprehensive Proteomics Data Analysis
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/yuanlizhanshi/EasyProtein
+BugReports: https://github.com/yuanlizhanshi/EasyProtein/issues

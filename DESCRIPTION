@@ -15,11 +15,24 @@ URL: https://github.com/yuanlizhanshi/EasyProtein
 BugReports: https://github.com/yuanlizhanshi/EasyProtein/issues
 RoxygenNote: 7.3.2
 Imports: 
+    ComplexHeatmap,
     data.table,
     dplyr,
+    dynamicTreeCut,
     edgeR,
+    ggiraph,
+    ggrepel,
+    limma,
+    matrixStats,
+    purrr,
+    rlang,
     S4Vectors,
+    scales,
     stringr,
     SummarizedExperiment,
     tibble,
     tidyr
+Suggests:
+    clusterProfiler,
+    org.Hs.eg.db,
+    org.Mm.eg.db

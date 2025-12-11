@@ -73,7 +73,7 @@ rawdata2se <- function(
     cv_threshod = 0.5
 ) {
 
-  #---- Step 1. 读取数据 ----#
+
   rawdata <- data.table::fread(exp_file) %>% as.data.frame()
   colnames(rawdata) <- gsub("\\\\", "/", colnames(rawdata))
   rawdata <- fix_duplicate_protein_ids(rawdata, id_col = obs_col)
@@ -85,7 +85,7 @@ rawdata2se <- function(
   rownames(rawdata_mtx) <- rawdata[[obs_col]]
   colnames(rawdata_mtx) <- tools::file_path_sans_ext(basename(colnames(rawdata_mtx)))
 
-  # ---- Step 2. 样本注释信息 ----#
+
   obs <- tibble::tibble(
     sample = colnames(rawdata_mtx),
     condition = stringr::str_extract(colnames(rawdata_mtx), "\\w+(?=_[^_]*$)"),
@@ -99,18 +99,18 @@ rawdata2se <- function(
   rep_counts <- table(obs$condition)
   single_rep <- all(rep_counts <= 1)
 
-  message(if (single_rep) "Only single replicate detected — skipping filtering steps."
-          else "Multiple replicates detected — running complete QC pipeline.")
+  message(if (single_rep) "Only single replicate detected,skipping filtering steps."
+          else "Multiple replicates detected, running complete QC pipeline.")
 
 
-  # ---- Step 3. 转为长表, 计算FC ----#
+
   rawdata_df <- rawdata_mtx %>%
     tibble::rownames_to_column(obs_col) %>%
     tidyr::pivot_longer(cols = -all_of(obs_col),
                         names_to = "sample", values_to = "raw_value") %>%
     dplyr::left_join(obs, by = c("sample"))
 
-  # ---- 单重复情况：跳过过滤 ----#
+
   if (single_rep) {
 
     rawdata_impute_df <- impute_low1pct_or_median_raw(rawdata_df, id_col = obs_col)
@@ -141,7 +141,7 @@ rawdata2se <- function(
   }
 
 
-  # ---- Step 4. 多重复: FC-based outlier detection ----#
+
   rawdata_df <- rawdata_df %>%
     dplyr::group_by(.data[[obs_col]], condition) %>%
     dplyr::mutate(
@@ -157,7 +157,7 @@ rawdata2se <- function(
   }
 
 
-  # ---- Step 5. 缺失筛选 ----#
+
   missing_gene <- rawdata_df %>%
     dplyr::group_by(.data[[obs_col]], condition) %>%
     dplyr::summarize(
@@ -181,7 +181,7 @@ rawdata2se <- function(
     dplyr::filter(.data[[obs_col]] %in% unique(missing_gene[[obs_col]]))
 
 
-  # ---- Step 6. 缺失填充 ----#
+
   rawdata_impute_df <- impute_low1pct_or_median_raw(rawdata_df, id_col = obs_col)
 
   rawdata_impute_df_wide <- rawdata_impute_df %>%
@@ -193,7 +193,7 @@ rawdata2se <- function(
   rawdata_impute_df_mtx <- rawdata_impute_df_mtx[, obs$sample]
 
 
-  # ---- Step 7. Construct SummarizedExperiment ----#
+
   se <- SummarizedExperiment::SummarizedExperiment(
     assays = list(
       raw_intensity = as.matrix(rawdata_mtx[rownames(rawdata_impute_df_mtx),
@@ -207,7 +207,7 @@ rawdata2se <- function(
   )
 
 
-  # ---- Step 8. CV筛选 ----#
+
   cv_df <- calc_gene_CV_by_condition(se)
 
   un_stable_cv_df <- cv_df %>%
@@ -224,7 +224,7 @@ rawdata2se <- function(
 
   se <- se[setdiff(rownames(se), un_stable_gene_df[[obs_col]]), ]
 
-  # ---- 返回 ----#
+
   return(list(
     se = se,
     un_stable_gene = un_stable_gene_df,

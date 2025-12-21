@@ -8,10 +8,9 @@ se2gene_group(
   se,
   assay = "conc",
   group_by = "condition",
-  cor_method = "All",
-  time_threhold = c(-0.75, 0.75),
-  min_expresion_threhold = 10,
-  CV_with_time_threhold = 0.2,
+  time_threhold = 0.75,
+  min_expresion_threhold = 1,
+  CV_with_time_threhold = 0.1,
   padj_threhold = 0.05
 )
 }
@@ -22,9 +21,7 @@ se2gene_group(
 
 \item{group_by}{Column in colData(se) defining sample ordering.}
 
-\item{cor_method}{Use "All" (raw expression) or "Mean" (expression by group).}
-
-\item{time_threhold}{Vector of two thresholds for up/down classification.}
+\item{time_threhold}{thresholds for up/down classification.}
 
 \item{min_expresion_threhold}{Minimum mean expression.}
 

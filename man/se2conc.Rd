@@ -4,10 +4,12 @@
 \alias{se2conc}
 \title{Convert SummarizedExperiment to concentration (CPM) data.frame}
 \usage{
-se2conc(se)
+se2conc(se, group_by = "condition")
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
+
+\item{group_by}{Column in colData(se) used for grouping (default: "condition").}
 }
 \value{
 A data.frame containing rowData and conc assay.

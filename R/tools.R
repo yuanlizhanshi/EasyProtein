@@ -158,6 +158,123 @@ impute_low1pct_or_median_raw <- function(
     dplyr::arrange(.data[[id_col]], .data[[condition_col]], .data[[sample_col]])
 }
 
+#' Classify genes by multi-round monotonic time-course patterns
+#'
+#' This function classifies genes based on monotonic temporal trends
+#' using an iterative Spearman correlation strategy across progressively
+#' trimmed time windows. At each round, genes exhibiting significant
+#' positive or negative monotonicity are assigned to Up or
+#' Down groups corresponding to the round at which the trend
+#' first becomes detectable.
+#'
+#' The time window is shortened by removing one boundary sample
+#' (head, tail, or automatically selected) after each round, until
+#' fewer than min_len samples remain.
+#'
+#' @param mat A numeric matrix with genes in rows and time-ordered samples
+#'   in columns. Row names must correspond to gene identifiers.
+#' @param rho_cut Numeric scalar specifying the absolute Spearman correlation
+#'   threshold for calling a monotonic trend. Default is 0.75.
+#' @param min_len Integer specifying the minimum number of samples required
+#'   to perform trend classification. Default is 4.
+#' @param trim_side Character string specifying how to trim the time window
+#'   at each iteration. One of:
+
+#' @return A data.frame with one row per gene and the following columns:gene,gene_group,type
+
+classify_timecourse_by_round <- function(
+    mat,
+    rho_cut = 0.75,
+    min_len = 4,
+    trim_side = c("best", "head", "tail")
+) {
+  trim_side <- match.arg(trim_side)
+
+  # ---- basic checks ----
+  if (!is.matrix(mat)) mat <- as.matrix(mat)
+  if (is.null(rownames(mat))) stop("The mat must have rownames as the gene name")
+  if (ncol(mat) < min_len) stop("The number of columns is less than min_len, so classification cannot start")
+
+  genes_all <- rownames(mat)
+  group <- rep(NA_character_, length(genes_all))
+  names(group) <- genes_all
+
+
+  remaining <- genes_all
+
+
+  cols <- seq_len(ncol(mat))
+
+  round_id <- 1L
+
+  while (length(cols) >= min_len && length(remaining) > 0) {
+
+    sub <- mat[remaining, cols, drop = FALSE]
+    tvec <- seq_along(cols)
+
+
+    rho <- apply(sub, 1, function(x) suppressWarnings(cor(x, tvec, method = "spearman")))
+    rho[is.na(rho)] <- 0
+
+    up_genes   <- names(rho)[rho >=  rho_cut]
+    down_genes <- names(rho)[rho <= -rho_cut]
+
+    if (length(up_genes) > 0)   group[up_genes]   <- paste0("Up", round_id)
+    if (length(down_genes) > 0) group[down_genes] <- paste0("Down", round_id)
+
+
+    newly_assigned <- union(up_genes, down_genes)
+    remaining <- setdiff(remaining, newly_assigned)
+
+
+    if (length(cols) == min_len) break
+
+    # ---- trim one sample (head/tail/best) ----
+    if (trim_side == "head") {
+      cols <- cols[-1]
+    } else if (trim_side == "tail") {
+      cols <- cols[-length(cols)]
+    } else {
+
+      if (length(remaining) == 0) {
+        cols <- cols[-1]
+      } else {
+        cols_head <- cols[-1]
+        cols_tail <- cols[-length(cols)]
+
+        score_side <- function(use_cols) {
+          sub2 <- mat[remaining, use_cols, drop = FALSE]
+          t2 <- seq_along(use_cols)
+          rho2 <- apply(sub2, 1, function(x) suppressWarnings(cor(x, t2, method = "spearman")))
+          rho2 <- rho2[is.finite(rho2)]
+          if (length(rho2) == 0) return(0)
+          median(abs(rho2), na.rm = TRUE)
+        }
+
+        s_head <- score_side(cols_head)
+        s_tail <- score_side(cols_tail)
+
+        cols <- if (s_head >= s_tail) cols_head else cols_tail
+      }
+    }
+
+    round_id <- round_id + 1L
+  }
+
+  group[is.na(group)] <- "No pattern"
+
+  out <- data.frame(
+    gene = genes_all,
+    gene_group = unname(group[genes_all]),
+    stringsAsFactors = FALSE
+  )
+  out$type <- case_when(
+    str_detect(out$gene_group,'Up') ~ 'Up',
+    str_detect(out$gene_group,'Down') ~ 'Down',
+    str_detect(out$gene_group,'No') ~ 'No pattern'
+  )
+  return(out)
+}
 
 #' Limma-based differential expression analysis for proteomics (unpaired)
 #'

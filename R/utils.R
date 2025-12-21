@@ -140,13 +140,36 @@ se2internstiy <- function(se) {
 #' Convert SummarizedExperiment to concentration (CPM) data.frame
 #'
 #' @param se A SummarizedExperiment object.
+#' @param group_by Column in colData(se) used for grouping (default: "condition").
 #' @return A data.frame containing rowData and conc assay.
 #' @export
-se2conc <- function(se) {
-  df <- cbind(as.data.frame(rowData(se)),
-              as.data.frame(assay(se, "conc")))
-  return(df)
+se2conc <- function(se, group_by = 'condition') {
+
+  expr_mean <- calc_gene_mean_by_condition(
+    se = se,
+    assay_name = 'conc',
+    condition_col = group_by
+  )
+  colnames(expr_mean) <- paste0('Mean_', colnames(expr_mean))
+
+  expr_median <- calc_gene_mean_by_condition(
+    se = se,
+    assay_name = 'conc',
+    method = 'Median',
+    condition_col = group_by
+  )
+  colnames(expr_median) <- paste0('Median_', colnames(expr_median))
+
+  out <- cbind(
+    as.data.frame(rowData(se)),
+    as.data.frame(assay(se, "conc")),
+    as.data.frame(expr_mean),
+    as.data.frame(expr_median)
+  )
+
+  return(out)
 }
+
 
 #' Convert SummarizedExperiment to z-scaled CPM data.frame
 #'
@@ -294,8 +317,7 @@ get_batch_DEGs <- function(se,
 #' @param se A SummarizedExperiment object.
 #' @param assay Assay name to use (default "conc").
 #' @param group_by Column in colData(se) defining sample ordering.
-#' @param cor_method Use "All" (raw expression) or "Mean" (expression by group).
-#' @param time_threhold Vector of two thresholds for up/down classification.
+#' @param time_threhold  thresholds for up/down classification.
 #' @param min_expresion_threhold Minimum mean expression.
 #' @param CV_with_time_threhold CV threshold used to define stable genes.
 #' @param padj_threhold Adjusted p-value threshold for DEGs.
@@ -303,125 +325,93 @@ get_batch_DEGs <- function(se,
 #' @return Updated SummarizedExperiment with gene grouping added to rowData.
 #' @export
 se2gene_group <- function(se,
-                          assay = "conc",
-                          group_by = "condition",
-                          cor_method = "All",
-                          time_threhold = c(-0.75, 0.75),
-                          min_expresion_threhold = 10,
-                          CV_with_time_threhold = 0.2,
-                          padj_threhold = 0.05) {
-
+                          assay = 'conc',
+                          group_by = 'condition',
+                          time_threhold = 0.75,
+                          min_expresion_threhold = 1,
+                          CV_with_time_threhold =  0.1,
+                          padj_threhold = 0.05
+){
   expr <- assay(se, assay)
   expr_log <- log2(expr)
-  expr_mean <- calc_gene_mean_by_condition(se)
+
+  expr_mean <- calc_gene_mean_by_condition(se = se, assay_name= assay,condition_col = group_by)
 
   if (!all(rownames(expr_mean) == rownames(expr))) {
-    stop("Row order mismatch between expression matrix and mean-expression matrix.")
+    stop('Error')
   }
 
-  time_factor <- factor(se[[group_by]], levels = unique(se[[group_by]]))
-  design <- model.matrix(~ 0 + time_factor)
-  colnames(design) <- levels(time_factor)
 
-  fit <- limma::lmFit(expr, design)
-  fit <- limma::eBayes(fit)
-  anova_res <- limma::topTable(fit, number = Inf)
-
-  sig_gene <- anova_res %>%
-    tibble::rownames_to_column("Protein.Ids") %>%
-    dplyr::filter(adj.P.Val <= 0.01)
-
-  unsig_gene <- anova_res %>%
-    tibble::rownames_to_column("Protein.Ids") %>%
-    dplyr::filter(!(Protein.Ids %in% sig_gene$Protein.Ids))
-
-  # correlation across time
-  if (cor_method == "All") {
-    gene_info <- tibble::tibble(
-      Protein.Ids = rownames(expr),
-      Genes = rowData(se)[["Genes"]],
-      Mean_expression = rowMeans(expr),
-      Median_exprssion = matrixStats::rowMedians(expr),
-      CV_with_time = apply(expr_mean, 1, calculate_cv),
-      Spearman_with_time = apply(expr, 1, function(x) {
-        cor(x, seq_len(ncol(expr)), method = "spearman")
-      })
-    )
-  } else {
-    gene_info <- tibble::tibble(
-      Protein.Ids = rownames(expr),
-      Genes = rowData(se)[["Genes"]],
-      Mean_expression = rowMeans(expr),
-      Median_exprssion = matrixStats::rowMedians(expr),
-      CV_with_time = apply(expr_mean, 1, calculate_cv),
-      Spearman_with_time = apply(expr_mean, 1, function(x) {
-        cor(x, seq_len(ncol(expr_mean)), method = "spearman")
-      })
-    )
-  }
-
-  # expression filters
-  low_mean_gene <- dplyr::filter(gene_info, Mean_expression < min_expresion_threhold)
-  gene_not_low <- dplyr::filter(gene_info, Mean_expression >= min_expresion_threhold)
-
-  up_gene <- gene_not_low %>%
-    dplyr::filter(
-      Protein.Ids %in% sig_gene$Protein.Ids,
-      Spearman_with_time > time_threhold[2]
-    )
-
-  down_gene <- gene_not_low %>%
-    dplyr::filter(
-      Protein.Ids %in% sig_gene$Protein.Ids,
-      Spearman_with_time < time_threhold[1]
-    )
-
-  adaptive_gene <- gene_not_low %>%
-    dplyr::filter(Protein.Ids %in% sig_gene$Protein.Ids) %>%
-    dplyr::filter(!(Protein.Ids %in% c(up_gene$Protein.Ids, down_gene$Protein.Ids)))
-
-  stable_gene <- adaptive_gene %>%
-    dplyr::filter(CV_with_time <= CV_with_time_threhold)
-
-  fluctuated_gene <- adaptive_gene %>%
-    dplyr::filter(CV_with_time > CV_with_time_threhold)
-
-  # FC matrix from all comparisons
-  all_deg <- get_batch_DEGs(se, compare_col = "condition", start_col = 1)
-
-  fc_mat <- purrr::map2(all_deg, names(all_deg), function(df, nm) {
-    df %>%
-      dplyr::filter(adj.P.Val <= padj_threhold) %>%
-      dplyr::select(Protein.Ids, logFC) %>%
-      dplyr::rename(!!nm := logFC)
-  }) %>%
-    purrr::reduce(dplyr::full_join, by = "Protein.Ids") %>%
-    dplyr::mutate(dplyr::across(everything(), ~ tidyr::replace_na(.x, 0)))
-
-  colnames(fc_mat)[-1] <- paste0("log2FC_", colnames(fc_mat)[-1])
-
-  gene_info_full <- gene_info %>%
-    dplyr::left_join(fc_mat, by = "Protein.Ids") %>%
-    dplyr::mutate(dplyr::across(everything(), ~ tidyr::replace_na(.x, 0)))
-
-  # assign gene groups
-  gene_info_full$gene_group <- dplyr::case_when(
-    gene_info_full$Protein.Ids %in% up_gene$Protein.Ids ~ "Up",
-    gene_info_full$Protein.Ids %in% down_gene$Protein.Ids ~ "Down",
-    gene_info_full$Protein.Ids %in% c(stable_gene$Protein.Ids, unsig_gene$Protein.Ids) ~ "Stable",
-    gene_info_full$Protein.Ids %in% fluctuated_gene$Protein.Ids ~ "Fluctuated",
-    gene_info_full$Protein.Ids %in% low_mean_gene$Protein.Ids ~ "Low expression"
+  gene_info <- tibble(
+    Protein.Ids = rownames(expr),
+    Genes = rowData(se)[['Genes']],
+    Mean_expression = rowMeans(expr),
+    Median_exprssion = rowMedians(expr),
+    CV_with_time = apply(expr_mean,1,calculate_cv),
+    Spearman_with_time = apply(expr_mean,1,function(x,N = NULL){
+      cor(x,1:N,method = 'spearman')
+    },N = ncol(expr_mean))
   )
 
-  # add to rowData
+
+
+
+  gene_with_low_mean <- gene_info %>%
+    dplyr::filter(Mean_expression < min_expresion_threhold)
+
+  gene_with_low_CV <- gene_info %>%
+    dplyr::filter(Mean_expression >= min_expresion_threhold)%>%
+    dplyr::filter(CV_with_time <= CV_with_time_threhold)
+
+  gene_with_low_mean_and_low_cv <- union(gene_with_low_mean$Protein.Ids,gene_with_low_CV$Protein.Ids)
+  gene_with_low_mean_and_low_cv_df <- tibble(
+    gene = gene_with_low_mean_and_low_cv,
+    gene_group = c(rep('Low expression',length(gene_with_low_mean$Protein.Ids)),
+                   rep('Low CV',length(gene_with_low_CV$Protein.Ids))
+    ),
+    type = c(rep('Low expression',length(gene_with_low_mean$Protein.Ids)),
+             rep('Low CV',length(gene_with_low_CV$Protein.Ids))
+    )
+  )
+
+
+
+  gene_left <- gene_info %>% dplyr::filter(!(Protein.Ids %in% gene_with_low_mean_and_low_cv))
+
+
+  gene_group_left <- classify_timecourse_by_round(expr_mean[gene_left$Protein.Ids,],rho_cut = time_threhold)
+
+  gene_group_final <- bind_rows(gene_group_left,gene_with_low_mean_and_low_cv_df
+  )
+  gene_info_full <- left_join(gene_info,gene_group_final,by = c('Protein.Ids' = 'gene'))
+
+  #Get log2FC
+  all_DEGs <- get_batch_DEGs(se,compare_col = group_by,start_col = 1)
+  gene_FC_matrix <- map2(all_DEGs,names(all_DEGs),function(df,name,padj_threhold = padj_threhold){
+    df <- df %>% dplyr::filter(adj.P.Val <= padj_threhold) %>%
+      dplyr::select(Protein.Ids,logFC)
+    colnames(df)[2] <- name
+    return(df)
+  },padj_threhold = padj_threhold) %>% purrr::reduce(full_join,by = 'Protein.Ids') %>%
+    mutate(
+      across(everything(), ~replace_na(.x, 0))
+    )
+  colnames(gene_FC_matrix)[-1] <- paste0('log2FC_',colnames(gene_FC_matrix)[-1])
+
+
+  gene_info_full <- gene_info_full %>% left_join(gene_FC_matrix,by = 'Protein.Ids') %>%
+    mutate(
+      across(everything(), ~replace_na(.x, 0))
+    )
+
+
   if (all(rownames(rowData(se)) == gene_info_full$Protein.Ids)) {
     for (col in colnames(gene_info_full)) {
       if (!(col %in% colnames(rowData(se)))) {
-        rowData(se)[[col]] <- gene_info_full[[col]]
+        rowData(se)[col] = gene_info_full[col]
       }
     }
   }
-
   return(se)
 }
 
@@ -548,7 +538,8 @@ calc_gene_CV_by_condition <- function(se,
 #' Calculate mean expression per gene per condition
 #'
 #' @param se SummarizedExperiment object.
-#' @param assay_name Assay used for mean calculation.
+#' @param assay_name Assay used for mean or median calculation.
+#' @param method for calculate mean or median.
 #' @param condition_col Column in colData(se) defining conditions.
 #'
 #' @return A numeric matrix of gene-by-condition mean expression.
@@ -556,6 +547,7 @@ calc_gene_CV_by_condition <- function(se,
 
 calc_gene_mean_by_condition <- function(se,
                                         assay_name = "conc",
+                                        method = 'mean',
                                         condition_col = "condition") {
 
   stopifnot(assay_name %in% assayNames(se))
@@ -563,34 +555,54 @@ calc_gene_mean_by_condition <- function(se,
 
   if (length(unique(se[[condition_col]])) == ncol(se)) {
     return(NULL)
+  } else {
+
+    mtx  <- assay(se, assay_name)
+    meta <- as.data.frame(colData(se))
+
+    gene_order <- rownames(mtx)
+
+    df_long <- as.data.frame(mtx) %>%
+      tibble::rownames_to_column("Protein.Ids") %>%
+      tidyr::pivot_longer(
+        cols = -Protein.Ids,
+        names_to = "sample",
+        values_to = "value"
+      ) %>%
+      dplyr::left_join(meta, by = c("sample"))
+    if (method == 'mean') {
+      mean_df <- df_long %>%
+        dplyr::group_by(Protein.Ids, !!sym(condition_col)) %>%
+        dplyr::summarise(
+          mean_val = mean(value, na.rm = TRUE),
+          .groups = "drop"
+        ) %>%
+        tidyr::pivot_wider(
+          names_from  = !!sym(condition_col),
+          values_from = mean_val
+        )
+    }else{
+      mean_df <- df_long %>%
+        dplyr::group_by(Protein.Ids, !!sym(condition_col)) %>%
+        dplyr::summarise(
+          mean_val = median(value, na.rm = TRUE),
+          .groups = "drop"
+        ) %>%
+        tidyr::pivot_wider(
+          names_from  = !!sym(condition_col),
+          values_from = mean_val
+        )
+    }
+
+
+
+    mean_mat <- as.data.frame(mean_df)
+    rownames(mean_mat) <- mean_mat$Protein.Ids
+    mean_mat$Protein.Ids <- NULL
+
+    mean_mat <- mean_mat[gene_order, , drop = FALSE]
+
+    return(as.matrix(mean_mat))
   }
-
-  mtx <- assay(se, assay_name)
-  meta <- as.data.frame(colData(se))
-
-  df_long <- as.data.frame(mtx) %>%
-    tibble::rownames_to_column("Protein.Ids") %>%
-    tidyr::pivot_longer(cols = -Protein.Ids,
-                        names_to = "sample",
-                        values_to = "value") %>%
-    dplyr::left_join(meta, by = "sample")
-
-  mean_df <- df_long %>%
-    dplyr::group_by(Protein.Ids, !!rlang::sym(condition_col)) %>%
-    dplyr::summarise(
-      mean_val = mean(value, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    tidyr::pivot_wider(
-      names_from = !!rlang::sym(condition_col),
-      values_from = mean_val
-    )
-
-  mean_mat <- as.data.frame(mean_df)
-  rownames(mean_mat) <- mean_mat$Protein.Ids
-  mean_mat$Protein.Ids <- NULL
-
-  mean_mat <- mean_mat[rownames(mtx), , drop = FALSE]
-  return(as.matrix(mean_mat))
 }
 

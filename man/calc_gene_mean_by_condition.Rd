@@ -7,13 +7,16 @@
 calc_gene_mean_by_condition(
   se,
   assay_name = "conc",
+  method = "mean",
   condition_col = "condition"
 )
 }
 \arguments{
 \item{se}{SummarizedExperiment object.}
 
-\item{assay_name}{Assay used for mean calculation.}
+\item{assay_name}{Assay used for mean or median calculation.}
+
+\item{method}{for calculate mean or median.}
 
 \item{condition_col}{Column in colData(se) defining conditions.}
 }

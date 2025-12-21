@@ -202,57 +202,68 @@ mod_visualization_server <- function(input, output, session) {
   })
 
   
-
+  gene_exp_plot <- reactiveVal(NULL)
   output$gene_exp <- renderPlot({
     req(se_data(), input$gene_select)
     
     se <- se_data()
     genes <- input$gene_select
     
-    
-    
     sel <- input$selected_cols 
     col_name <- sub("\\|\\|.*$", "", sel[1])  
     vals <- sub("^.*\\|\\|", "", sel)        
-    col_df <- as.data.frame(colData(se_data()))
+    
+    col_df <- as.data.frame(colData(se))
     matched_samples <- rownames(col_df)[col_df[[col_name]] %in% vals]
     
     if (length(matched_samples) == 0) {
       showNotification("No samples matched your selection", type = "error")
-      return()
+      return(NULL)
     }
+    
     se_sub <- se[, matched_samples, drop = FALSE]
     
     valid_genes <- genes[genes %in% rowData(se_sub)$Genes]
     if (length(valid_genes) == 0) return(NULL)
     
     if (length(valid_genes) == 1) {
-      return(
-        plot_gene_expression(se_sub, valid_genes, by = input$group_col)
+      p <- plot_gene_expression(
+        se_sub,
+        valid_genes,
+        by = input$group_col
       )
-    }else{
-      plot_list <- map(valid_genes, ~{
-        plot_gene_expression(se_sub, .x, by = input$group_col) 
+    } else {
+      plot_list <- purrr::map(valid_genes, ~{
+        plot_gene_expression(se_sub, .x, by = input$group_col)
       })
-      combined <- plot_grid(plotlist = plot_list)  
-      return(combined)
+      p <- cowplot::plot_grid(plotlist = plot_list)
     }
-  }, height = function() input$gene_exp_height,
-  width  = function() input$gene_exp_width)
+    
+    gene_exp_plot(p)   # ⭐ 核心：把图存下来
+    p                  # renderPlot 仍然正常画
+  },
+  height = function() input$gene_exp_height,
+  width  = function() input$gene_exp_width
+  )
+  
   
   
   output$down_gene_exp_ui <- renderUI({
     req(se_data())
     downloadButton("down_gene_exp", "Download PDF")
   })
-  # output$down_gene_exp <- make_download_pdf(
-  #   plot_expr   = function() plot_gene_expression(se_sub, input$gene_select,by= input$group_col),
-  #   input       = input,
-  #   suffix      = paste0(input$gene_select,"_expression"),
-  #   width       = function() input$gene_exp_width  / 100,
-  #   height      = function() input$gene_exp_height / 100,
-  #   input_field = "gene_exp_rds"
-  # )
+  output$down_gene_exp <- make_download_pdf(
+    plot_expr   = function() {
+      req(gene_exp_plot())
+      gene_exp_plot()
+    },
+    input       = input,
+    suffix      = paste0(input$gene_select, "_expression"),
+    width       = function() input$gene_exp_width  / 100,
+    height      = function() input$gene_exp_height / 100,
+    input_field = "gene_exp_rds"
+  )
+  
   
 
   

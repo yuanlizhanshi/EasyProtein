@@ -40,7 +40,6 @@ mod_time_series_server <- function(input, output, session) {
       new_se <- se2gene_group(
         se = se_sub,
         group_by = input$coldata_col_selector,
-        cor_method = input[["time_filter-cor_method"]], 
         time_threhold = input[["time_filter-time_threshold"]],
         min_expresion_threhold = input[["time_filter-min_expression_threshold"]],
         CV_with_time_threhold = input[["time_filter-CV_with_time_threshold"]],

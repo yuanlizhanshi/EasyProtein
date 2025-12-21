@@ -17,57 +17,60 @@
 #' @importFrom stringr str_detect
 #'
 #' @export
+
 plot_gene_expression <- function(se, gene, by = "condition") {
 
-  conc_mean_df <- se2conc(se) %>%
-    dplyr::select(-Genes) %>%
-    tidyr::pivot_longer(cols = -Protein.Ids,
-                        names_to = "sample",
-                        values_to = "conc") %>%
+  conc_mean_df <- assay(se, "conc") %>%
+    as.data.frame() %>%
+    rownames_to_column('Protein.Ids') %>%
+    tidyr::pivot_longer(
+      cols = -Protein.Ids,
+      names_to = "sample",
+      values_to = "conc"
+    ) %>%
     dplyr::left_join(as.data.frame(se@colData), by = "sample") %>%
     dplyr::left_join(as.data.frame(rowData(se)), by = "Protein.Ids")
-
   gene_name <- paste0("^", gene, "$")
-
   target_gene <- conc_mean_df %>%
     dplyr::filter(stringr::str_detect(Genes, gene_name))
 
   if (!by %in% colnames(se@colData)) {
-    stop(paste0("Column '", by, "' not found in colData(se)."))
+    stop(paste0("Column '", by, "' not found in colData(se)"))
   }
 
   target_gene[[by]] <- factor(
     target_gene[[by]],
     levels = unique(se@colData[[by]])
   )
+  group_unique <- unique(se@colData[[by]])
+  if (length(group_unique) < ncol(se)) {
 
-  # grouped by condition
-  if (length(unique(se@colData[[by]])) < ncol(se)) {
     p1 <- ggplot(target_gene, aes(x = .data[[by]], y = conc)) +
       geom_boxplot(outlier.size = 1, width = 0.3) +
       labs(x = NULL, y = "Expression") +
       ggtitle(gene) +
       theme_test() +
       theme(
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold"),
-        axis.text.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 14, face = "bold"),
-        axis.title.y = element_text(size = 14, face = "bold")
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold", color = "black"),
+        axis.text.y = element_text(size = 12, face = "bold", color = "black"),
+        axis.title.x = element_text(size = 14, face = "bold", color = "black"),
+        axis.title.y = element_text(size = 14, face = "bold", color = "black")
       )
   } else {
-    # per-sample barplot
+
     p1 <- ggplot(target_gene, aes(x = sample, y = conc)) +
       geom_col() +
       labs(x = NULL, y = "Expression") +
       ggtitle(gene) +
       theme_test() +
       theme(
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold"),
-        axis.text.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 14, face = "bold"),
-        axis.title.y = element_text(size = 14, face = "bold")
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold", color = "black"),
+        axis.text.y = element_text(size = 12, face = "bold", color = "black"),
+        axis.title.x = element_text(size = 14, face = "bold", color = "black"),
+        axis.title.y = element_text(size = 14, face = "bold", color = "black")
       )
   }
+
   return(p1)
 }
 
@@ -296,6 +299,143 @@ plotCV_density <- function(se){
     scale_x_log10() +
     labs(x = "CV", y = NULL) +
     theme_test()
+}
+
+
+#' Plot multi-round logFC trends for monotonic gene groups
+#'
+#' This function visualizes log fold-change (logFC) trajectories of genes
+#' classified by multi-round monotonic time-course patterns (e.g. \code{Up1},
+#' \code{Down2}). Individual gene trajectories are shown as semi-transparent
+#' lines, while the group-level mean trajectory is overlaid for each pattern.
+#'
+#' Genes are grouped according to their assigned trend group, and facets
+#' are ordered by round index, with \code{Up*} and \code{Down*} displayed
+#' as paired groups within each round.
+#'
+#' @param se A \linkS4class{SummarizedExperiment} object containing
+#'   concentration-based expression data and log fold-change values.
+#' @param group_by Character string specifying the column in
+#'   \code{colData(se)} used to define experimental conditions.
+#'   Default is \code{"condition"}.
+#'
+#' @return A \link[ggplot2]{ggplot} object showing logFC trajectories
+#'   faceted by gene trend group.
+#'
+#' @details
+#' The function performs the following steps:
+#' \enumerate{
+#'   \item Convert the \code{SummarizedExperiment} object to a gene-level
+#'         data frame using \code{se2conc()}.
+#'   \item Retain only genes classified as \code{Up} or \code{Down}.
+#'   \item Reshape logFC values into long format for plotting.
+#'   \item Reorder gene groups as paired rounds
+#'         (\code{Up1}, \code{Down1}, \code{Up2}, \code{Down2}, ...).
+#'   \item Plot individual gene trajectories and overlay group-level
+#'         mean trends.
+#' }
+#'
+#' Facet labels include the number of genes (\code{n}) in each group.
+#'
+#' @seealso
+#' \code{\link{classify_timecourse_by_round}},
+#' \code{\link{se2conc}},
+#' \code{\link[ggplot2]{ggplot}}
+#'
+#' @examples
+#' \dontrun{
+#' p <- plot_FC_trend(se, group_by = "condition")
+#' print(p)
+#' }
+#'
+#' @importFrom dplyr filter select contains mutate arrange distinct group_by
+#' @importFrom tidyr pivot_longer
+#' @importFrom stringr str_extract
+#' @importFrom ggplot2 ggplot aes geom_line stat_summary facet_wrap labs
+#' @importFrom tibble tibble
+#'
+#' @export
+
+plot_FC_trend <- function(se,group_by = 'condition'){
+
+  logFC_long <- se2conc(se,group_by= group_by) %>%
+    dplyr::filter(type %in% c('Up','Down')) %>%
+    dplyr::select(
+      Protein.Ids,
+      gene_group,
+      contains('log2FC')
+    ) %>%
+    pivot_longer(
+      cols = -c('Protein.Ids','gene_group'),
+      names_to = 'Sample',
+      values_to = 'logFC'
+    )
+
+
+  levels_ordered <- logFC_long$gene_group |>
+    unique() |>
+    tibble::tibble(group = _) |>
+    dplyr::mutate(
+      round = as.integer(gsub("Up|Down", "", group)),
+      type  = ifelse(grepl("^Up", group), "Up", "Down")
+    ) |>
+    dplyr::arrange(
+      round,
+      factor(type, levels = c("Up", "Down"))
+    ) |>
+    dplyr::pull(group)
+
+  logFC_long$gene_group <- sapply(logFC_long$gene_group, as.character)
+  logFC_long$gene_group <- factor(logFC_long$gene_group,levels = levels_ordered)
+  logFC_long$Sample <- str_extract(logFC_long$Sample,'(?<=_).*')
+  logFC_long$Sample <- factor(logFC_long$Sample,levels = unique(logFC_long$Sample))
+
+  gene_n_df <- logFC_long %>%
+    dplyr::select(Protein.Ids,gene_group) %>%
+    distinct_all() %>%
+    group_by(gene_group) %>%
+    mutate(n = n()) %>%
+    dplyr::select(gene_group,n) %>%
+    distinct_all()
+
+  group_labels <- setNames(
+    paste0(gene_n_df$gene_group, " (n = ", gene_n_df$n, ")"),
+    gene_n_df$gene_group
+  )
+
+  p1 <- ggplot(logFC_long, aes(x = Sample, y = logFC)) +
+    geom_line(
+      aes(group = Protein.Ids),
+      color = "grey80",
+      alpha = 0.3
+    ) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    stat_summary(
+      aes(group = gene_group),
+      fun = mean,
+      geom = "line",
+      color = "red",
+      size = 1.4
+    ) +
+    facet_wrap(
+      ~ gene_group,
+      scales = "free_y",
+      ncol = 2,
+      labeller = labeller(gene_group = group_labels)
+    ) +
+    theme_test() +
+    theme(
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold", size = 12),
+      axis.text  = element_text(face = "bold"),
+      axis.title = element_text(face = "bold")
+    ) +
+    labs(
+      y = "logFC",
+      x = NULL
+    )
+
+  return(p1)
 }
 
 

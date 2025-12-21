@@ -1,0 +1,25 @@
+.navbar-default .navbar-nav > li > a {
+  color: #FFFFFF !important;
+  font-size: 28px !important;
+  margin-left: 10px !important;
+}
+
+.Introduction {
+    background-color: #325880;
+}
+.species {
+    border-color: #325880;
+}
+.tissue {
+    border-color: #ffffff;
+}
+
+.jump {
+    width:600px;
+}
+.double_choose {
+   width:600px;
+}
+.upload_meta {
+  margin-top:20px;
+}

@@ -1486,9 +1486,9 @@ plot_pca <- function(pca.df, pca.res, colorby, label) {
 }
 
 plotSE_density <- function(se){
-  rawdata <- se2raw(se)
+  rawdata <- as.data.frame(assay(se, "raw_intensity")) %>% rownames_to_column('ProteinID')
   rawdata_df <- rawdata %>%
-    pivot_longer(cols = 3:length(rawdata),names_to = 'Sample',values_to = 'intersity')  %>%
+    pivot_longer(cols = -ProteinID,names_to = 'Sample',values_to = 'intersity')  %>%
     dplyr::filter(!is.na(intersity)) %>%
     mutate(log2intersity = log2(intersity) )
   rawdata_df$Sample <- factor(rawdata_df$Sample,levels = unique(colnames(se)))
@@ -1510,9 +1510,9 @@ plotSE_density <- function(se){
 }
 #plotSE_density(se)
 plotSE_missing_value <- function(se){
-  rawdata <- se2raw(se)
+  rawdata <- as.data.frame(assay(se, "raw_intensity")) %>% rownames_to_column('ProteinID')
   missing_number_df <- rawdata %>%
-    pivot_longer(cols = 3:length(rawdata),names_to = 'Sample',values_to = 'intersity')  %>%
+    pivot_longer(cols = -ProteinID,names_to = 'Sample',values_to = 'intersity')  %>%
     dplyr::filter(is.na(intersity)) %>%
     group_by(Sample) %>%
     mutate(missing_number = n()) %>%
@@ -1540,9 +1540,9 @@ plotSE_missing_value <- function(se){
 #plotSE_missing_value(se)
 
 plotSE_protein_number <- function(se){
-  rawdata <- se2raw(se)
+  rawdata <- as.data.frame(assay(se, "raw_intensity")) %>% rownames_to_column('ProteinID')
   protein_numberr_df <- rawdata %>%
-    pivot_longer(cols = 3:length(rawdata),names_to = 'Sample',values_to = 'intersity')  %>%
+    pivot_longer(cols = -ProteinID,names_to = 'Sample',values_to = 'intersity')  %>%
     dplyr::filter(!is.na(intersity)) %>%
     group_by(Sample) %>%
     mutate(protein_number = n()) %>%
@@ -2281,7 +2281,7 @@ make_download_time_se_zip <- function(
 #   list(ui = ui, server = server)
 # }
 
-make_grouped_select <- function(id, df, default_all = FALSE, max_levels = 1000) {
+make_grouped_select <- function(id, df,label = 'Select coldata columns', default_all = FALSE, max_levels = 1000) {
 
 
   valid_cols <- names(df)[
@@ -2318,7 +2318,7 @@ make_grouped_select <- function(id, df, default_all = FALSE, max_levels = 1000) 
 
   ui <- virtualSelectInput(
     inputId = id,
-    label   = "选择一个列",
+    label   = label,
     choices = choices,
     multiple = TRUE,
     search = TRUE,
@@ -2350,7 +2350,7 @@ make_grouped_select <- function(id, df, default_all = FALSE, max_levels = 1000) 
 show_heatmap_param_modal <- function(se_data = NULL) {
 
   all_cols <- if (!is.null(se_data)) as.data.frame(colData(se_data)) else character(0)
-
+  all_rows <- if (!is.null(se_data)) as.data.frame(rowData(se_data)) else character(0)
   showModal(
     modalDialog(
       title = "Please set Heatmap parameters",
@@ -2368,8 +2368,9 @@ show_heatmap_param_modal <- function(se_data = NULL) {
             h4("Column selection"),
 
             make_grouped_select(
-              "selected_cols",
-              all_cols,
+              id = "selected_cols",
+              df = all_cols,
+              label = 'Select coldata columns',
               default_all = TRUE
             )$ui,
             selectInput(
@@ -2408,7 +2409,17 @@ show_heatmap_param_modal <- function(se_data = NULL) {
               "Top annotation grouping",
               choices = c("NULL", colnames(all_cols)),
               selected = "condition"
-            )
+            ),
+
+
+            make_grouped_select(
+              id = "selected_rows",
+              df = all_rows,
+              label = 'Select rowdata columns',
+              default_all = TRUE
+            )$ui
+
+
           ),
 
           ## ===============================
@@ -2420,18 +2431,46 @@ show_heatmap_param_modal <- function(se_data = NULL) {
             h4("Heatmap parameters"),
 
 
-
-            checkboxInput(
-              "enable_col_cluster",
-              "Enable column clustering",
-              value = TRUE
+            fluidRow(
+              column(
+                  6,
+                  checkboxInput(
+                    "enable_col_cluster",
+                    "Enable column clustering",
+                    value = TRUE
+                  )
+              ),
+              column(
+                6,
+                checkboxInput(
+                  "enable_row_cluster",
+                  "Enable row clustering",
+                  value = TRUE
+                )
+              )
             ),
 
-            checkboxInput(
-              "show_col_names",
-              "Display column names",
-              value = FALSE
+            fluidRow(
+              column(
+                6,
+                checkboxInput(
+                  "show_col_names",
+                  "Display column names",
+                  value = FALSE
+                ),
+              ),
+              column(
+                6,
+                checkboxInput(
+                  "show_row_names",
+                  "Display row names",
+                  value = FALSE
+                ),
+              )
             ),
+
+
+
 
 
             sliderInput(

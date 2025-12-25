@@ -21,7 +21,7 @@ BiocManager::install(c(
   "SummarizedExperiment"
 ))
 ```
-Then you can install the development version of EasyProtein
+Then you can install the development version of EasyProtein:
 
 ```r
 devtools::install_github("yuanlizhanshi/EasyProtein")

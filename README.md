@@ -9,10 +9,9 @@ EasyProtein requires a recent version of R (≥ 4.1) and several CRAN and Biocon
 
 
 Please install the required package managers first:
-You can install the development version of EasyProtein
 
 ``` r
-# install.packages(c("devtools", "BiocManager"))
+install.packages(c("devtools", "BiocManager"))
 
 BiocManager::install(c(
   "ComplexHeatmap",
@@ -21,7 +20,10 @@ BiocManager::install(c(
   "S4Vectors",
   "SummarizedExperiment"
 ))
+```
+Then you can install the development version of EasyProtein
 
+```r
 devtools::install_github("yuanlizhanshi/EasyProtein")
 ```
 

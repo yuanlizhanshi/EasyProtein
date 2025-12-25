@@ -4,9 +4,11 @@
 \alias{launch_EasyProtein}
 \title{Launch EasyProtein Shiny App}
 \usage{
-launch_EasyProtein(...)
+launch_EasyProtein(install_missing = TRUE, ...)
 }
 \arguments{
+\item{install_missing}{Logical. Whether to install missing packages automatically.}
+
 \item{...}{Passed to shiny::runApp().}
 }
 \description{

@@ -270,14 +270,14 @@ mod_pattern_server <- function(input, output, session) {
 
       if (group_col %in% colnames(df_anno)) {
         vec <- df_anno[[group_col]]
-        if (is.character(vec)) vec <- factor(vec, levels = unique(vec))
+        vec <- factor(vec, levels = unique(vec))
         top_anno <- ComplexHeatmap::HeatmapAnnotation(group = vec)
       }
     }
 
     # 行、列 split 向量（严格对齐）
     row_split_vec <- rowData(se_sub)[[new_col_name]]
-    col_split_vec <- colData(se_sub)$col_cluster
+    col_split_vec <- factor(colData(se_sub)$col_cluster,levels = unique(colData(se_sub)$col_cluster))
 
     stopifnot(length(row_split_vec) == nrow(intersity_scale))
     stopifnot(length(col_split_vec) == ncol(intersity_scale))
@@ -285,7 +285,7 @@ mod_pattern_server <- function(input, output, session) {
     if (input$col_cluster_mode == "kmeans") {
       ht <- ComplexHeatmap::Heatmap(
         intersity_scale,
-        cluster_columns   = TRUE,
+        cluster_columns   = input$enable_col_cluster,
         cluster_rows      = input$enable_row_cluster,
         show_row_names    = input$show_row_names,
         show_column_names = input$show_col_names,
@@ -298,7 +298,7 @@ mod_pattern_server <- function(input, output, session) {
       if (isTRUE(input$enable_col_cluster)) {
         ht <- ComplexHeatmap::Heatmap(
           intersity_scale,
-          cluster_columns   = TRUE,
+          cluster_columns   = input$enable_col_cluster,
           cluster_rows      = input$enable_row_cluster,
           show_row_names    = input$show_row_names,
           show_column_names = input$show_col_names,
@@ -314,9 +314,7 @@ mod_pattern_server <- function(input, output, session) {
           row_split        = row_split_vec,
           column_split     = col_split_vec,
           show_column_names = input$show_col_names,
-          top_annotation   = ComplexHeatmap::HeatmapAnnotation(
-            group = col_split_vec
-          )
+          top_annotation   = top_anno
         )
       }
     }

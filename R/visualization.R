@@ -1,3 +1,112 @@
+#' Save plots in multiple formats with standardized resolution
+#'
+#' Save a plot object into PDF, TIFF, and PNG formats simultaneously with
+#' predefined scaling rules for width, height, and resolution. Output files
+#' are automatically organized into subdirectories under a \code{Fig/} folder.
+#'
+#' This function is designed for publication-quality figure export, supporting
+#' both ggplot objects and grid graphical objects (e.g., \code{gList}).
+#'
+#' @param object A plot object to be saved. Can be a \code{ggplot} object or a
+#'   grid graphical object such as \code{gList}.
+#' @param filenames A character string specifying the base filename (without
+#'   file extension) for the output figures.
+#' @param width Numeric. Figure width in inches. Must be provided.
+#' @param height Numeric. Figure height in inches. Must be provided.
+#' @param dpi Numeric. Resolution in dots per inch. Default is \code{600}.
+#'
+#' @details
+#' The function creates a directory structure:
+#' \describe{
+#'   \item{Fig/PDF}{PDF output}
+#'   \item{Fig/TIFF}{TIFF output}
+#'   \item{Fig/PNG}{PNG output}
+#' }
+#'
+#' File dimensions are scaled internally:
+#' \itemize{
+#'   \item PDF: width and height multiplied by 2.
+#'   \item TIFF: width and height multiplied by 1000.
+#'   \item PNG: width and height multiplied by 500.
+#' }
+#'
+#' For PNG output, if \code{dpi > 600}, the resolution is automatically set to 300;
+#' otherwise, \code{dpi/2} is used.
+#'
+#' If \code{object} is of class \code{gList}, the plot is rendered using
+#' \code{grid.draw()}; otherwise, \code{print()} is used.
+#'
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of writing figure files to disk.
+#'
+#' @importFrom grDevices cairo_pdf dev.off
+#' @importFrom grid grid.draw
+#' @importFrom purrr map
+#'
+#' @examples
+#' \dontrun{
+#' library(ggplot2)
+#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#'
+#' saveplot(
+#'   object = p,
+#'   filenames = "mtcars_scatter",
+#'   width = 6,
+#'   height = 4,
+#'   dpi = 600
+#' )
+#' }
+#'
+#' @export
+
+saveplot <- function(object,filenames = filename,width = NULL,height = NULL,dpi = 600){
+  if (is.null(width)| is.null(height)) {
+    stop('Must input figure width and height')
+  }
+
+  if(!dir.exists("Fig")){
+    dir.create("Fig")
+  }
+  purrr::map(c("TIFF","PNG","PDF"),function(x){
+    if(!dir.exists(paste0('Fig/',x))){
+      dir.create(paste0('Fig/',x))
+    }
+  })
+
+  pdf_filenames = paste0('Fig/PDF/',filenames,'.pdf')
+  pdf_width = width*2
+  pdf_height = height*2
+  pdf_res = dpi
+
+  tiff_filenames = paste0('Fig/TIFF/',filenames,'.tiff')
+  tiff_width = width*1000
+  tiff_height = height*1000
+  tiff_res = dpi
+
+  png_filenames = paste0('Fig/PNG/',filenames,'.png')
+  png_width = width*500
+  png_height = height*500
+  if (dpi > 600) {
+    png_res = 300
+  }else{
+    png_res = dpi/2
+  }
+  if (class(object)[1] == 'gList') {
+    cairo_pdf(file = pdf_filenames,width = pdf_width, height = pdf_height,fallback_resolution = pdf_res)
+    grid.draw(object)
+    dev.off()
+
+
+  }else{
+    cairo_pdf(file = pdf_filenames,width = pdf_width, height = pdf_height,fallback_resolution = pdf_res)
+    print(object)
+    dev.off()
+
+
+  }
+
+}
+
 #' Plot gene expression across samples or conditions
 #'
 #' This function extracts a given gene from a SummarizedExperiment object,

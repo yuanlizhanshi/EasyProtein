@@ -862,7 +862,7 @@ get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20,filter =T, 
 
   pc_name <- paste0("Dim.", pc)
   if (!pc_name %in% colnames(mat)) {
-    stop("PC no exist：", pc_name)
+    stop("PC no exist:", pc_name)
   }
 
   df <- data.frame(

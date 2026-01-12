@@ -23,7 +23,6 @@ Imports:
     ggiraph,
     ggrepel,
     limma,
-    matrixStats,
     purrr,
     rlang,
     S4Vectors,

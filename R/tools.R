@@ -770,3 +770,136 @@ run_gsea <- function(
   return(res)
 }
 
+#' Extract positive and negative contributors for a given PCA component
+#'
+#' This function extracts the top contributing features (e.g. proteins/genes)
+#' for a specified principal component (PC) from a \code{FactoMineR::PCA} result.
+#' It supports both signed loadings (coordinates) for direction-aware interpretation
+#' and contribution values for importance ranking, and can optionally merge
+#' feature annotations from a \code{SummarizedExperiment} object.
+#'
+#' @param pca.res A \code{PCA} object returned by \code{FactoMineR::PCA}.
+#'
+#' @param se_obj A \code{SummarizedExperiment} object. If provided, row annotations
+#'   (from \code{rowData(se_obj)}) will be joined to PCA variables using
+#'   \code{Protein.Ids}. Default is \code{NULL}.
+#'
+#' @param pc Integer. The principal component to extract (e.g. \code{1} for PC1).
+#'   Default is \code{1}.
+#'
+#' @param n Integer. Number of top features to return for each direction
+#'   (positive and negative). Default is \code{20}.
+#'
+#' @param filter Logical. If \code{TRUE}, features are collapsed at the gene level:
+#'   the first entry per gene is kept after filtering non-empty gene names.
+#'   This is useful when multiple proteins/isoforms map to the same gene symbol.
+#'   Default is \code{TRUE}.
+#'
+#' @param use Character. Which PCA metric to use:
+#'   \describe{
+#'     \item{\code{"coord"}}{Use signed coordinates (loadings). This preserves
+#'       directionality and is suitable for identifying positive vs negative
+#'       contributors along the PC.}
+#'     \item{\code{"contrib"}}{Use contribution values. This ranks features by
+#'       importance to the PC but does not encode direction.}
+#'   }
+#'   Default is \code{"coord"}.
+#'
+#' @return A list with the following components:
+#'   \describe{
+#'     \item{PC}{Character string indicating the selected PC (e.g. \code{"Dim.1"}).}
+#'     \item{metric}{Which metric was used: \code{"coord"} or \code{"contrib"}.}
+#'     \item{positive}{A data frame of the top \code{n} positively contributing
+#'       features (only for \code{"coord"}).}
+#'     \item{negative}{A data frame of the top \code{n} negatively contributing
+#'       features (only for \code{"coord"}).}
+#'   }
+#'
+#' @details
+#' The function operates on \code{pca.res$var[[use]]}, where:
+#' \itemize{
+#'   \item \code{coord} represents the signed loadings (projection of each feature
+#'     onto the PC axis), allowing interpretation of positive vs negative directions.
+#'   \item \code{contrib} represents the percentage contribution of each feature to
+#'     the variance of the PC, without directional information.
+#' }
+#'
+#' When \code{se_obj} is provided, feature-level annotations are merged from
+#' \code{rowData(se_obj)} by \code{Protein.Ids}. Gene symbols are extracted from
+#' the \code{Genes} column (taking the first symbol before a semicolon).
+#'
+#' If \code{filter = TRUE}, the results are collapsed at the gene level by keeping
+#' only one representative entry per gene, which is recommended when multiple
+#' protein entries map to the same gene.
+#'
+#' @examples
+#' \dontrun{
+#' library(FactoMineR)
+#'
+#' # Run PCA
+#' pca.res <- PCA(t(expr_matrix), scale.unit = TRUE, graph = FALSE)
+#'
+#' # Extract top contributors on PC1 using signed coordinates
+#' res_pc1 <- get_pc_contributors(pca.res, pc = 1, n = 30, use = "coord")
+#'
+#' res_pc1$positive
+#' res_pc1$negative
+#'
+#' # Using contribution values instead of signed loadings
+#' res_pc1_contrib <- get_pc_contributors(pca.res, pc = 1, n = 30, use = "contrib")
+#' }
+#'
+#' @importFrom dplyr %>% left_join mutate filter arrange slice_head group_by
+#' @importFrom stringr str_extract
+#' @export
+
+
+get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20,filter =T, use = c("coord", "contrib")) {
+
+  use <- match.arg(use)
+
+  mat <- pca.res$var[[use]]
+
+  pc_name <- paste0("Dim.", pc)
+  if (!pc_name %in% colnames(mat)) {
+    stop("PC no exist：", pc_name)
+  }
+
+  df <- data.frame(
+    Protein.Ids = rownames(mat),
+    value = mat[, pc_name]
+  ) %>%
+    left_join(as.data.frame(rowData(se_obj)),by = 'Protein.Ids') %>%
+    mutate(gene = str_extract(Genes, '^[^;]+'))
+
+  if(filter){
+    df <- df %>%
+      dplyr::filter(gene != '') %>%
+      group_by(gene) %>%
+      slice_head(n = 1)
+  }
+
+  df <- df[!is.na(df$value), ]
+
+
+  pos <- df %>%
+    dplyr::arrange(dplyr::desc(value)) %>%
+    dplyr::filter(value >0) %>%
+    dplyr::slice_head(n = n) %>%
+    mutate(type = 'Positive')
+
+
+  neg <- df %>%
+    dplyr::arrange(value) %>%
+    dplyr::filter(value <0) %>%
+    dplyr::slice_head(n = n) %>%
+    mutate(type = 'Negative')
+
+  return(list(
+    PC = pc_name,
+    metric = use,
+    positive = pos,
+    negative = neg
+  ))
+}
+

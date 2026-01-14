@@ -3,7 +3,8 @@ mod_home_server <- function(input, output, session) {
     div(
       p("Easy Protein, Version 0.1 (Build date: 2025-09-23)"),
       p("Easy Protein, Version 0.2 (Build date: 2025-11-29)"),
-      p("Easy Protein, Version 0.2 (Build date: 2025-12-21)")
+      p("Easy Protein, Version 0.3 (Build date: 2025-12-21)"),
+      p("Easy Protein, Version 0.3 (Build date: 2026-01-14)")
     )
   })
 }

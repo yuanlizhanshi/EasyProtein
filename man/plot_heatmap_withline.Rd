@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{plot_heatmap_withline}
 \alias{plot_heatmap_withline}
-\title{Heatmap with mean/median trend line and block annotation}
+\title{Plot heatmap with row-wise summary line using ComplexHeatmap}
 \usage{
 plot_heatmap_withline(
   mat = NULL,
@@ -25,42 +25,116 @@ plot_heatmap_withline(
 )
 }
 \arguments{
-\item{mat}{Numeric matrix.}
+\item{mat}{A numeric matrix. Rows typically represent genes/features and
+columns represent samples/conditions. The matrix will be internally coerced
+to \code{matrix} if needed.}
 
-\item{row_split}{Vector defining row groups.}
+\item{row_split}{A vector or factor of length \code{nrow(mat)} used to split
+rows into clusters or groups. Each unique level defines one row group.}
 
-\item{column_split}{Vector defining column groups.}
+\item{column_split}{A vector or factor of length \code{ncol(mat)} used to split
+columns into groups. If provided, summary lines are calculated at the group
+level; otherwise, summaries are calculated across all columns.}
 
-\item{top_annotation}{ComplexHeatmap top annotation.}
+\item{top_annotation}{A \code{HeatmapAnnotation} object (from
+\pkg{ComplexHeatmap}) added to the top of the heatmap. Default is \code{NULL}.}
 
-\item{show_column_names}{Logical.}
+\item{show_column_names}{Logical. Whether to display column names on the heatmap.
+Default is \code{FALSE}.}
 
-\item{ht.col.list}{List controlling heatmap colors.}
+\item{ht.col.list}{A list controlling the color mapping of the heatmap.
+\describe{
+  \item{col_range}{Numeric vector of length 3 specifying breakpoints for the color scale.}
+  \item{col_color}{Character vector of colors corresponding to \code{col_range}.}
+}}
 
-\item{border}{Logical.}
+\item{border}{Logical. Whether to draw borders around heatmap cells. Passed to
+\code{ComplexHeatmap::Heatmap}. Default is \code{TRUE}.}
 
-\item{line.size}{Size of grid lines.}
+\item{line.size}{Numeric. Line width for grid lines in the heatmap body.
+Default is \code{0.1}.}
 
-\item{line.col}{Color of grid lines.}
+\item{line.col}{Character. Color of grid lines in the heatmap body.
+Default is \code{"grey90"}.}
 
-\item{mline.size}{Size of trend line.}
+\item{mline.size}{Numeric. Line width of the summary line drawn in the right
+annotation panel. Default is \code{2}.}
 
-\item{mline.col}{Color of trend line.}
+\item{mline.col}{Character. Color of the summary line drawn in the right
+annotation panel. Default is \code{"#CC3333"}.}
 
-\item{set.md}{"mean" or "median".}
+\item{set.md}{Character. Method for summarizing values within each cluster.
+Either \code{"mean"} or \code{"median"}. Default is \code{"mean"}.}
 
-\item{textbox.pos}{Position of group text.}
+\item{textbox.pos}{Numeric vector of length 2 giving the relative position
+(in NPC units) of the annotation text box inside the panel. Default is
+\code{c(0.5, 0.8)}.}
 
-\item{textbox.size}{Font size of group text.}
+\item{textbox.size}{Numeric. Font size of the annotation text shown in the panel.
+Default is \code{8}.}
 
-\item{panel.arg}{Parameters for ComplexHeatmap::anno_link.}
+\item{panel.arg}{A vector of length 5 controlling the layout and appearance
+of the right-side summary panel created by \code{anno_link}:
+\describe{
+  \item{[1]}{Height of the panel (in cm).}
+  \item{[2]}{Gap between heatmap and panel (in cm).}
+  \item{[3]}{Width of the panel (in cm).}
+  \item{[4]}{Fill color of the panel background.}
+  \item{[5]}{Border color of the panel. Use \code{NA} to remove the border.}
+}
+Default is \code{c(2, 0.25, 4, "grey90", NA)}.}
 
-\item{...}{Passed to ComplexHeatmap::Heatmap.}
+\item{...}{Additional arguments passed to \code{ComplexHeatmap::Heatmap}.}
 }
 \value{
-A Heatmap object.
+A \code{Heatmap} object from \pkg{ComplexHeatmap}. The object can be
+  further modified, combined with other heatmaps, or drawn using \code{draw()}.
 }
 \description{
-This wrapper around ComplexHeatmap visualizes a matrix with row clusters.
-A trend line (mean or median) is added per column group.
+This function draws a heatmap using \pkg{ComplexHeatmap} and adds a custom
+row-side panel that summarizes each row cluster (defined by \code{row_split})
+with a line plot (mean or median across columns or column groups).
+It is particularly useful for visualizing module-level trends or cluster-level
+expression profiles in omics data.
+}
+\details{
+The function performs the following steps:
+\enumerate{
+  \item Split rows according to \code{row_split}.
+  \item Assign random colors to each row group and display them as block
+  annotations on the right side.
+  \item For each row group, compute either the mean or median expression
+  across columns (or across column groups if \code{column_split} is provided).
+  \item Plot the summarized values as a line within a custom panel aligned
+  to the corresponding row cluster.
+}
+
+This visualization is particularly suitable for showing module-level or
+cluster-level trends, such as temporal patterns or condition-specific shifts
+in expression.
+}
+\examples{
+\dontrun{
+library(ComplexHeatmap)
+
+# Example matrix
+mat <- matrix(rnorm(200), nrow = 20)
+rownames(mat) <- paste0("Gene", 1:20)
+colnames(mat) <- paste0("Sample", 1:10)
+
+# Row and column grouping
+row_grp <- rep(LETTERS[1:4], each = 5)
+col_grp <- rep(c("Ctrl", "Treat"), each = 5)
+
+# Draw heatmap with summary lines
+ht <- plot_heatmap_withline(
+  mat = mat,
+  row_split = row_grp,
+  column_split = col_grp,
+  set.md = "mean"
+)
+
+draw(ht)
+}
+
 }

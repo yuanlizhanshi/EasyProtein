@@ -1,3 +1,112 @@
+#' Save plots in multiple formats with standardized resolution
+#'
+#' Save a plot object into PDF, TIFF, and PNG formats simultaneously with
+#' predefined scaling rules for width, height, and resolution. Output files
+#' are automatically organized into subdirectories under a \code{Fig/} folder.
+#'
+#' This function is designed for publication-quality figure export, supporting
+#' both ggplot objects and grid graphical objects (e.g., \code{gList}).
+#'
+#' @param object A plot object to be saved. Can be a \code{ggplot} object or a
+#'   grid graphical object such as \code{gList}.
+#' @param filenames A character string specifying the base filename (without
+#'   file extension) for the output figures.
+#' @param width Numeric. Figure width in inches. Must be provided.
+#' @param height Numeric. Figure height in inches. Must be provided.
+#' @param dpi Numeric. Resolution in dots per inch. Default is \code{600}.
+#'
+#' @details
+#' The function creates a directory structure:
+#' \describe{
+#'   \item{Fig/PDF}{PDF output}
+#'   \item{Fig/TIFF}{TIFF output}
+#'   \item{Fig/PNG}{PNG output}
+#' }
+#'
+#' File dimensions are scaled internally:
+#' \itemize{
+#'   \item PDF: width and height multiplied by 2.
+#'   \item TIFF: width and height multiplied by 1000.
+#'   \item PNG: width and height multiplied by 500.
+#' }
+#'
+#' For PNG output, if \code{dpi > 600}, the resolution is automatically set to 300;
+#' otherwise, \code{dpi/2} is used.
+#'
+#' If \code{object} is of class \code{gList}, the plot is rendered using
+#' \code{grid.draw()}; otherwise, \code{print()} is used.
+#'
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of writing figure files to disk.
+#'
+#' @importFrom grDevices cairo_pdf dev.off
+#' @importFrom grid grid.draw
+#' @importFrom purrr map
+#'
+#' @examples
+#' \dontrun{
+#' library(ggplot2)
+#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#'
+#' saveplot(
+#'   object = p,
+#'   filenames = "mtcars_scatter",
+#'   width = 6,
+#'   height = 4,
+#'   dpi = 600
+#' )
+#' }
+#'
+#' @export
+
+saveplot <- function(object,filenames = filename,width = NULL,height = NULL,dpi = 600){
+  if (is.null(width)| is.null(height)) {
+    stop('Must input figure width and height')
+  }
+
+  if(!dir.exists("Fig")){
+    dir.create("Fig")
+  }
+  purrr::map(c("TIFF","PNG","PDF"),function(x){
+    if(!dir.exists(paste0('Fig/',x))){
+      dir.create(paste0('Fig/',x))
+    }
+  })
+
+  pdf_filenames = paste0('Fig/PDF/',filenames,'.pdf')
+  pdf_width = width*2
+  pdf_height = height*2
+  pdf_res = dpi
+
+  tiff_filenames = paste0('Fig/TIFF/',filenames,'.tiff')
+  tiff_width = width*1000
+  tiff_height = height*1000
+  tiff_res = dpi
+
+  png_filenames = paste0('Fig/PNG/',filenames,'.png')
+  png_width = width*500
+  png_height = height*500
+  if (dpi > 600) {
+    png_res = 300
+  }else{
+    png_res = dpi/2
+  }
+  if (class(object)[1] == 'gList') {
+    cairo_pdf(file = pdf_filenames,width = pdf_width, height = pdf_height,fallback_resolution = pdf_res)
+    grid.draw(object)
+    dev.off()
+
+
+  }else{
+    cairo_pdf(file = pdf_filenames,width = pdf_width, height = pdf_height,fallback_resolution = pdf_res)
+    print(object)
+    dev.off()
+
+
+  }
+
+}
+
 #' Plot gene expression across samples or conditions
 #'
 #' This function extracts a given gene from a SummarizedExperiment object,
@@ -773,120 +882,196 @@ plot_GO_dot3 <- function(GO_df, topn = 10, label_format = 30){
 
 
 
-#' Heatmap with mean/median trend line and block annotation
+#' Plot heatmap with row-wise summary line using ComplexHeatmap
 #'
-#' This wrapper around ComplexHeatmap visualizes a matrix with row clusters.
-#' A trend line (mean or median) is added per column group.
+#' This function draws a heatmap using \pkg{ComplexHeatmap} and adds a custom
+#' row-side panel that summarizes each row cluster (defined by \code{row_split})
+#' with a line plot (mean or median across columns or column groups).
+#' It is particularly useful for visualizing module-level trends or cluster-level
+#' expression profiles in omics data.
 #'
-#' @param mat Numeric matrix.
-#' @param row_split Vector defining row groups.
-#' @param column_split Vector defining column groups.
-#' @param top_annotation ComplexHeatmap top annotation.
-#' @param show_column_names Logical.
-#' @param ht.col.list List controlling heatmap colors.
-#' @param border Logical.
-#' @param line.size Size of grid lines.
-#' @param line.col Color of grid lines.
-#' @param mline.size Size of trend line.
-#' @param mline.col Color of trend line.
-#' @param set.md "mean" or "median".
-#' @param textbox.pos Position of group text.
-#' @param textbox.size Font size of group text.
-#' @param panel.arg Parameters for ComplexHeatmap::anno_link.
-#' @param ... Passed to ComplexHeatmap::Heatmap.
+#' @param mat A numeric matrix. Rows typically represent genes/features and
+#'   columns represent samples/conditions. The matrix will be internally coerced
+#'   to \code{matrix} if needed.
 #'
-#' @return A Heatmap object.
+#' @param row_split A vector or factor of length \code{nrow(mat)} used to split
+#'   rows into clusters or groups. Each unique level defines one row group.
 #'
-#' @importFrom ComplexHeatmap Heatmap anno_block anno_link rowAnnotation ht_opt grid.textbox
+#' @param column_split A vector or factor of length \code{ncol(mat)} used to split
+#'   columns into groups. If provided, summary lines are calculated at the group
+#'   level; otherwise, summaries are calculated across all columns.
+#'
+#' @param top_annotation A \code{HeatmapAnnotation} object (from
+#'   \pkg{ComplexHeatmap}) added to the top of the heatmap. Default is \code{NULL}.
+#'
+#' @param show_column_names Logical. Whether to display column names on the heatmap.
+#'   Default is \code{FALSE}.
+#'
+#' @param ht.col.list A list controlling the color mapping of the heatmap.
+#'   \describe{
+#'     \item{col_range}{Numeric vector of length 3 specifying breakpoints for the color scale.}
+#'     \item{col_color}{Character vector of colors corresponding to \code{col_range}.}
+#'   }
+#'
+#' @param border Logical. Whether to draw borders around heatmap cells. Passed to
+#'   \code{ComplexHeatmap::Heatmap}. Default is \code{TRUE}.
+#'
+#' @param line.size Numeric. Line width for grid lines in the heatmap body.
+#'   Default is \code{0.1}.
+#'
+#' @param line.col Character. Color of grid lines in the heatmap body.
+#'   Default is \code{"grey90"}.
+#'
+#' @param mline.size Numeric. Line width of the summary line drawn in the right
+#'   annotation panel. Default is \code{2}.
+#'
+#' @param mline.col Character. Color of the summary line drawn in the right
+#'   annotation panel. Default is \code{"#CC3333"}.
+#'
+#' @param set.md Character. Method for summarizing values within each cluster.
+#'   Either \code{"mean"} or \code{"median"}. Default is \code{"mean"}.
+#'
+#' @param textbox.pos Numeric vector of length 2 giving the relative position
+#'   (in NPC units) of the annotation text box inside the panel. Default is
+#'   \code{c(0.5, 0.8)}.
+#'
+#' @param textbox.size Numeric. Font size of the annotation text shown in the panel.
+#'   Default is \code{8}.
+#'
+#' @param panel.arg A vector of length 5 controlling the layout and appearance
+#'   of the right-side summary panel created by \code{anno_link}:
+#'   \describe{
+#'     \item{[1]}{Height of the panel (in cm).}
+#'     \item{[2]}{Gap between heatmap and panel (in cm).}
+#'     \item{[3]}{Width of the panel (in cm).}
+#'     \item{[4]}{Fill color of the panel background.}
+#'     \item{[5]}{Border color of the panel. Use \code{NA} to remove the border.}
+#'   }
+#'   Default is \code{c(2, 0.25, 4, "grey90", NA)}.
+#'
+#' @param ... Additional arguments passed to \code{ComplexHeatmap::Heatmap}.
+#'
+#' @return A \code{Heatmap} object from \pkg{ComplexHeatmap}. The object can be
+#'   further modified, combined with other heatmaps, or drawn using \code{draw()}.
+#'
+#' @details
+#' The function performs the following steps:
+#' \enumerate{
+#'   \item Split rows according to \code{row_split}.
+#'   \item Assign random colors to each row group and display them as block
+#'   annotations on the right side.
+#'   \item For each row group, compute either the mean or median expression
+#'   across columns (or across column groups if \code{column_split} is provided).
+#'   \item Plot the summarized values as a line within a custom panel aligned
+#'   to the corresponding row cluster.
+#' }
+#'
+#' This visualization is particularly suitable for showing module-level or
+#' cluster-level trends, such as temporal patterns or condition-specific shifts
+#' in expression.
+#'
+#' @examples
+#' \dontrun{
+#' library(ComplexHeatmap)
+#'
+#' # Example matrix
+#' mat <- matrix(rnorm(200), nrow = 20)
+#' rownames(mat) <- paste0("Gene", 1:20)
+#' colnames(mat) <- paste0("Sample", 1:10)
+#'
+#' # Row and column grouping
+#' row_grp <- rep(LETTERS[1:4], each = 5)
+#' col_grp <- rep(c("Ctrl", "Treat"), each = 5)
+#'
+#' # Draw heatmap with summary lines
+#' ht <- plot_heatmap_withline(
+#'   mat = mat,
+#'   row_split = row_grp,
+#'   column_split = col_grp,
+#'   set.md = "mean"
+#' )
+#'
+#' draw(ht)
+#' }
+#'
+#' @importFrom ComplexHeatmap Heatmap HeatmapAnnotation rowAnnotation anno_block anno_link
+#' @importFrom grid unit gpar
 #' @importFrom scales rescale
-#' @importFrom grid grid.rect grid.text pushViewport popViewport viewport gpar unit
-#'
 #' @export
 
-plot_heatmap_withline <- function(
-    mat = NULL,
-    row_split = NULL,
-    column_split = NULL,
-    top_annotation = NULL,
-    show_column_names = FALSE,
-    ht.col.list = list(col_range = c(-2, 0, 2),
-                       col_color = c("#08519C", "white", "#A50F15")),
-    border = TRUE,
-    line.size = 0.1,
-    line.col = "grey90",
-    mline.size = 2,
-    mline.col = "#CC3333",
-    set.md = "mean",
-    textbox.pos = c(0.5, 0.8),
-    textbox.size = 8,
-    panel.arg = c(2, 0.25, 4, "grey90", NA),
-    ...
-) {
+plot_heatmap_withline <- function(mat = NULL,
+                                  row_split = NULL,
+                                  #top_annotation = top_annotation,
+                                  column_split =NULL,
+                                  top_annotation = NULL,
+                                  show_column_names = FALSE,
+                                  ht.col.list = list(col_range = c(-2, 0, 2),
+                                                     col_color = c("#08519C", "white", "#A50F15")),
+                                  border = TRUE,
+                                  line.size = 0.1,
+                                  line.col = "grey90",
+                                  mline.size = 2,
+                                  mline.col = "#CC3333",
+                                  set.md = "mean",
+                                  textbox.pos = c(0.5, 0.8),
+                                  textbox.size = 8,
+                                  panel.arg = c(2, 0.25, 4, "grey90", NA),
+                                  ...) {
 
   ComplexHeatmap::ht_opt(message = FALSE)
+
+
 
   subgroup <- factor(row_split)
   cluster.num <- nlevels(subgroup)
 
-  # Random colors for cluster blocks
-  clustcol <- c(
-    "OrangeRed", "SlateBlue3", "DarkOrange", "GreenYellow", "Purple",
-    "DarkSlateGray", "Gold", "DarkGreen", "DeepPink2", "Red4",
-    "#4682B4", "#FFDAB9", "#708090", "#836FFF", "#CDC673", "#CD9B1D"
-  )
-  colanno <- sample(clustcol, cluster.num)
+
+  clustcol <-c("OrangeRed","SlateBlue3","DarkOrange","GreenYellow","Purple","DarkSlateGray","Gold","DarkGreen","DeepPink2","Red4","#4682B4","#FFDAB9","#708090","#836FFF","#CDC673","#CD9B1D","#FF6EB4","#CDB5CD","#008B8B","#43CD80","#483D8B","#66CD00","#CDC673","#CDAD00","#CD9B9B","#FF8247","#8B7355","#8B3A62","#68228B","#CDB7B5","#CD853F","#6B8E23","#696969","#7B68EE","#9F79EE","#B0C4DE","#7A378B","#66CDAA","#EEE8AA","#00FF00","#EEA2AD","#A0522D","#000080","#E9967A","#00CDCD","#8B4500","#DDA0DD","#EE9572","#EEE9E9","#8B1A1A","#8B8378","#EE9A49","#EECFA1","#8B4726","#8B8878","#EEB4B4","#C1CDCD","#8B7500","#0000FF","#EEEED1","#4F94CD","#6E8B3D","#B0E2FF","#76EE00","#A2B5CD","#548B54","#BBFFFF","#B4EEB4","#00C5CD","#008B8B","#7FFFD4","#8EE5EE","#43CD80","#68838B","#00FF00","#B9D3EE","#9ACD32","#00688B","#FFEC8B","#1C86EE","#CDCD00","#473C8B","#FFB90F","#EED5D2","#CD5555","#CDC9A5","#FFE7BA","#FFDAB9","#CD661D","#CDC5BF","#FF8C69","#8A2BE2","#CD8500","#B03060","#FF6347","#FF7F50","#CD0000","#F4A460","#FFB5C5","#DAA520","#CD6889","#32CD32","#FF00FF","#2E8B57","#CD96CD","#48D1CC","#9B30FF","#1E90FF","#CDB5CD","#191970","#E8E8E8","#FFDAB9")
+  colanno <- sample(clustcol,cluster.num)
   names(colanno) <- levels(subgroup)
 
-  # Row block annotation
-  anno.block <- ComplexHeatmap::anno_block(
-    align_to = split(1:nrow(mat), subgroup),
-    panel_fun = function(index, nm) {
-      npos = as.numeric(nm)
-      grid::grid.rect(gp = grid::gpar(fill = colanno[npos], col = NA))
-      grid::grid.text(
-        label = paste0("n:", length(index)),
-        rot = 90,
-        gp = grid::gpar(col = "white", fontsize = 8)
-      )
-    },
-    which = "row"
-  )
-
-  # -----------------------------
-  # panel drawing function
-  # -----------------------------
-  panel_fun <- function(index, nm) {
-    grid::pushViewport(grid::viewport(
-      xscale = c(0, 1), yscale = c(0, 1), clip = "on"
-    ))
+  anno.block <- ComplexHeatmap::anno_block(align_to = split(1:nrow(mat), subgroup),
+                                           panel_fun = function(index, nm) {
+                                             npos = as.numeric(nm)
+                                             grid::grid.rect(gp = grid::gpar(fill = colanno[npos], col = NA))
+                                             grid::grid.text(label = paste("n:", length(index), sep = ''),
+                                                             rot = 90,
+                                                             gp = grid::gpar(col = "white", fontsize = 8))
+                                           },
+                                           which = "row")
+  panel_fun = function(index, nm) {
+    grid::pushViewport(grid::viewport(xscale = c(0, 1), yscale = c(0, 1), clip = "on"))
+    grid::grid.rect()
 
     tmpmat <- mat[index, , drop = FALSE]
 
-    # -------------------------------------------------
-    # draw mean/median trend line
-    # -------------------------------------------------
     if (!is.null(column_split)) {
       col_groups <- factor(column_split)
       group_levels <- levels(col_groups)
 
+      # 计算每个组的均值
       means <- sapply(group_levels, function(g) {
         cols <- which(col_groups == g)
         vals <- as.numeric(tmpmat[, cols])
-        if (set.md == "mean") mean(vals, na.rm = TRUE) else median(vals, na.rm = TRUE)
+        if (set.md == "mean") {
+          mean(vals, na.rm = TRUE)
+        } else {
+          median(vals, na.rm = TRUE)
+        }
       })
 
       x_coords <- seq_along(means)
-
-      # scaling
       from_range <- range(means, na.rm = TRUE)
-      clip <- function(x) pmin(pmax(x, 0.05), 0.95)
 
-      y_scaled <- clip(scales::rescale(means, to = c(0.05, 0.95), from = from_range))
-      x_scaled <- clip(scales::rescale(x_coords, to = c(0.05, 0.95)))
+      # ✅ 缩放到 0.05–0.95，并强制不越界
+      clip_range <- function(x) pmin(pmax(x, 0.05), 0.95)
+      y_mean <- clip_range(scales::rescale(means, to = c(0.05, 0.95), from = from_range))
+      x_scaled <- clip_range(scales::rescale(x_coords, to = c(0.05, 0.95)))
 
+      # ✅ 绘制均值线（用 NPC 单位确保不超 panel）
       grid::grid.lines(
-        x = grid::unit(x_scaled, "npc"),
-        y = grid::unit(y_scaled, "npc"),
+        x = unit(x_scaled, "npc"),
+        y = unit(y_mean, "npc"),
         gp = grid::gpar(lwd = mline.size, col = mline.col)
       )
 
@@ -894,62 +1079,54 @@ plot_heatmap_withline <- function(
       mdia <- if (set.md == "mean") colMeans(tmpmat, na.rm = TRUE)
       else apply(tmpmat, 2, median, na.rm = TRUE)
 
-      y_scaled <- scales::rescale(mdia, to = c(0.05, 0.95))
-      x_scaled <- scales::rescale(seq_along(mdia), to = c(0.05, 0.95))
-
+      y <- scales::rescale(mdia, to = c(0.05, 0.95), from = range(mdia, na.rm = TRUE))
       grid::grid.lines(
-        x = grid::unit(x_scaled, "npc"),
-        y = grid::unit(y_scaled, "npc"),
+        x = unit(scales::rescale(seq_along(mdia), to = c(0.05, 0.95)), "npc"),
+        y = unit(y, "npc"),
         gp = grid::gpar(lwd = mline.size, col = mline.col)
       )
     }
 
-    # -------------------------------------------------
-    # add text box (using ComplexHeatmap::grid.textbox)
-    # -------------------------------------------------
-    text <- paste0("Gene number: ", length(index))
-
-    ComplexHeatmap::grid.textbox(
+    # ✅ 添加文字标签
+    grid.textbox <- utils::getFromNamespace("grid.textbox", "ComplexHeatmap")
+    text <- paste("Gene number:", length(index))
+    grid.textbox(
       text,
-      x = textbox.pos[1],
-      y = textbox.pos[2],
-      gp = grid::gpar(fontsize = textbox.size, fontface = "italic"),
-      background_gp = grid::gpar(col = NA, fill = "transparent")
+      x = textbox.pos[1], y = textbox.pos[2],
+      background_gp = gpar(col = NA, fill = 'transparent'),
+      gp = grid::gpar(fontsize = textbox.size, fontface = "italic")
     )
 
     grid::popViewport()
   }
 
-  # row annotation
-  right_annotation <- ComplexHeatmap::rowAnnotation(
-    cluster = anno.block,
-    line = ComplexHeatmap::anno_link(
-      align_to = subgroup,
-      which = "row",
-      panel_fun = panel_fun,
-      size = grid::unit(as.numeric(panel.arg[1]), "cm"),
-      gap = grid::unit(as.numeric(panel.arg[2]), "cm"),
-      width = grid::unit(as.numeric(panel.arg[3]), "cm"),
-      side = "right",
-      link_gp = grid::gpar(fill = panel.arg[4], col = panel.arg[5])
-    )
-  )
 
-  # final heatmap
-  ht_final <- ComplexHeatmap::Heatmap(
-    as.matrix(mat),
-    name = "Z-score",
-    cluster_rows = TRUE,
-    cluster_columns = FALSE,
-    show_row_names = FALSE,
-    show_column_names = show_column_names,
-    top_annotation = top_annotation,
-    column_split = column_split,
-    row_split = row_split,
-    right_annotation = right_annotation,
-    ...
-  )
 
-  return(ht_final)
+
+
+  right_annotation <- ComplexHeatmap::rowAnnotation(cluster = anno.block,
+                                                    line = ComplexHeatmap::anno_link(align_to = subgroup,
+                                                                                     which = "row",
+                                                                                     panel_fun = panel_fun,
+                                                                                     size = grid::unit(as.numeric(panel.arg[1]), "cm"),
+                                                                                     gap = grid::unit(as.numeric(panel.arg[2]), "cm"),
+                                                                                     width = grid::unit(as.numeric(panel.arg[3]), "cm"),
+                                                                                     side = "right",
+                                                                                     link_gp = grid::gpar(fill = panel.arg[4], col = panel.arg[5])))
+
+  htf <- ComplexHeatmap::Heatmap(as.matrix(mat),
+                                 name = "Z-score",
+                                 cluster_rows  = T,
+                                 cluster_columns = F,
+                                 show_row_names = F,
+                                 show_column_names = show_column_names,
+                                 top_annotation = top_annotation,
+                                 column_split = column_split,
+                                 row_split = row_split,
+                                 column_title = NULL,
+                                 right_annotation = right_annotation,
+                                 ...)
+  return(htf)
 }
+
 

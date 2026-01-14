@@ -1,7 +1,7 @@
 Package: EasyProtein
 Type: Package
 Title: An Interactive and Reproducible Platform for Comprehensive Proteomics Data Analysis
-Version: 0.1.2
+Version: 0.2.0
 Authors@R: 
     c(
       person("Yunhui Kong", role =c("aut","cre"),email = "kongyunhui1@gamil.com")
@@ -23,7 +23,6 @@ Imports:
     ggiraph,
     ggrepel,
     limma,
-    matrixStats,
     purrr,
     rlang,
     S4Vectors,

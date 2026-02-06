@@ -501,39 +501,55 @@ get_turning_point <- function(vec, fluctuate = 0.05) {
 #' @return A data.frame containing CV values for each gene per condition.
 #' @export
 
-calc_gene_CV_by_condition <- function(se,
-                                      assay_name = "conc",
-                                      condition_col = "condition") {
+
+
+calc_feature_CV_by_condition <- function(
+    se,
+    assay_name = "conc",
+    condition_col = "condition"
+) {
 
   stopifnot(assay_name %in% assayNames(se))
   stopifnot(condition_col %in% colnames(colData(se)))
 
-  if (length(unique(se[[condition_col]])) == ncol(se)) {
+  ## CV is not meaningful if each sample is its own condition
+  if (length(unique(colData(se)[[condition_col]])) == ncol(se)) {
     return(NULL)
   }
 
-  mtx <- assay(se, assay_name)
+  mtx  <- assay(se, assay_name)
   meta <- as.data.frame(colData(se))
 
+  ## Convert assay matrix to long format
   df_long <- as.data.frame(mtx) %>%
-    tibble::rownames_to_column("Protein.Ids") %>%
-    tidyr::pivot_longer(cols = -Protein.Ids,
-                        names_to = "sample",
-                        values_to = "value") %>%
-    dplyr::left_join(meta, by = "sample")
+    tibble::rownames_to_column("feature") %>%
+    tidyr::pivot_longer(
+      cols = -feature,
+      names_to = "sample_name",
+      values_to = "value"
+    ) %>%
+    dplyr::left_join(
+      meta %>% tibble::rownames_to_column("sample_name"),
+      by = "sample_name"
+    )
 
+  ## Calculate CV per feature per condition
   cv_df <- df_long %>%
-    dplyr::group_by(Protein.Ids, !!rlang::sym(condition_col)) %>%
+    dplyr::group_by(
+      feature,
+      !!rlang::sym(condition_col)
+    ) %>%
     dplyr::summarise(
       mean_val = mean(value, na.rm = TRUE),
-      sd_val = sd(value, na.rm = TRUE),
-      CV = sd_val / mean_val,
-      n = sum(!is.na(value)),
-      .groups = "drop"
+      sd_val   = sd(value, na.rm = TRUE),
+      CV       = sd_val / mean_val,
+      n        = sum(!is.na(value)),
+      .groups  = "drop"
     )
 
   return(cv_df)
 }
+
 
 #' Calculate mean expression per gene per condition
 #'
@@ -545,64 +561,70 @@ calc_gene_CV_by_condition <- function(se,
 #' @return A numeric matrix of gene-by-condition mean expression.
 #' @export
 
-calc_gene_mean_by_condition <- function(se,
-                                        assay_name = "conc",
-                                        method = 'mean',
-                                        condition_col = "condition") {
+calc_feature_mean_by_condition <- function(
+    se,
+    assay_name = "conc",
+    method = "mean",
+    condition_col = "condition"
+) {
 
   stopifnot(assay_name %in% assayNames(se))
   stopifnot(condition_col %in% colnames(colData(se)))
+  stopifnot(method %in% c("mean", "median"))
 
-  if (length(unique(se[[condition_col]])) == ncol(se)) {
+  if (length(unique(colData(se)[[condition_col]])) == ncol(se)) {
     return(NULL)
-  } else {
-
-    mtx  <- assay(se, assay_name)
-    meta <- as.data.frame(colData(se))
-
-    gene_order <- rownames(mtx)
-
-    df_long <- as.data.frame(mtx) %>%
-      tibble::rownames_to_column("Protein.Ids") %>%
-      tidyr::pivot_longer(
-        cols = -Protein.Ids,
-        names_to = "sample",
-        values_to = "value"
-      ) %>%
-      dplyr::left_join(meta, by = c("sample"))
-    if (method == 'mean') {
-      mean_df <- df_long %>%
-        dplyr::group_by(Protein.Ids, !!sym(condition_col)) %>%
-        dplyr::summarise(
-          mean_val = mean(value, na.rm = TRUE),
-          .groups = "drop"
-        ) %>%
-        tidyr::pivot_wider(
-          names_from  = !!sym(condition_col),
-          values_from = mean_val
-        )
-    }else{
-      mean_df <- df_long %>%
-        dplyr::group_by(Protein.Ids, !!sym(condition_col)) %>%
-        dplyr::summarise(
-          mean_val = median(value, na.rm = TRUE),
-          .groups = "drop"
-        ) %>%
-        tidyr::pivot_wider(
-          names_from  = !!sym(condition_col),
-          values_from = mean_val
-        )
-    }
-
-
-
-    mean_mat <- as.data.frame(mean_df)
-    rownames(mean_mat) <- mean_mat$Protein.Ids
-    mean_mat$Protein.Ids <- NULL
-
-    mean_mat <- mean_mat[gene_order, , drop = FALSE]
-
-    return(as.matrix(mean_mat))
   }
+
+  mtx  <- assay(se, assay_name)
+  meta <- as.data.frame(colData(se))
+
+  feature_order <- rownames(mtx)
+
+  ## Convert assay matrix to long format
+  df_long <- as.data.frame(mtx) %>%
+    tibble::rownames_to_column("feature") %>%
+    tidyr::pivot_longer(
+      cols = -feature,
+      names_to = "sample_name",
+      values_to = "value"
+    ) %>%
+    dplyr::left_join(
+      meta %>% tibble::rownames_to_column("sample_name"),
+      by = "sample_name"
+    )
+
+  ## Aggregate by feature and condition
+  if (method == "mean") {
+    agg_df <- df_long %>%
+      dplyr::group_by(feature, !!rlang::sym(condition_col)) %>%
+      dplyr::summarise(
+        stat_value = mean(value, na.rm = TRUE),
+        .groups = "drop"
+      )
+  } else {
+    agg_df <- df_long %>%
+      dplyr::group_by(feature, !!rlang::sym(condition_col)) %>%
+      dplyr::summarise(
+        stat_value = median(value, na.rm = TRUE),
+        .groups = "drop"
+      )
+  }
+
+  ## Convert to wide matrix
+  mean_df <- agg_df %>%
+    tidyr::pivot_wider(
+      names_from  = !!rlang::sym(condition_col),
+      values_from = stat_value
+    )
+
+  mean_mat <- as.data.frame(mean_df)
+  rownames(mean_mat) <- mean_mat$feature
+  mean_mat$feature <- NULL
+
+  ## Preserve original feature order
+  mean_mat <- mean_mat[feature_order, , drop = FALSE]
+
+  return(as.matrix(mean_mat))
 }
 

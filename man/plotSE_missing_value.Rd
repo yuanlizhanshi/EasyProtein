@@ -5,19 +5,13 @@
 \title{Plot missing values per sample}
 \usage{
 plotSE_missing_value(se)
-
-plotSE_missing_value(se)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
 }
 \value{
 A ggplot object summarizing missing count per sample.
-
-A ggplot object summarizing missing count per sample.
 }
 \description{
-Plot missing values per sample
-
 Plot missing values per sample
 }

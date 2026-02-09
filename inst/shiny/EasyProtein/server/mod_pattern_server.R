@@ -11,7 +11,7 @@ mod_pattern_server <- function(input, output, session) {
     se     = NULL,
     se_sub = NULL
   )
-
+  ht_obj <- reactiveVal(NULL)
   mat_data <- reactiveVal(NULL)
   row_info <- reactiveVal(NULL)
   col_info <- reactiveVal(NULL)
@@ -275,10 +275,6 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
     # 3.6 画热图 PDF
     # =============================
-    out_pdf <- file.path("www", paste0("heatmap_", Sys.time(), "_",".pdf"))
-
-    cairo_pdf(out_pdf, width = input$pdf_width, height = input$pdf_height, fallback_resolution = 300)
-
     # 顶部注释
     top_anno <- NULL
     if (input$top_annotaion_legend != "NULL") {
@@ -309,6 +305,7 @@ mod_pattern_server <- function(input, output, session) {
         row_split         = row_split_vec,
         column_split      = col_split_vec,
         top_annotation    = top_anno,
+        use_raster = TRUE,
         name              = "Z-score"
       )
     } else {
@@ -323,6 +320,7 @@ mod_pattern_server <- function(input, output, session) {
           row_split         = row_split_vec,
           column_split      = col_split_vec,
           top_annotation    = top_anno,
+          use_raster = TRUE,
           name              = "Z-score"
         )
       } else {
@@ -336,36 +334,54 @@ mod_pattern_server <- function(input, output, session) {
       }
     }
 
-    ComplexHeatmap::draw(ht)
-    grDevices::dev.off()
-
-    pdf_path(out_pdf)
+    ht_obj(ht)
     removeModal()
-
     # =============================
     # 3.7 输出 UI：PDF 预览 + 按钮
     # =============================
-    output$heatmap_pdf <- renderUI({
-      tags$iframe(
-        src   = out_pdf,
-        style = "width:100%; height:700px;"
-      )
+    output$heatmap_plot <- renderPlot({
+      req(ht_obj())
+      ComplexHeatmap::draw(ht_obj())
     })
+    output$heatmap_pdf <- renderUI({
+      plotOutput("heatmap_plot", height = "700px")
+    })
+
+
+    ##
 
     output$reset_params_ui <- renderUI({
       req(row_info())
       actionButton("reset_params", "Reset parameters", class = "btn-info")
     })
 
-    output$download_ui <- renderUI({
-      req(row_info())
-      downloadButton("download_clusters", "Download clusters results")
-    })
+
   })
 
   # =============================
   # 4. 下载聚类结果
   # =============================
+
+  output$download_heatmap_pdf <- make_download_pdf(
+    plot_expr = function() {
+      req(ht_obj())
+      ht_obj()
+    },
+    input     = input,
+    suffix    = "heatmap",
+    width     = function() input$pdf_width,
+    height    = function() input$pdf_height,
+    input_field = "matrix_file"
+  )
+  output$download_heatmap_pdf_pattern_ui <- renderUI({
+    req(ht_obj())
+    downloadButton("download_heatmap_pdf", "Download PDF")
+  })
+  output$download_ui <- renderUI({
+    req(row_info())
+    downloadButton("download_clusters", "Download clusters results")
+  })
+
   output$download_clusters <- downloadHandler(
     filename = function() {
       paste0(
@@ -383,6 +399,7 @@ mod_pattern_server <- function(input, output, session) {
       openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
     }
   )
+
 
   # =============================
   # 5. 下载带聚类信息的 SE

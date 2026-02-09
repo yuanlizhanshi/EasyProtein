@@ -5,23 +5,23 @@
 # ======================================================
 
 mod_visualization_server <- function(input, output, session) {
-  
+
   # =====================================================
   # 1️⃣ Volcano plot 部分
   # =====================================================
   DEGs_rv2 <- reactiveVal(NULL)
-  
+
   observeEvent(input$Upload_DEG_table1, {
     req(input$Upload_DEG_table1)
     deg_path <- input$Upload_DEG_table1$datapath
     DEGs_df <- readxl::read_excel(deg_path)
     DEGs_rv2(DEGs_df)
   })
-  
+
   make_vol_plot <- reactive({
     req(DEGs_rv2())
     df <- DEGs_rv2()
-    
+
     ivolcano(
       data          = df,
       logFC_col     = "logFC",
@@ -32,12 +32,12 @@ mod_visualization_server <- function(input, output, session) {
       top_n         = input$Volcano_topN,
     )
   })
-  
+
   output$volcano <- ggiraph::renderGirafe({
     req(DEGs_rv2())
     make_vol_plot()$ggiraph_obj
   })
-  
+
   output$download_vol_pdf <- downloadHandler(
     filename = function() {
       base_full <- tools::file_path_sans_ext(basename(input$Upload_DEG_table1$name))
@@ -48,9 +48,9 @@ mod_visualization_server <- function(input, output, session) {
       ggplot2::ggsave(file, plot = p, device = cairo_pdf, width = 8, height = 6, dpi = 600)
     }
   )
-  
-  
-  
+
+
+
   # =====================================================
   # 2️⃣ GO enrichment dotplot 部分
   # =====================================================
@@ -62,7 +62,7 @@ mod_visualization_server <- function(input, output, session) {
                  "xls"  = readxl::read_xls(input$go_file$datapath),
                  stop("Only .xls/.xlsx are supported")
     )
-    
+
     need_cols <- c("Description", "p.adjust", "GeneRatio", "Count")
     validate(
       need(all(need_cols %in% names(df)),
@@ -71,7 +71,7 @@ mod_visualization_server <- function(input, output, session) {
     )
     df
   })
-  
+
 
   output$GO_enrich_plot1 <- renderPlot({
     req(go_df())
@@ -79,26 +79,26 @@ mod_visualization_server <- function(input, output, session) {
   },
   height = function() input$go_plot_height,
   width = function() input$go_plot_width)
-  
+
   output$GO_enrich_plot2 <- renderPlot({
     req(go_df())
     plot_GO_dot2(go_df(), topn = input$go_topn, label_format = input$go_label_width)
   },
   height = function() input$go_plot_height,
   width = function() input$go_plot_width)
-  
- 
+
+
   output$down_GO_pdf_style1 <- renderUI({
     req(go_df())
     downloadButton("dl_go_style1", "Download PDF")
   })
-  
+
   output$down_GO_pdf_style2 <- renderUI({
     req(go_df())
     downloadButton("dl_go_style2", "Download PDF")
   })
-  
- 
+
+
   output$dl_go_style1 <- make_download_pdf(
     plot_expr   = function() plot_GO_dot1(go_df(), topn = input$go_topn, label_format = input$go_label_width),
     input       = input,
@@ -107,7 +107,7 @@ mod_visualization_server <- function(input, output, session) {
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"
   )
-  
+
   output$dl_go_style2 <- make_download_pdf(
     plot_expr   = function() plot_GO_dot2(go_df(), topn = input$go_topn, label_format = input$go_label_width),
     input       = input,
@@ -126,7 +126,7 @@ mod_visualization_server <- function(input, output, session) {
                  "tsv"  = data.table::fread(input$string_go_file$datapath),
                  stop("Only .tsv/.xls/.xlsx are supported")
     )
-    
+
     need_cols <- c("false discovery rate", "genes mapped", "term description", "enrichment score")
     validate(
       need(all(need_cols %in% names(df)),
@@ -141,8 +141,8 @@ mod_visualization_server <- function(input, output, session) {
   },
   height = function() input$string_go_plot_height,
   width = function() input$string_go_width)
-  
-  
+
+
   output$down_GO_pdf_style3 <- renderUI({
     req(string_go_df())
     downloadButton("dl_go_style3", "Download PDF")
@@ -156,7 +156,7 @@ mod_visualization_server <- function(input, output, session) {
     input_field = "string_go_file"
   )
   ##gene expression------
-  
+
   se_data   <- reactiveVal(NULL)
   observeEvent(input$gene_exp_rds, {
     req(input$gene_exp_rds)
@@ -187,45 +187,45 @@ mod_visualization_server <- function(input, output, session) {
       )
     )
   })
-  
+
   output$choose_samples_UI <- renderUI({
     req(se_data())
     all_cols <- as.data.frame(colData(se_data()))
-    
+
     make_grouped_select("selected_cols", all_cols, default_all = TRUE)$ui
   })
-  
+
   observe({
     req(se_data())
     all_cols <- as.data.frame(colData(se_data()))
     make_grouped_select("selected_cols", all_cols, default_all = TRUE)$server(input, output, session)
   })
 
-  
+
   gene_exp_plot <- reactiveVal(NULL)
   output$gene_exp <- renderPlot({
     req(se_data(), input$gene_select)
-    
+
     se <- se_data()
     genes <- input$gene_select
-    
-    sel <- input$selected_cols 
-    col_name <- sub("\\|\\|.*$", "", sel[1])  
-    vals <- sub("^.*\\|\\|", "", sel)        
-    
+
+    sel <- input$selected_cols
+    col_name <- sub("\\|\\|.*$", "", sel[1])
+    vals <- sub("^.*\\|\\|", "", sel)
+
     col_df <- as.data.frame(colData(se))
     matched_samples <- rownames(col_df)[col_df[[col_name]] %in% vals]
-    
+
     if (length(matched_samples) == 0) {
       showNotification("No samples matched your selection", type = "error")
       return(NULL)
     }
-    
+
     se_sub <- se[, matched_samples, drop = FALSE]
-    
+
     valid_genes <- genes[genes %in% rowData(se_sub)$Genes]
     if (length(valid_genes) == 0) return(NULL)
-    
+
     if (length(valid_genes) == 1) {
       p <- plot_gene_expression(
         se_sub,
@@ -238,16 +238,16 @@ mod_visualization_server <- function(input, output, session) {
       })
       p <- cowplot::plot_grid(plotlist = plot_list)
     }
-    
+
     gene_exp_plot(p)   # ⭐ 核心：把图存下来
     p                  # renderPlot 仍然正常画
   },
   height = function() input$gene_exp_height,
   width  = function() input$gene_exp_width
   )
-  
-  
-  
+
+
+
   output$down_gene_exp_ui <- renderUI({
     req(se_data())
     downloadButton("down_gene_exp", "Download PDF")
@@ -263,12 +263,12 @@ mod_visualization_server <- function(input, output, session) {
     height      = function() input$gene_exp_height / 100,
     input_field = "gene_exp_rds"
   )
-  
-  
 
-  
+
+
+
 }
- 
+
 
 
 

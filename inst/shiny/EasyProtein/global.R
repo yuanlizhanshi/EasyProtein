@@ -47,6 +47,24 @@ CALLER_ID   <- "EasyProtein"
 js_escape  <- function(x) gsub("'", "\\\\'", x, fixed = TRUE)
 
 
+# make_download_pdf <- function(plot_expr, input, suffix = NULL,
+#                               width = 7, height = 5,
+#                               input_field = "se_file") {
+#   downloadHandler(
+#     filename = function() {
+#       base <- tools::file_path_sans_ext(basename(input[[input_field]]$name))
+#       paste0(base, if (!is.null(suffix)) paste0("_", suffix) else "", ".pdf")
+#     },
+#     content = function(file) {
+#       w <- if (is.function(width))  width()  else width
+#       h <- if (is.function(height)) height() else height
+#       cairo_pdf(file, width = w, height = h, fallback_resolution = 300)
+#       print(plot_expr())  # plot_expr() 必须返回 ggplot
+#       dev.off()
+#     }
+#   )
+# }
+
 make_download_pdf <- function(plot_expr, input, suffix = NULL,
                               width = 7, height = 5,
                               input_field = "se_file") {
@@ -58,12 +76,22 @@ make_download_pdf <- function(plot_expr, input, suffix = NULL,
     content = function(file) {
       w <- if (is.function(width))  width()  else width
       h <- if (is.function(height)) height() else height
+
       cairo_pdf(file, width = w, height = h, fallback_resolution = 300)
-      print(plot_expr())  # plot_expr() 必须返回 ggplot
+
+      p <- plot_expr()
+
+      if (inherits(p, "Heatmap") || inherits(p, "HeatmapList")) {
+        ComplexHeatmap::draw(p)
+      } else {
+        print(p)  # ggplot
+      }
+
       dev.off()
     }
   )
 }
+
 #ui ----
 
 timeFilterUI <- function(id) {

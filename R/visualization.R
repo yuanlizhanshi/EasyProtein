@@ -1084,6 +1084,7 @@ plot_heatmap_withline <- function(mat = NULL,
                                  column_split = column_split,
                                  row_split = row_split,
                                  column_title = NULL,
+                                 use_raster = TRUE,
                                  right_annotation = right_annotation,
                                  ...)
   return(htf)

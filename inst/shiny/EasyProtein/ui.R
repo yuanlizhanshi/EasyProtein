@@ -39,7 +39,7 @@ ui <- {
                            uiOutput("HOME_output_text")
                          )
                        ),
-                       
+
                        tags$br(),
                        #tags$hr(style = "border-top: 2px solid #999999; margin:auto;"),
                        card(
@@ -53,7 +53,7 @@ ui <- {
                            style = "background:#FFFFFF;"
                          )
                        ),
-                       
+
                        style = "font-size:150%;width:80%;"
                      )
                  )
@@ -80,7 +80,7 @@ ui <- {
                        )
                      ),
                      verbatimTextOutput("se_summary"),
-                     
+
                      downloadButton("download_se", "下载结果")
                    ),style = "font-size:125%;width:80%;")
         ),
@@ -92,17 +92,17 @@ ui <- {
                      sidebarLayout(
                        sidebarPanel(
                          fileInput("se_file", "Upload SummarizedExperiment (Rds)", accept = ".Rds"),
-                         
+
                          uiOutput('edit_samples_UI'),
                          uiOutput('edit_genes_UI'),
                          uiOutput('download_edit_sample'),
                          br(), br(),
-                         sliderInput("plot_width", "Plot width (px)", 
+                         sliderInput("plot_width", "Plot width (px)",
                                      min = 100, max = 3000, value = 480, step = 20),
-                         sliderInput("plot_height", "Plot height (px)", 
+                         sliderInput("plot_height", "Plot height (px)",
                                      min = 100, max = 3000, value = 340, step = 20),
                          br(), br(),
-                         
+
                          textOutput("included_info")
                        ),
                        mainPanel(
@@ -125,7 +125,7 @@ ui <- {
                              downloadButton("download_protein_density_pdf", "Download PDF"),
                              br(),
                              plotOutput("intensity_density")
-                             
+
                            ),
                            tabPanel(
                              "CV density",
@@ -133,7 +133,7 @@ ui <- {
                              downloadButton("download_cv_density_pdf", "Download PDF"),
                              br(),
                              plotOutput("cv_density")
-                             
+
                            ),
                            tabPanel(
                              "Number of proteins detected",
@@ -141,8 +141,8 @@ ui <- {
                              downloadButton("download_protein_num_pdf", "Download PDF"),
                              br(),
                              plotOutput("proteins_number")
-                             
-                             
+
+
                            ),
                            tabPanel(
                              "Miss value statistics",
@@ -150,7 +150,7 @@ ui <- {
                              downloadButton("download_na_pdf", "Download PDF"),
                              br(),
                              plotOutput("Miss_value_statistics")
-                             
+
                            )
                          )
                        )
@@ -158,8 +158,8 @@ ui <- {
                    ),style = "font-size:125%;width:80%;")
         ),
 
-        
-        
+
+
         ###Pattern clustering-----
         tabPanel(title = "Pattern clustering",
                  icon = icon("project-diagram"),
@@ -173,11 +173,12 @@ ui <- {
                            uiOutput("reset_params_ui"),
                            uiOutput("download_ui"),
                            uiOutput('download_pattern_se_UI')
-                           
+
                          )
                        ),
                        mainPanel(
-                         uiOutput("heatmap_pdf")   # 动态 PDF iframe
+                         uiOutput("heatmap_pdf"),
+                         uiOutput("download_heatmap_pdf_pattern_ui")
                        )
                      )
                    ),style = "font-size:125%;width:90%;")
@@ -204,16 +205,16 @@ ui <- {
                    )
                  ),
                  div(
-                   DTOutput("DEGs_table") 
+                   DTOutput("DEGs_table")
                  )
                  ,style = "font-size:125%;width:80%;"),
                  icon = icon('exchange-alt', lib = "font-awesome")
-                 
-                 
+
+
         ),
-        
+
         ###Time series-------
-        tabPanel(title = "Time series", 
+        tabPanel(title = "Time series",
                  icon = icon('history'),
                  fluidPage(
                    div(
@@ -222,12 +223,12 @@ ui <- {
                          fileInput("time_rds_file", tags$span("Upload SummarizedExperiment object", style = "white-space: nowrap;"), accept = ".Rds"),
                          sliderInput("FC_plot_width", "Plot width (px)", min = 400, max =1200, value = 600, step = 50),
                          sliderInput("FC_plot_height","Plot height (px)", min = 300, max = 1200, value = 800, step = 50),
-                         
+
                          div(
                            style = "display:flex; align-items:center; gap:10px;",
                            verbatimTextOutput("se_summary_time")
                          ),
-                         
+
                          uiOutput('download_time_se_UI')
                        ),
                        mainPanel(
@@ -240,7 +241,7 @@ ui <- {
                    ),style = "font-size:125%;")
         ),
         ###Tools -----
-        tabPanel(title = "Tools", 
+        tabPanel(title = "Tools",
                  icon = icon('wrench', lib = 'font-awesome'),
                  tabPanel("Subset SE", value = "se",
                           fluidPage(
@@ -253,23 +254,23 @@ ui <- {
                               uiOutput('download_subset_se_UI'),
                               br(),
                               verbatimTextOutput("subset_info"),
-                              
+
                             ),
                             mainPanel(
                               # h4("SE Dimension Preview"),
                               # tableOutput("se_dim_table")
                             )
-                            
+
                           )
                  ),
-                 
+
         ),
         ###Enrichment-----
         tabPanel(
           title = "Functional enrichment",
           value = "Results",
           icon = icon("chart-line", lib = "font-awesome"),
-          
+
           fluidPage(
             tags$head(
               tags$style(HTML("
@@ -282,10 +283,10 @@ ui <- {
         }
       "))
             ),
-            
+
             tabsetPanel(
               id = "visual_tabs",
-              
+
               # --- 1. GO enrichment ---
               tabPanel(
                 "GO enrichment", value = "GO_e",
@@ -434,7 +435,7 @@ ui <- {
                      tabPanel(
                        "Volcano Plot", value = "plotA",
                        sidebarLayout(
-              
+
                          sidebarPanel(
                            width = 4,
                            fileInput(
@@ -444,15 +445,15 @@ ui <- {
                              buttonLabel = "Browse...",
                              placeholder = "No file selected"
                            ),
-                           sliderInput("Volcano_log2FC", "log2FC threshold", 
+                           sliderInput("Volcano_log2FC", "log2FC threshold",
                                        min = 0, max = 3, value = 1, step = 0.1),
-                           sliderInput("Volcano_FDR", "padj threshold", 
+                           sliderInput("Volcano_FDR", "padj threshold",
                                        min = 0.001, max = 0.05, value = 0.05, step = 0.01),
-                           sliderInput("Volcano_topN", "Highlight gene numbers", 
+                           sliderInput("Volcano_topN", "Highlight gene numbers",
                                        min = 0, max = 50, value = 5, step = 1)
                          ),
-                         
-                  
+
+
                          mainPanel(
                            width = 8,
                            div(style = "display: flex; justify-content: flex-end; margin-bottom: 10px;",
@@ -462,14 +463,14 @@ ui <- {
                          )
                        )
                      ),
-                     
-                     tabPanel("Gene expression", 
+
+                     tabPanel("Gene expression",
                               fluidPage(
                                 sidebarLayout(
                                   sidebarPanel(
                                     fileInput("gene_exp_rds", "Upload SE", accept = c(".Rds")),
                                     uiOutput('choose_samples_UI'),
-                                    uiOutput("gene_selector_ui"), 
+                                    uiOutput("gene_selector_ui"),
                                     br(),
                                     br(),
                                     sliderInput("gene_exp_width", "Plot width (px)", min = 400, max = 2000, value = 600, step = 50),
@@ -479,7 +480,7 @@ ui <- {
                                     uiOutput("down_gene_exp_ui"),
                                     br(),
                                     plotOutput("gene_exp")
-                                    
+
                                   )
                                 )
                               )
@@ -501,19 +502,19 @@ ui <- {
                                tabPanel("Style 1",
                                         br(),
                                         plotOutput("GO_enrich_plot1",height = '610px'),
-                                        uiOutput("down_GO_pdf_style1")  
+                                        uiOutput("down_GO_pdf_style1")
                                ),
                                tabPanel("Style 2",
                                         br(),
                                         plotOutput("GO_enrich_plot2",height = '610px'),
-                                        uiOutput("down_GO_pdf_style2") 
+                                        uiOutput("down_GO_pdf_style2")
                                )
                              )
                            )
                          )
                        )
                      ),
-                     tabPanel("String enrichment plot", 
+                     tabPanel("String enrichment plot",
                               fluidPage(
                                 sidebarLayout(
                                   sidebarPanel(
@@ -527,7 +528,7 @@ ui <- {
                                     uiOutput("down_GO_pdf_style3"),
                                     br(),
                                     plotOutput("GO_enrich_plot3",height = '610px')
-                                    
+
                                   )
                                 )
                               )
@@ -546,26 +547,25 @@ ui <- {
                      # )
                  )
               )
-                 
+
         ),
 
         ###
-        tabPanel(title = "Tutorials", 
+        tabPanel(title = "Tutorials",
                  icon = icon('bookmark',lib = 'glyphicon'),
                  p("Tutorials content.")),
-        
+
         tabPanel(title = "Contact",
                  icon =  icon('envelope',lib = 'glyphicon'),
                  p("If any problem, contact kyh")),
         nav_spacer(),
         nav_item(tags$a(shiny::icon("github"), "Kongmou", href = "https://github.com/yuanlizhanshi", target = "_blank"))
       )
-      
-    #  
+
+    #
     )
   )
 }
 
 
 
- 

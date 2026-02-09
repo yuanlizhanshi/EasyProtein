@@ -258,7 +258,7 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
     # 3.6 画热图 PDF
     # =============================
-    out_pdf <- file.path("www", "heatmap.pdf")
+    out_pdf <- file.path("www", paste0("heatmap_", Sys.time(), "_",".pdf"))
 
     cairo_pdf(out_pdf, width = input$pdf_width, height = input$pdf_height, fallback_resolution = 300)
 

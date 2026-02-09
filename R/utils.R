@@ -148,6 +148,7 @@ se2conc <- function(se, group_by = 'condition') {
   expr_mean <- calc_gene_mean_by_condition(
     se = se,
     assay_name = 'conc',
+    method = 'mean',
     condition_col = group_by
   )
   colnames(expr_mean) <- paste0('Mean_', colnames(expr_mean))

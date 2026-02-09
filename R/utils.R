@@ -336,7 +336,7 @@ se2gene_group <- function(se,
   expr <- assay(se, assay)
   expr_log <- log2(expr)
 
-  expr_mean <- calc_gene_mean_by_condition(se = se, assay_name= assay,condition_col = group_by)
+  expr_mean <- calc_gene_mean_by_condition(se = se, method = 'mean',assay_name= assay,condition_col = group_by)
 
   if (!all(rownames(expr_mean) == rownames(expr))) {
     stop('Error')

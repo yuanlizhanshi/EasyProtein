@@ -561,7 +561,7 @@ calc_feature_CV_by_condition <- function(
 #' @return A numeric matrix of gene-by-condition mean expression.
 #' @export
 
-calc_feature_mean_by_condition <- function(
+calc_gene_mean_by_condition <- function(
     se,
     assay_name = "conc",
     method = "mean",

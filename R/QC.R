@@ -110,18 +110,15 @@ rawdata2se <- function(
 
   stopifnot(obs_col %in% colnames(rawdata))
 
-  ## feature
   rawdata$feature <- stringr::str_extract(rawdata[[obs_col]], "^[^;]+")
 
   rawdata <- rawdata %>%
     dplyr::filter(!is.na(feature), feature != "") %>%
     dplyr::filter(!duplicated(feature))
 
-  ## rowData
-  var <- data.frame(feature = rawdata$feature)
-  rownames(var) <- var$feature
+  var <- data.frame(gene = rawdata$feature)
+  rownames(var) <- var$gene
 
-  ## raw intensity matrix
   raw_cols <- stringr::str_detect(colnames(rawdata), raw_prefix)
   stopifnot(any(raw_cols))
 
@@ -131,7 +128,6 @@ rawdata2se <- function(
     basename(colnames(rawdata_mtx))
   )
 
-  ## colData
   obs <- tibble::tibble(
     sample = colnames(rawdata_mtx),
     condition = stringr::str_extract(sample, "\\w+(?=_[^_]*$)"),
@@ -153,7 +149,6 @@ rawdata2se <- function(
     ) %>%
     dplyr::left_join(obs, by = "sample")
 
-  ## single replicate shortcut
   if (single_rep) {
 
     rawdata_impute_df <- impute_low1pct_or_median_raw(
@@ -182,7 +177,7 @@ rawdata2se <- function(
         conc = cpm_mtx,
         zscale = scale_mtx(cpm_mtx)
       ),
-      rowData = S4Vectors::DataFrame(var[rownames(mat), ]),
+      rowData = S4Vectors::DataFrame(var[rownames(mat), , drop = FALSE]),
       colData = S4Vectors::DataFrame(obs[colnames(mat), ])
     )
 
@@ -192,7 +187,6 @@ rawdata2se <- function(
     ))
   }
 
-  ## FC outlier
   rawdata_df <- rawdata_df %>%
     dplyr::group_by(feature, condition) %>%
     dplyr::mutate(
@@ -209,7 +203,6 @@ rawdata2se <- function(
     rawdata_df$raw_value[rawdata_df$fc > fc_threshold] <- NA
   }
 
-  ## missing filter
   missing_feature <- rawdata_df %>%
     dplyr::group_by(feature, condition) %>%
     dplyr::summarise(
@@ -227,7 +220,6 @@ rawdata2se <- function(
   missing_gene_df <- rawdata %>%
     dplyr::filter(feature %in% missing_feature$feature)
 
-  ## impute
   rawdata_impute_df <- impute_low1pct_or_median_raw(
     rawdata_df,
     id_col = "feature"
@@ -254,11 +246,10 @@ rawdata2se <- function(
       conc = cpm_mtx,
       zscale = scale_mtx(cpm_mtx)
     ),
-    rowData = S4Vectors::DataFrame(var[rownames(mat), ]),
+    rowData = S4Vectors::DataFrame(var[rownames(mat), , drop = FALSE]),
     colData = S4Vectors::DataFrame(obs[colnames(mat), ])
   )
 
-  ## CV filter
   cv_df <- calc_feature_CV_by_condition(se)
 
   un_stable_cv_df <- cv_df %>%
@@ -270,7 +261,7 @@ rawdata2se <- function(
     dplyr::filter(n_stable_groups < min_stable_groups)
 
   un_stable_gene_df <- as.data.frame(
-    rowData(se)[un_stable_cv_df$feature, ]
+    rowData(se)[un_stable_cv_df$feature, , drop = FALSE]
   )
 
   se <- se[!rownames(se) %in% un_stable_cv_df$feature, ]
@@ -281,3 +272,4 @@ rawdata2se <- function(
     missing_gene_df = missing_gene_df
   )
 }
+

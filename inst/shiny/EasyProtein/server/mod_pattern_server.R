@@ -232,7 +232,7 @@ mod_pattern_server <- function(input, output, session) {
       } else {
         ck <- kmeans(t(intersity_scale), centers = input$col_k, nstart = 1)
         col_cluster_df <- tibble::tibble(
-          protein_group = colnames(intersity_scale),
+          gene = colnames(intersity_scale),
           km_cluster    = paste0('km',ck$cluster)
         )
       }
@@ -241,7 +241,7 @@ mod_pattern_server <- function(input, output, session) {
     } else {
       group_vec <- as.character(colData(se_sub)[[input$coldata_col_selector]])
       col_cluster_df <- tibble::tibble(
-        protein_group = colnames(intersity_scale),
+        gene = colnames(intersity_scale),
         group         = factor(group_vec, levels = unique(group_vec))
       )
       col_cluster_vec <- col_cluster_df$group
@@ -257,15 +257,16 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
     # 3.5 构造 row_info（导出用）
     # =============================
-    mean_expr <- calc_gene_mean_by_condition(se_sub, condition_col = "col_cluster") %>%
+    mean_expr <- calc_gene_mean_by_condition(se_sub, assay_name = "conc",
+                                             method = "mean",condition_col = "col_cluster") %>%
       as.data.frame() %>%
-      tibble::rownames_to_column("Protein.Ids")
+      tibble::rownames_to_column("gene")
 
     row_info_df <- row_cluster_df %>%
-      dplyr::left_join(mean_expr, by = c("protein_group" = "Protein.Ids")) %>%
+      dplyr::left_join(mean_expr, by = c( "gene")) %>%
       dplyr::left_join(
         se2conc(se_sub),
-        by = c("protein_group" = "Protein.Ids")
+        by = c("gene")
       )
 
     row_info(row_info_df)
@@ -346,7 +347,7 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
     output$heatmap_pdf <- renderUI({
       tags$iframe(
-        src   = "heatmap.pdf",
+        src   = out_pdf,
         style = "width:100%; height:700px;"
       )
     })

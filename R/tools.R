@@ -497,7 +497,7 @@ auto_cluster_matrix_pca_one <- function(
       minClusterSize = minClusterSize,
       pamStage = pamStage
     )
-    df <- data.frame(protein_group = rownames(mtx), km_cluster = paste0("km", cl))
+    df <- data.frame(gene = rownames(mtx), km_cluster = paste0("km", cl))
   } else {
     d <- stats::as.dist(1 - stats::cor(mtx, method = "spearman"))
     hc <- stats::hclust(d, method = method_hclust)
@@ -509,7 +509,7 @@ auto_cluster_matrix_pca_one <- function(
       minClusterSize = minClusterSize,
       pamStage = pamStage
     )
-    df <- data.frame(protein_group = colnames(mtx), km_cluster = paste0("km", cl))
+    df <- data.frame(gene = colnames(mtx), km_cluster = paste0("km", cl))
   }
 
   return(df)

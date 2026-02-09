@@ -1,4 +1,6 @@
 library(EasyProtein)
+library(tidyverse)
+library(SummarizedExperiment)
 library(bslib)
 library(DT)
 library(htmltools)

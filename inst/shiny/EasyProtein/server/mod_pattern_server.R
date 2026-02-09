@@ -192,21 +192,21 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
     # 3.3 行聚类
     # =============================
-    # 返回 data.frame: protein_group + km_cluster
+    # 返回 data.frame: gene + km_cluster
 
     if (identical(input$row_k, "AUTO")) {
       row_cluster_df <- auto_cluster_matrix_pca_one(intersity_scale, mode = "row")
     } else {
       rk <- kmeans(intersity_scale, centers = input$row_k, nstart = 1)
       row_cluster_df <- tibble::tibble(
-        protein_group = rownames(intersity_scale),
+        gene = rownames(intersity_scale),
         km_cluster    = paste0('km',rk$cluster)
       )
     }
 
     # 对齐 se_sub 行顺序，写入 rowData
     row_cluster_vec <- row_cluster_df$km_cluster[
-      match(rownames(se_sub), row_cluster_df$protein_group)
+      match(rownames(se_sub), row_cluster_df$gene)
     ]
 
     if (any(is.na(row_cluster_vec))) {

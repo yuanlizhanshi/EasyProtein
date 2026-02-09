@@ -11,6 +11,11 @@ mod_time_series_server <- function(input, output, session) {
     se <- readRDS(input$time_rds_file$datapath)
     se_data(se)
     show_time_series_param(se_data())
+    make_grouped_select(
+      id = "selected_cols",
+      df = as.data.frame(colData(se_data())),
+      default_all = TRUE
+    )$server(input, output, session)
   })
   
   

@@ -250,7 +250,7 @@ rawdata2se <- function(
     colData = S4Vectors::DataFrame(obs[colnames(mat), ])
   )
 
-  cv_df <- calc_feature_CV_by_condition(se)
+  cv_df <- calc_gene_CV_by_condition(se)
 
   un_stable_cv_df <- cv_df %>%
     dplyr::group_by(feature) %>%

@@ -95,7 +95,7 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 #' @export
 rawdata2se <- function(
     exp_file,
-    obs_col = "Gene",
+    obs_col = "Genes",
     raw_prefix = "raw",
     enable_detect_outlier_gene = FALSE,
     fc_threshold = 5,

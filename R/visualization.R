@@ -308,46 +308,6 @@ plotSE_missing_value <- function(se){
 }
 
 
-#' Plot missing values per sample
-#'
-#' @param se A SummarizedExperiment object.
-#'
-#' @return A ggplot object summarizing missing count per sample.
-#'
-#' @importFrom ggplot2 ggplot aes geom_point geom_segment geom_text labs theme
-#' @importFrom tidyr pivot_longer
-#' @importFrom dplyr filter group_by mutate select distinct
-#'
-#' @export
-plotSE_missing_value <- function(se){
-  rawdata <- se2raw(se)
-
-  missing_df <- rawdata %>%
-    pivot_longer(cols = 3:ncol(rawdata),
-                 names_to = 'Sample',
-                 values_to = 'intersity') %>%
-    dplyr::filter(is.na(intersity)) %>%
-    group_by(Sample) %>%
-    mutate(missing_number = n()) %>%
-    dplyr::select(Sample, missing_number) %>%
-    distinct()
-
-  missing_df$Sample <- factor(missing_df$Sample, levels = unique(colnames(se)))
-
-  ggplot(missing_df, aes(x = missing_number, y = Sample)) +
-    geom_segment(aes(x = 0, xend = missing_number), color = "grey60") +
-    geom_point(size = 4) +
-    geom_text(aes(label = missing_number, hjust = -0.5)) +
-    labs(x = "Number of missing values", y = NULL) +
-    theme_test() +
-    theme(
-      axis.text.x = element_text(size = 12, face = "bold"),
-      axis.text.y = element_text(size = 12, face = "bold"),
-      axis.title.x = element_text(size = 14, face = "bold"),
-      axis.title.y = element_text(size = 14, face = "bold")
-    )
-}
-
 #' Plot number of detected proteins per sample
 #'
 #' @param se A SummarizedExperiment object.

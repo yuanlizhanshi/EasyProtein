@@ -155,7 +155,7 @@ se2conc <- function(se, group_by = 'condition') {
   expr_median <- calc_gene_mean_by_condition(
     se = se,
     assay_name = 'conc',
-    method = 'Median',
+    method = 'median',
     condition_col = group_by
   )
   colnames(expr_median) <- paste0('Median_', colnames(expr_median))
@@ -567,7 +567,7 @@ calc_gene_mean_by_condition <- function(
     method = "mean",
     condition_col = "condition"
 ) {
-
+  method <- tolower(method)
   stopifnot(assay_name %in% assayNames(se))
   stopifnot(condition_col %in% colnames(colData(se)))
   stopifnot(method %in% c("mean", "median"))

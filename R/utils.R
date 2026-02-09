@@ -479,6 +479,9 @@ calculate_cv <- function(x) {
   return(s / m)
 }
 
+
+
+
 #' Count turning points in vector
 #'
 #' @param vec Numeric vector.
@@ -504,7 +507,7 @@ get_turning_point <- function(vec, fluctuate = 0.05) {
 
 
 
-calc_feature_CV_by_condition <- function(
+calc_gene_CV_by_condition <- function(
     se,
     assay_name = "conc",
     condition_col = "condition"

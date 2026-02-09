@@ -25,6 +25,18 @@ mod_pattern_server <- function(input, output, session) {
     se_obj <- readRDS(input$matrix_file$datapath)
     rv$se <- se_obj
     show_heatmap_param_modal(rv$se)
+    make_grouped_select(
+      id = "selected_cols",
+      df = as.data.frame(colData(rv$se)),
+      label = "Select coldata columns",
+      default_all = TRUE
+    )$server(input, output, session)
+    make_grouped_select(
+      id = "selected_rows",
+      df = as.data.frame(rowData(rv$se)),
+      label = "Select rowdata columns",
+      default_all = TRUE
+    )$server(input, output, session)
   })
 
   # 重置参数（重新弹窗）
@@ -32,6 +44,18 @@ mod_pattern_server <- function(input, output, session) {
     req(rv$se)
     removeModal()
     show_heatmap_param_modal(rv$se)
+    make_grouped_select(
+      id = "selected_cols",
+      df = as.data.frame(colData(rv$se)),
+      label = "Select coldata columns",
+      default_all = TRUE
+    )$server(input, output, session)
+    make_grouped_select(
+      id = "selected_rows",
+      df = as.data.frame(rowData(rv$se)),
+      label = "Select rowdata columns",
+      default_all = TRUE
+    )$server(input, output, session)
   })
 
   # =============================
@@ -46,10 +70,6 @@ mod_pattern_server <- function(input, output, session) {
   output$coldata_col_selector <- renderUI({
     req(rv$se)
     all_cols <- as.data.frame(colData(rv$se))
-
-    # 初始化 grouped select 的 server 逻辑
-    make_grouped_select(id = "selected_cols",df= all_cols,label = 'Select coldata columns', default_all = TRUE)$server(input, output, session)
-
     # 真正显示在 UI 里的 coldata 分组选择下拉框
     selectInput(
       "coldata_col_selector",
@@ -67,10 +87,6 @@ mod_pattern_server <- function(input, output, session) {
   output$coldata_row_selector <- renderUI({
     req(rv$se)
     all_rows <- as.data.frame(rowData(rv$se))
-
-    # 初始化 grouped select 的 server 逻辑
-    make_grouped_select(id = "selected_rows", df = all_rows, label = 'Select rowdata columns',default_all = TRUE)$server(input, output, session)
-
     # 真正显示在 UI 里的 coldata 分组选择下拉框
     selectInput(
       "coldata_row_selector",

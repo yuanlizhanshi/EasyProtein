@@ -301,8 +301,11 @@ make_download_time_se_zip <- function(
 #   list(ui = ui, server = server)
 # }
 
-make_grouped_select <- function(id, df,label = 'Select coldata columns', default_all = FALSE, max_levels = 1000) {
-
+make_grouped_select <- function(id,
+                                df,
+                                label = "Select coldata columns",
+                                default_all = FALSE,
+                                max_levels = 1000) {
 
   valid_cols <- names(df)[
     sapply(df, function(x) {
@@ -311,57 +314,61 @@ make_grouped_select <- function(id, df,label = 'Select coldata columns', default
   ]
 
   df <- df[, valid_cols, drop = FALSE]
+  df <- df[, !names(df) %in% c("rep", "group"), drop = FALSE]
 
   if (ncol(df) == 0) {
     ui <- helpText("No valid columns (character type with <= 1000 levels).")
     return(list(ui = ui, server = function(...) {}))
   }
 
-  choices <- purrr::map(names(df), function(col) {
-    vals <- unique(df[[col]])
-    vals <- as.character(vals)
-    setNames(paste0(col, "||", vals), vals)
-  })
-  names(choices) <- names(df)
+  col_choices <- names(df)
 
-  # 去掉 rep / group
-  choices <- choices[!names(choices) %in% c("rep", "group")]
-
-  if (length(choices) > 1) {
-    choices <- choices[c(2:length(choices), 1)]
-  }
-
-  default_selected <- NULL
-  if (default_all && length(choices) > 0) {
-    default_selected <- unname(unlist(choices[[1]]))
-  }
-
-  ui <- virtualSelectInput(
-    inputId = id,
-    label   = label,
-    choices = choices,
-    multiple = TRUE,
-    search = TRUE,
-    selected = default_selected,
-    placeholder = "选择列及取值..."
+  ui <- tagList(
+    selectInput(
+      inputId = paste0(id, "_col"),
+      label = paste0(label, " (column)"),
+      choices = col_choices,
+      selected = col_choices[1]
+    ),
+    virtualSelectInput(
+      inputId = id,
+      label   = paste0(label, " (values)"),
+      choices = NULL,
+      multiple = TRUE,
+      search = TRUE,
+      selected = NULL,
+      placeholder = "选择列对应的取值..."
+    )
   )
 
   server <- function(input, output, session) {
-    observeEvent(input[[id]], ignoreInit = TRUE, {
-      vals <- input[[id]]
-      if (is.null(vals) || length(vals) <= 1) return()
+    observeEvent(input[[paste0(id, "_col")]], ignoreInit = TRUE, {
+      col_name <- input[[paste0(id, "_col")]]
+      vals <- unique(df[[col_name]])
+      vals <- as.character(vals)
+      choices <- setNames(paste0(col_name, "||", vals), vals)
+      selected <- if (default_all) unname(choices) else NULL
 
-      groups <- sub("\\|\\|.*$", "", vals)
-      g0 <- groups[1]
-      keep <- vals[groups == g0]
+      updateVirtualSelect(
+        inputId = id,
+        choices = choices,
+        selected = selected
+      )
+    }, ignoreNULL = TRUE)
 
-      if (length(keep) != length(vals)) {
-        updateVirtualSelect(
-          inputId = id,
-          selected = keep
-        )
-      }
-    })
+    observeEvent(TRUE, {
+      col_name <- input[[paste0(id, "_col")]] %||% col_choices[1]
+      vals <- unique(df[[col_name]])
+      vals <- as.character(vals)
+      choices <- setNames(paste0(col_name, "||", vals), vals)
+      selected <- if (default_all) unname(choices) else NULL
+
+      updateVirtualSelect(
+        inputId = id,
+        choices = choices,
+        selected = selected
+      )
+    }, once = TRUE)
   }
 
   list(ui = ui, server = server)

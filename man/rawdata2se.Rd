@@ -2,47 +2,72 @@
 % Please edit documentation in R/QC.R
 \name{rawdata2se}
 \alias{rawdata2se}
-\title{Import raw data and construct SummarizedExperiment for QC}
+\title{Construct a SummarizedExperiment object from raw expression table}
 \usage{
 rawdata2se(
   exp_file,
-  obs_col = "Protein.Ids",
+  obs_col = "Gene",
+  raw_prefix = "raw",
   enable_detect_outlier_gene = FALSE,
   fc_threshold = 5,
-  valid_group_cutoff = -1,
+  min_valid_groups = 0,
   frac_NA_threshold = 0.5,
-  stable_group_cutoff = -1,
-  cv_threshod = 0.5
+  min_stable_groups = 0,
+  cv_threshold = 0.5
 )
 }
 \arguments{
-\item{exp_file}{Path to raw intensity file.}
+\item{exp_file}{Path to the raw expression table file. The file must
+contain one column specifying feature identifiers and multiple
+columns containing raw expression values.}
 
-\item{obs_col}{Column containing protein identifiers.}
+\item{obs_col}{Name of the column in \code{exp_file} used to define
+feature identifiers. Only the substring before the first semicolon
+(\code{;}) will be used as the feature name.}
 
-\item{enable_detect_outlier_gene}{Logical, perform FC-based outlier removal.}
+\item{raw_prefix}{Character string used to identify raw expression
+columns. All columns whose names contain this prefix will be treated
+as raw intensity measurements.}
 
-\item{fc_threshold}{Fold-change threshold for detecting outliers.}
+\item{enable_detect_outlier_gene}{Logical flag indicating whether to
+mask extreme outlier measurements within each condition based on
+fold-change from the median.}
 
-\item{valid_group_cutoff}{Minimum number of valid groups after NA filtering.}
+\item{fc_threshold}{Numeric threshold for fold-change–based outlier
+detection. Values exceeding this fold change relative to the
+condition median will be set to \code{NA} when outlier detection is
+enabled.}
 
-\item{frac_NA_threshold}{NA fraction threshold per group.}
+\item{min_valid_groups}{Minimum number of conditions in which a feature
+must pass the missing-value filter to be retained. Features with
+fewer valid conditions are removed.}
 
-\item{stable_group_cutoff}{Minimum number of groups with stable CV.}
+\item{frac_NA_threshold}{Maximum allowed fraction of missing values
+within a condition for that condition to be considered valid for a
+given feature.}
 
-\item{cv_threshod}{CV threshold for determining stable genes.}
+\item{min_stable_groups}{Minimum number of conditions in which a feature
+must show low variability (coefficient of variation below
+\code{cv_threshold}) to be retained.}
+
+\item{cv_threshold}{Numeric threshold on coefficient of variation (CV)
+used to define feature stability within each condition.}
 }
 \value{
-A list containing:
-\describe{
-  \item{se}{A \code{SummarizedExperiment} object}
-  \item{un_stable_gene}{Genes removed due to unstable CV}
-  \item{missing_gene_df}{Genes removed due to excessive missingness}
-}
+A list with class \code{"RawDataSE"} containing:
+  \itemize{
+    \item \code{se}: A \code{SummarizedExperiment} object storing raw
+      intensities, imputed intensities, CPM-normalized values, and
+      z-scored expression.
+    \item \code{un_stable_gene}: A data frame of features removed due to
+      high variability across conditions.
+    \item \code{missing_gene_df}: A data frame of features removed due
+      to excessive missing values.
+  }
 }
 \description{
-Read MaxQuant-like protein intensity matrix, perform QC filtering,
-remove missing genes, impute missing values, filter unstable proteins,
-and return a \code{SummarizedExperiment} object containing raw,
-imputed, CPM, and z-scaled assays.
+This function reads a raw expression table, performs feature-level
+filtering, optional outlier masking, missing-value imputation, and
+stability filtering, and returns a \code{SummarizedExperiment} object
+together with diagnostic gene lists.
 }

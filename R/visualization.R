@@ -131,14 +131,14 @@ plot_gene_expression <- function(se, gene, by = "condition") {
 
   conc_mean_df <- assay(se, "conc") %>%
     as.data.frame() %>%
-    rownames_to_column('Protein.Ids') %>%
+    rownames_to_column('gene') %>%
     tidyr::pivot_longer(
-      cols = -Protein.Ids,
+      cols = -gene,
       names_to = "sample",
       values_to = "conc"
     ) %>%
     dplyr::left_join(as.data.frame(se@colData), by = "sample") %>%
-    dplyr::left_join(as.data.frame(rowData(se)), by = "Protein.Ids")
+    dplyr::left_join(as.data.frame(rowData(se)), by = "gene")
   gene_name <- paste0("^", gene, "$")
   target_gene <- conc_mean_df %>%
     dplyr::filter(stringr::str_detect(Genes, gene_name))
@@ -430,12 +430,12 @@ plot_FC_trend <- function(se,group_by = 'condition'){
   logFC_long <- se2conc(se,group_by= group_by) %>%
     dplyr::filter(type %in% c('Up','Down')) %>%
     dplyr::select(
-      Protein.Ids,
+      gene,
       gene_group,
       contains('log2FC')
     ) %>%
     pivot_longer(
-      cols = -c('Protein.Ids','gene_group'),
+      cols = -c('gene','gene_group'),
       names_to = 'Sample',
       values_to = 'logFC'
     )
@@ -460,7 +460,7 @@ plot_FC_trend <- function(se,group_by = 'condition'){
   logFC_long$Sample <- factor(logFC_long$Sample,levels = unique(logFC_long$Sample))
 
   gene_n_df <- logFC_long %>%
-    dplyr::select(Protein.Ids,gene_group) %>%
+    dplyr::select(gene,gene_group) %>%
     distinct_all() %>%
     group_by(gene_group) %>%
     mutate(n = n()) %>%
@@ -474,7 +474,7 @@ plot_FC_trend <- function(se,group_by = 'condition'){
 
   p1 <- ggplot(logFC_long, aes(x = Sample, y = logFC)) +
     geom_line(
-      aes(group = Protein.Ids),
+      aes(group = gene),
       color = "grey80",
       alpha = 0.3
     ) +

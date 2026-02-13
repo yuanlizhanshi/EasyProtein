@@ -163,7 +163,8 @@ make_download_se_qc_zip <- function(
     unstable_gene,      # reactiveVal: un_stable_gene_rv
     input,              # Shiny input 对象
     file_input_id,      # 上传文件ID
-    suffix = "_filtered"  # 输出文件后缀
+    suffix = "_filtered",  # 输出文件后缀
+    session = NULL
 ) {
   downloadHandler(
     filename = function() {
@@ -173,6 +174,14 @@ make_download_se_qc_zip <- function(
     },
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
 
       se_obj <- se_reactive()
       miss_gene_df <- miss_gene()         # ✅ reactive 取值
@@ -220,7 +229,8 @@ make_download_se_zip <- function(
     se_reactive,        # reactiveExpr：返回 SummarizedExperiment 对象
     input,              # Shiny input 对象
     file_input_id,      # e.g. "se_file" —— 上传文件 ID，用来取原始文件名
-    suffix = "_filtered"  # 文件名后缀（可选）
+    suffix = "_filtered",  # 文件名后缀（可选）
+    session = NULL
 ) {
   downloadHandler(
     filename = function() {
@@ -230,6 +240,14 @@ make_download_se_zip <- function(
     },
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
       se_obj <- se_reactive()
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
 
@@ -262,7 +280,8 @@ make_download_time_se_zip <- function(
     se_reactive,
     input,
     file_input_id,
-    suffix = "_time_series"
+    suffix = "_time_series",
+    session = NULL
 ) {
   downloadHandler(
     filename = function() {
@@ -272,6 +291,14 @@ make_download_time_se_zip <- function(
     },
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
       se_obj <- se_reactive()
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
 

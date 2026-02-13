@@ -2,10 +2,46 @@
 ui <- {
   fluidPage(
     #useShinyjs(),
+    tags$div(id = "download_loading_overlay",
+             tags$div(class = "overlay-box",
+                      icon("spinner", class = "fa-spin"),
+                      span(id = "download_loading_text", " 正在准备下载，请稍候...")
+             )
+    ),
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "style_1.css"),
       #tags$script(src = "scripts.js"),
       tags$link(rel = "stylesheet", href = "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"),
+      tags$style(HTML("
+        #download_loading_overlay {
+          display: none;
+          position: fixed;
+          z-index: 99999;
+          left: 0; top: 0;
+          width: 100vw; height: 100vh;
+          background: rgba(255, 255, 255, 0.7);
+        }
+        #download_loading_overlay .overlay-box {
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          padding: 14px 20px;
+          font-size: 16px;
+          box-shadow: 0 2px 10px rgba(0,0,0,.15);
+        }
+      ")),
+      tags$script(HTML("
+        Shiny.addCustomMessageHandler('download_status', function(msg) {
+          var overlay = document.getElementById('download_loading_overlay');
+          var textEl = document.getElementById('download_loading_text');
+          if (!overlay) return;
+          if (msg && msg.text && textEl) textEl.textContent = msg.text;
+          overlay.style.display = (msg && msg.show) ? 'block' : 'none';
+        });
+      ")),
       theme = bslib::bs_theme(bootswatch = "journal"),
       # tags$script(
       #   HTML("

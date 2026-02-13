@@ -319,7 +319,8 @@ mod_QC_server <- function(input, output, session) {
     se_reactive   = se_filtered,   # 传 reactiveExpr（不要加 ()）
     input         = input,
     file_input_id = "se_file",     # 上传文件 ID
-    suffix        = "_filtered"    # 可选
+    suffix        = "_filtered",   # 可选
+    session       = session
   )
 
   output$download_edit_sample <- renderUI({

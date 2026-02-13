@@ -108,7 +108,8 @@ mod_tools_server <- function(input, output, session) {
     se_reactive   = reactive(rv$se_sub),
     input         = input,
     file_input_id = "upload_subset_se",
-    suffix        = "_subset"
+    suffix        = "_subset",
+    session       = session
   )
   output$download_subset_se_UI <- renderUI({
     req(rv$se_sub)

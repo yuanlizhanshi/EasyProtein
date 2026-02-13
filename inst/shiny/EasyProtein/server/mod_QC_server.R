@@ -23,24 +23,24 @@ mod_QC_server <- function(input, output, session) {
   })
 
   # -----------------------------
-  # 2️⃣ 移除样本逻辑
+  # 2️⃣ 选择样本逻辑（默认全选）
   # -----------------------------
-  remove_samples <- reactiveVal(character(0))
+  selected_samples <- reactiveVal(NULL)
 
   output$edit_samples_UI <- renderUI({
     req(se_filtered())
-    actionButton("edit_samples", "Edit SE (Remove samples)")
+    actionButton("edit_samples", "Edit SE (Select samples)")
   })
 
   observeEvent(input$edit_samples, {
     req(se_data())
     all_cols <- if (!is.null(se_data())) as.data.frame(colData(se_data())) else character(0)
-    make_grouped_select("modal_remove_samples", all_cols)$server(input, output, session)
+    make_grouped_select("modal_remove_samples", all_cols, default_all = TRUE)$server(input, output, session)
     showModal(
       modalDialog(
-        title = "Choose sample to remove",
+        title = "Choose samples to include",
 
-        make_grouped_select("modal_remove_samples", all_cols)$ui,
+        make_grouped_select("modal_remove_samples", all_cols, default_all = TRUE)$ui,
         # shinyWidgets::pickerInput(
         #   inputId = "modal_remove_samples",
         #   label   = "Select sample to remove ",
@@ -69,13 +69,14 @@ mod_QC_server <- function(input, output, session) {
     col_df <- as.data.frame(colData(se_data()))
     sel <- input$modal_remove_samples %||% character(0)
     if (length(sel) == 0) {
+      selected_samples(NULL)
       removeModal()
       return()
     }
     col_name <- sub("\\|\\|.*$", "", sel[1])     # 所选列名（只有一个）
     vals     <- sub("^.*\\|\\|", "", sel)        # 多个取值
-    samples_to_remove <- rownames(col_df)[col_df[[col_name]] %in% vals]
-    remove_samples(samples_to_remove)
+    samples_to_keep <- rownames(col_df)[col_df[[col_name]] %in% vals]
+    selected_samples(samples_to_keep)
 
     removeModal()
   })
@@ -177,9 +178,9 @@ mod_QC_server <- function(input, output, session) {
     req(se_data())
     se <- se_data()
 
-    rmv <- remove_samples()
-    if (!is.null(rmv) && length(rmv) > 0) {
-      se <- se[, !(colnames(se) %in% rmv), drop = FALSE]
+    keep <- selected_samples()
+    if (!is.null(keep) && length(keep) > 0) {
+      se <- se[, colnames(se) %in% keep, drop = FALSE]
     }
 
     keep_genes <- gene_keep()
@@ -243,7 +244,7 @@ mod_QC_server <- function(input, output, session) {
     req(se_data())
     total <- ncol(se_data())
     kept  <- ncol(se_filtered())
-    paste0("Sample info：", kept, " / ", total)
+    paste0("Sample info:", kept, " / ", total)
   })
 
   output$intensity_density <- renderPlot({
@@ -325,6 +326,6 @@ mod_QC_server <- function(input, output, session) {
 
   output$download_edit_sample <- renderUI({
     req(se_filtered())
-    downloadButton("download_se2", "Download edit samples")
+    downloadButton("download_se2", "Download selected samples")
   })
 }

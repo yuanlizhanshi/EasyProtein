@@ -96,7 +96,7 @@ mod_tools_server <- function(input, output, session) {
 
 
 
-  output$download_tools_subset_se <- make_download_time_se_zip(
+  output$download_tools_subset_se <- make_download_se_zip(
     se_reactive   = reactive(rv$se_sub),
     input         = input,
     file_input_id = "upload_subset_se",

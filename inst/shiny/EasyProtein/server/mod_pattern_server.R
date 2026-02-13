@@ -339,9 +339,21 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
     # 3.7 输出 UI：PDF 预览 + 按钮
     # =============================
+    # output$heatmap_plot <- renderPlot({
+    #   req(ht_obj())
+    #   ComplexHeatmap::draw(ht_obj())
+    # })
     output$heatmap_plot <- renderPlot({
       req(ht_obj())
+
+      p <- Progress$new(session, min = 0, max = 1)
+      on.exit(p$close())
+
+      p$set(message = "Drawing heatmap", value = 0.2)
+
       ComplexHeatmap::draw(ht_obj())
+
+      p$set(value = 1)
     })
     output$heatmap_pdf <- renderUI({
       plotOutput("heatmap_plot", height = "700px")

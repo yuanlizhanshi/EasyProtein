@@ -568,67 +568,40 @@ calc_gene_CV_by_condition <- function(
 calc_gene_mean_by_condition <- function(
     se,
     assay_name = "conc",
-    method = "mean",
+    method = c("mean", "median"),
     condition_col = "condition"
 ) {
-  method <- tolower(method)
+  method <- match.arg(tolower(method), c("mean", "median"))
   stopifnot(assay_name %in% assayNames(se))
   stopifnot(condition_col %in% colnames(colData(se)))
-  stopifnot(method %in% c("mean", "median"))
 
-  if (length(unique(colData(se)[[condition_col]])) == ncol(se)) {
-    return(NULL)
-  }
+  mtx <- assay(se, assay_name)
+  grp <- as.character(colData(se)[[condition_col]])
 
-  mtx  <- assay(se, assay_name)
-  meta <- as.data.frame(colData(se))
 
-  feature_order <- rownames(mtx)
+  if (is.null(colnames(mtx))) stop("assay matrix has no colnames.")
+  if (length(grp) != ncol(mtx)) stop("Length of grouping vector != ncol(assay).")
 
-  ## Convert assay matrix to long format
-  df_long <- as.data.frame(mtx) %>%
-    tibble::rownames_to_column("feature") %>%
-    tidyr::pivot_longer(
-      cols = -feature,
-      names_to = "sample_name",
-      values_to = "value"
-    ) %>%
-    dplyr::left_join(
-      meta %>% tibble::rownames_to_column("sample_name"),
-      by = "sample_name"
-    )
+  # 分组顺序：保持出现顺序（而不是字母序）
+  lvls <- unique(grp)
 
-  ## Aggregate by feature and condition
-  if (method == "mean") {
-    agg_df <- df_long %>%
-      dplyr::group_by(feature, !!rlang::sym(condition_col)) %>%
-      dplyr::summarise(
-        stat_value = mean(value, na.rm = TRUE),
-        .groups = "drop"
-      )
-  } else {
-    agg_df <- df_long %>%
-      dplyr::group_by(feature, !!rlang::sym(condition_col)) %>%
-      dplyr::summarise(
-        stat_value = median(value, na.rm = TRUE),
-        .groups = "drop"
-      )
-  }
+  out <- sapply(lvls, function(g) {
+    cols <- which(grp == g)
+    sub  <- mtx[, cols, drop = FALSE]
+    if (method == "mean") {
+      rowMeans(sub, na.rm = TRUE)
+    } else {
+      apply(sub, 1, median, na.rm = TRUE)
+    }
+  })
 
-  ## Convert to wide matrix
-  mean_df <- agg_df %>%
-    tidyr::pivot_wider(
-      names_from  = !!rlang::sym(condition_col),
-      values_from = stat_value
-    )
 
-  mean_mat <- as.data.frame(mean_df)
-  rownames(mean_mat) <- mean_mat$feature
-  mean_mat$feature <- NULL
+  out <- as.matrix(out)
+  rownames(out) <- rownames(mtx)
+  colnames(out) <- lvls
 
-  ## Preserve original feature order
-  mean_mat <- mean_mat[feature_order, , drop = FALSE]
-
-  return(as.matrix(mean_mat))
+  out
 }
+
+
 

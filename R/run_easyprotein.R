@@ -22,6 +22,7 @@ launch_EasyProtein <- function(install_missing = TRUE, ...) {
     "shiny",
     "shinyjqui",
     "shinyjs",
+    "writexl",
     "shinydashboard",
     "shinythemes",
     "shinyWidgets",

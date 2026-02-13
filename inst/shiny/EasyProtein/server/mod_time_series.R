@@ -93,7 +93,8 @@ mod_time_series_server <- function(input, output, session) {
       se_reactive   = se_filtered,   
       input         = input,
       file_input_id = "time_rds_file",     
-      suffix        = "_timeseries"   
+      suffix        = "_timeseries",
+      session       = session
     )
     
     output$download_time_se_UI <- renderUI({

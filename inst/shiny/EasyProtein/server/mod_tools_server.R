@@ -71,6 +71,14 @@ mod_tools_server <- function(input, output, session) {
 
 
     final_row_idx <- sort(unique(c(row_idx, excel_row_idx)))
+    if (length(final_row_idx) == 0) {
+      final_row_idx <- seq_len(nrow(rv$se))
+    }
+
+    if (length(col_idx) == 0) {
+      showNotification("No samples selected after filtering. Please revise your selection.", type = "error")
+      return(invisible(NULL))
+    }
 
     rv$se_sub <- rv$se[final_row_idx, col_idx, drop = FALSE]
 
@@ -100,7 +108,8 @@ mod_tools_server <- function(input, output, session) {
     se_reactive   = reactive(rv$se_sub),
     input         = input,
     file_input_id = "upload_subset_se",
-    suffix        = "_subset"
+    suffix        = "_subset",
+    session       = session
   )
   output$download_subset_se_UI <- renderUI({
     req(rv$se_sub)

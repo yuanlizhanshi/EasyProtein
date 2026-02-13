@@ -279,6 +279,7 @@ mod_upload_server <- function(input, output, session, rv) {
     unstable_gene = un_stable_gene_rv,
     input         = input,
     file_input_id = "upload_tsv",
-    suffix        = ""
+    suffix        = "",
+    session       = session
   )
 }

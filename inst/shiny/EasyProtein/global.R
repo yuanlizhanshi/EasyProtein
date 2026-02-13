@@ -67,13 +67,23 @@ js_escape  <- function(x) gsub("'", "\\\\'", x, fixed = TRUE)
 
 make_download_pdf <- function(plot_expr, input, suffix = NULL,
                               width = 7, height = 5,
-                              input_field = "se_file") {
+                              input_field = "se_file",
+                              session = shiny::getDefaultReactiveDomain()) {
   downloadHandler(
     filename = function() {
       base <- tools::file_path_sans_ext(basename(input[[input_field]]$name))
       paste0(base, if (!is.null(suffix)) paste0("_", suffix) else "", ".pdf")
     },
     content = function(file) {
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在生成 PDF，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
+
       w <- if (is.function(width))  width()  else width
       h <- if (is.function(height)) height() else height
 
@@ -137,22 +147,51 @@ timeFilterUI <- function(id) {
 }
 
 #server logic------
+.get_upload_base <- function(upload_name) {
+  base_no_ext <- tools::file_path_sans_ext(basename(upload_name))
+  base <- stringr::str_extract(base_no_ext, ".*(?=_report)")
+  if (is.na(base) || !nzchar(base)) {
+    base <- base_no_ext
+  }
+  base
+}
+
+.write_assay_export_if_exists <- function(se_obj, assay_name, out_path) {
+  assay_names <- SummarizedExperiment::assayNames(se_obj)
+  if (!assay_name %in% assay_names) return(FALSE)
+
+  assay_df <- cbind(
+    as.data.frame(SummarizedExperiment::rowData(se_obj)),
+    as.data.frame(SummarizedExperiment::assay(se_obj, assay_name))
+  )
+  writexl::write_xlsx(assay_df, path = out_path)
+  TRUE
+}
 make_download_se_qc_zip <- function(
     se_reactive,        # reactiveExpr: 返回 SummarizedExperiment 对象
     miss_gene,          # reactiveVal: missing_gene_rv
     unstable_gene,      # reactiveVal: un_stable_gene_rv
     input,              # Shiny input 对象
     file_input_id,      # 上传文件ID
-    suffix = "_filtered"  # 输出文件后缀
+    suffix = "_filtered",  # 输出文件后缀
+    session = NULL
 ) {
   downloadHandler(
     filename = function() {
       req(input[[file_input_id]]$name)
-      base <- stringr::str_extract(basename(input[[file_input_id]]$name), ".*(?=_report)")
+      base <- .get_upload_base(input[[file_input_id]]$name)
       paste0(base, suffix, ".zip")
     },
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
 
       se_obj <- se_reactive()
       miss_gene_df <- miss_gene()         # ✅ reactive 取值
@@ -200,16 +239,25 @@ make_download_se_zip <- function(
     se_reactive,        # reactiveExpr：返回 SummarizedExperiment 对象
     input,              # Shiny input 对象
     file_input_id,      # e.g. "se_file" —— 上传文件 ID，用来取原始文件名
-    suffix = "_filtered"  # 文件名后缀（可选）
+    suffix = "_filtered",  # 文件名后缀（可选）
+    session = NULL
 ) {
   downloadHandler(
     filename = function() {
       req(input[[file_input_id]]$name)
-      base <- str_extract(basename(input[[file_input_id]]$name), ".*(?=_report)")
+      base <- .get_upload_base(input[[file_input_id]]$name)
       paste0(base, suffix, ".zip")
     },
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
       se_obj <- se_reactive()
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
 
@@ -242,16 +290,25 @@ make_download_time_se_zip <- function(
     se_reactive,
     input,
     file_input_id,
-    suffix = "_time_series"
+    suffix = "_time_series",
+    session = NULL
 ) {
   downloadHandler(
     filename = function() {
       req(input[[file_input_id]]$name)
-      base <- str_extract(basename(input[[file_input_id]]$name), ".*(?=_report)")
+      base <- .get_upload_base(input[[file_input_id]]$name)
       paste0(base, suffix, ".zip")
     },
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
+      if (!is.null(session)) {
+        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+      }
+      on.exit({
+        if (!is.null(session)) {
+          session$sendCustomMessage("download_status", list(show = FALSE))
+        }
+      }, add = TRUE)
       se_obj <- se_reactive()
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
 
@@ -259,21 +316,30 @@ make_download_time_se_zip <- function(
       dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
 
       # 临时文件路径
-      rds_path   <- file.path(tmpdir, paste0(base_full, "_se.Rds"))
-      #excel1_path <- file.path(tmpdir, paste0(base_full, "_imputated_intensity.xlsx"))
+      rds_path    <- file.path(tmpdir, paste0(base_full, "_se.Rds"))
       excel2_path <- file.path(tmpdir, paste0(base_full, "_normalized_expression.xlsx"))
       excel3_path <- file.path(tmpdir, paste0(base_full, "_Zscaled_expression.xlsx"))
 
-
       saveRDS(se_obj, rds_path)
-      #writexl::write_xlsx(se2internstiy(se_obj), path = excel1_path)
-      writexl::write_xlsx(se2conc(se_obj),       path = excel2_path)
-      writexl::write_xlsx(se2scale(se_obj),      path = excel3_path)
+
+      files_to_zip <- c(rds_path)
+      if ("conc" %in% SummarizedExperiment::assayNames(se_obj)) {
+        writexl::write_xlsx(se2conc(se_obj), path = excel2_path)
+        files_to_zip <- c(files_to_zip, excel2_path)
+      } else {
+        has_intensity <- .write_assay_export_if_exists(se_obj, "intensity", excel2_path)
+        if (has_intensity) files_to_zip <- c(files_to_zip, excel2_path)
+      }
+
+      if ("zscale" %in% SummarizedExperiment::assayNames(se_obj)) {
+        writexl::write_xlsx(se2scale(se_obj), path = excel3_path)
+        files_to_zip <- c(files_to_zip, excel3_path)
+      }
 
       # 打包 ZIP
       zip::zipr(
         zipfile = file,
-        files = c(rds_path, excel2_path, excel3_path),
+        files = files_to_zip,
         mode = "cherry-pick"
       )
     },
@@ -751,11 +817,21 @@ show_se_selector_modal <- function(se_data) {
       size = "l",
 
       h4("Subset samples in SE"),
-      make_grouped_select("se_col_selector", col_df, TRUE)$ui,
+      make_grouped_select(
+        id = "se_col_selector",
+        df = col_df,
+        label = "Select coldata columns",
+        default_all = TRUE
+      )$ui,
 
       tags$hr(),
       h4("Option1:Subset genes in SE by gene group"),
-      make_grouped_select("se_row_selector", row_df, TRUE)$ui,
+      make_grouped_select(
+        id = "se_row_selector",
+        df = row_df,
+        label = "Select rowdata columns",
+        default_all = TRUE
+      )$ui,
 
 
       h4("Option2:Upload excel contains protein group"),

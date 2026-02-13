@@ -236,18 +236,18 @@ se2DEGs <- function(se,
 
   # expression matrix as df
   exp_df <- as.data.frame(mtx) %>%
-    tibble::rownames_to_column("Protein_id")
+    tibble::rownames_to_column("gene")
 
   # compute group medians
   med_df <- as.data.frame(mtx) %>%
-    tibble::rownames_to_column("Protein_id") %>%
-    tidyr::pivot_longer(-Protein_id, names_to = "sample", values_to = "value")
+    tibble::rownames_to_column("gene") %>%
+    tidyr::pivot_longer(-gene, names_to = "sample", values_to = "value")
 
   meta2 <- meta %>% tibble::rownames_to_column(".sample_id")
 
   med_df <- med_df %>%
     dplyr::left_join(meta2, by = c("sample" = ".sample_id")) %>%
-    dplyr::group_by(Protein_id, !!rlang::sym(compare_col)) %>%
+    dplyr::group_by(gene, !!rlang::sym(compare_col)) %>%
     dplyr::summarize(median_expr = median(value, na.rm = TRUE), .groups = "drop") %>%
     tidyr::pivot_wider(
       names_from = !!rlang::sym(compare_col),
@@ -257,9 +257,9 @@ se2DEGs <- function(se,
 
   # join information
   final_df <- as.data.frame(rowData(se)) %>%
-    dplyr::left_join(exp_df, by = c("Protein.Ids" = "Protein_id")) %>%
-    dplyr::left_join(DEGs_res[, c(1, 8, 9, 2, 5, 6)], by = c("Protein.Ids" = "feature")) %>%
-    dplyr::left_join(med_df, by = c("Protein.Ids" = "Protein_id"))
+    dplyr::left_join(exp_df, by = c("gene")) %>%
+    dplyr::left_join(DEGs_res[, c(1, 8, 9, 2, 5, 6)], by = c("gene" = "feature")) %>%
+    dplyr::left_join(med_df, by = c("gene"))
 
   # store attributes so downstream functions know group info
   attr(final_df, "ref_group") <- ref

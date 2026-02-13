@@ -26,7 +26,7 @@ mod_visualization_server <- function(input, output, session) {
       data          = df,
       logFC_col     = "logFC",
       pval_col      = "adj.P.Val",
-      gene_col      = "Genes",
+      gene_col      = "gene",
       pval_cutoff   = input$Volcano_FDR,
       logFC_cutoff  = input$Volcano_log2FC,
       top_n         = input$Volcano_topN,
@@ -166,7 +166,7 @@ mod_visualization_server <- function(input, output, session) {
   output$gene_selector_ui <- renderUI({
     req(se_data())   # 等 se 上传后才触发
     se <- se_data()
-    gene_list <- rowData(se)$Genes
+    gene_list <- rownames(se)
     col_vars <- colnames(colData(se))
     tagList(
       selectizeInput(

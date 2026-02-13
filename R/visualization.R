@@ -141,7 +141,7 @@ plot_gene_expression <- function(se, gene, by = "condition") {
     dplyr::left_join(as.data.frame(rowData(se)), by = "gene")
   gene_name <- paste0("^", gene, "$")
   target_gene <- conc_mean_df %>%
-    dplyr::filter(stringr::str_detect(Genes, gene_name))
+    dplyr::filter(stringr::str_detect(.data[['gene']], gene_name))
 
   if (!by %in% colnames(se@colData)) {
     stop(paste0("Column '", by, "' not found in colData(se)"))

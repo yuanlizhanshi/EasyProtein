@@ -420,7 +420,8 @@ mod_pattern_server <- function(input, output, session) {
     se_reactive   = reactive(rv$se_sub),
     input         = input,
     file_input_id = "matrix_file",
-    suffix        = "_clustering"
+    suffix        = "_clustering",
+    session       = session
   )
 
   output$download_pattern_se_UI <- renderUI({

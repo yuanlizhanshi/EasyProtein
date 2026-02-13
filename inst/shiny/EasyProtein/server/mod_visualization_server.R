@@ -29,7 +29,7 @@ mod_visualization_server <- function(input, output, session) {
       gene_col      = "gene",
       pval_cutoff   = input$Volcano_FDR,
       logFC_cutoff  = input$Volcano_log2FC,
-      top_n         = input$Volcano_topN,
+      top_n         = input$Volcano_topN
     )
   })
 
@@ -45,7 +45,7 @@ mod_visualization_server <- function(input, output, session) {
     },
     content = function(file) {
       p <- make_vol_plot()$ggobj
-      ggplot2::ggsave(file, plot = p, device = cairo_pdf, width = 8, height = 6, dpi = 600)
+  ggplot2::ggsave(file, plot = p, device = grDevices::cairo_pdf, width = 8, height = 6, dpi = 600)
     }
   )
 
@@ -151,8 +151,8 @@ mod_visualization_server <- function(input, output, session) {
     plot_expr   = function() plot_GO_dot3(string_go_df(), topn = input$string_go_go_topn, label_format = input$string_go_go_label_width),
     input       = input,
     suffix      = "string_enrichment",
-    width       = function() input$go_plot_width  / 100,
-    height      = function() input$go_plot_height / 100,
+    width       = function() input$string_go_width  / 100,
+    height      = function() input$string_go_plot_height / 100,
     input_field = "string_go_file"
   )
   ##gene expression------

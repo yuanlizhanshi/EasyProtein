@@ -26,7 +26,8 @@ launch_EasyProtein <- function(install_missing = TRUE, ...) {
     "shinydashboard",
     "shinythemes",
     "shinyWidgets",
-    "ggiraph"
+    "ggiraph",
+    "ggpubr"
   )
 
   missing_pkgs <- required_pkgs[!vapply(

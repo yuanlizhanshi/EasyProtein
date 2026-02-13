@@ -854,7 +854,7 @@ run_gsea <- function(
 #' @export
 
 
-get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20,filter =T, use = c("coord", "contrib")) {
+get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20, use = c("coord", "contrib")) {
 
   use <- match.arg(use)
 
@@ -866,18 +866,11 @@ get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20,filter =T, 
   }
 
   df <- data.frame(
-    Protein.Ids = rownames(mat),
+    gene = rownames(mat),
     value = mat[, pc_name]
   ) %>%
-    left_join(as.data.frame(rowData(se_obj)),by = 'Protein.Ids') %>%
-    mutate(gene = str_extract(Genes, '^[^;]+'))
+    left_join(as.data.frame(rowData(se_obj)),by = 'gene') 
 
-  if(filter){
-    df <- df %>%
-      dplyr::filter(gene != '') %>%
-      group_by(gene) %>%
-      slice_head(n = 1)
-  }
 
   df <- df[!is.na(df$value), ]
 

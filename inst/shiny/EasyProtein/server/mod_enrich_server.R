@@ -45,6 +45,13 @@ mod_enrich_server <- function(input, output, session) {
       df[[input$gene_col]]
     }
     removeModal()
+    showModal(modalDialog(
+      title = NULL,
+      "正在运行富集分析，请稍候...",
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
     enrichment_analysis(genes, db = "GO", species = detect_species_from_symbol(genes))
   })
   
@@ -88,6 +95,13 @@ mod_enrich_server <- function(input, output, session) {
       df[[input$gene_col]]
     }
     removeModal()
+    showModal(modalDialog(
+      title = NULL,
+      "正在运行富集分析，请稍候...",
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
     enrichment_analysis(genes, db = "KEGG", species = detect_species_from_symbol(genes))
   })
   
@@ -125,6 +139,13 @@ mod_enrich_server <- function(input, output, session) {
     req(enriched_data())
     df <- enriched_data()
     removeModal()
+    showModal(modalDialog(
+      title = NULL,
+      "正在运行富集分析，请稍候...",
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
     withProgress(message = "Uploading and Calculating...", {
       gesa_res <- run_gsea(
         df,
@@ -171,6 +192,13 @@ mod_enrich_server <- function(input, output, session) {
     req(enriched_data())
     df <- enriched_data()
     removeModal()
+    showModal(modalDialog(
+      title = NULL,
+      "正在运行富集分析，请稍候...",
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
     withProgress(message = "Uploading and Calculating...", {
       gesa_res <- run_gsea(
         df,

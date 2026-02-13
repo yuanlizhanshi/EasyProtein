@@ -208,7 +208,7 @@ mod_visualization_server <- function(input, output, session) {
 
     se <- se_data()
     genes <- input$gene_select
-
+    print(genes)
     sel <- input$selected_cols
     col_name <- sub("\\|\\|.*$", "", sel[1])
     vals <- sub("^.*\\|\\|", "", sel)
@@ -223,7 +223,7 @@ mod_visualization_server <- function(input, output, session) {
 
     se_sub <- se[, matched_samples, drop = FALSE]
 
-    valid_genes <- genes[genes %in% rowData(se_sub)$Genes]
+    valid_genes <- genes[genes %in% rownames(se_sub)]
     if (length(valid_genes) == 0) return(NULL)
 
     if (length(valid_genes) == 1) {
@@ -239,8 +239,8 @@ mod_visualization_server <- function(input, output, session) {
       p <- cowplot::plot_grid(plotlist = plot_list)
     }
 
-    gene_exp_plot(p)   # ⭐ 核心：把图存下来
-    p                  # renderPlot 仍然正常画
+    gene_exp_plot(p)
+    p
   },
   height = function() input$gene_exp_height,
   width  = function() input$gene_exp_width

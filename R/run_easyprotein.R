@@ -57,7 +57,7 @@ launch_EasyProtein <- function(install_missing = TRUE, ...) {
   ## --------------------------------------------------
   app_dir <- system.file(
     "shiny",
-    "easyprotein",
+    "EasyProtein",
     package = "EasyProtein"
   )
 

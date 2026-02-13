@@ -59,7 +59,10 @@
 #'
 #' @export
 
-saveplot <- function(object,filenames = filename,width = NULL,height = NULL,dpi = 600){
+saveplot <- function(object, filenames = NULL, width = NULL, height = NULL, dpi = 600){
+  if (is.null(filenames) || !nzchar(filenames)) {
+    stop("Must input filenames")
+  }
   if (is.null(width)| is.null(height)) {
     stop('Must input figure width and height')
   }

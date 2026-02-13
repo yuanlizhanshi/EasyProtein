@@ -71,6 +71,14 @@ mod_tools_server <- function(input, output, session) {
 
 
     final_row_idx <- sort(unique(c(row_idx, excel_row_idx)))
+    if (length(final_row_idx) == 0) {
+      final_row_idx <- seq_len(nrow(rv$se))
+    }
+
+    if (length(col_idx) == 0) {
+      showNotification("No samples selected after filtering. Please revise your selection.", type = "error")
+      return(invisible(NULL))
+    }
 
     rv$se_sub <- rv$se[final_row_idx, col_idx, drop = FALSE]
 

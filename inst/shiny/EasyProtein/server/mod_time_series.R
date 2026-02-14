@@ -60,7 +60,7 @@ mod_time_series_server <- function(input, output, session) {
       req(se_filtered(), param_confirmed())
 
       se <- se_filtered()
-  cat("SummarizedExperiment:\n")
+     cat("SummarizedExperiment:\n")
       print(se)
       if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
         cat("\nassays:", paste0(names(SummarizedExperiment::assays(se)), collapse = ", "), "\n")

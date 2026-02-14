@@ -1,13 +1,13 @@
 # ======================================================
 # Module: DEG Server
-# 功能：读取 SE 对象 → 选择分组列 / 参考组 / 比较组 → 运行差异分析 → 输出表格 + 下载结果
-# 兼容原 UI，保持 ID 不变。
+# Purpose: read SE object → choose grouping/reference/compare → run DE → output table + download
+# Keep compatibility with existing UI (IDs unchanged).
 # ======================================================
 
 mod_deg_server <- function(input, output, session, rv) {
   
   # --------------------------------------------------
-  # 1️⃣ 上传 SummarizedExperiment
+  # 1️⃣ Upload SummarizedExperiment
   # --------------------------------------------------
   observeEvent(input$Upload_SE2, {
     req(input$Upload_SE2)
@@ -15,8 +15,8 @@ mod_deg_server <- function(input, output, session, rv) {
     
     tryCatch({
       se <- readRDS(se_path)
-      rv$se <- se   # ✅ 写入全局 rv$se
-      showNotification("文件读取成功 ✅", type = "message")
+  rv$se <- se   # ✅ write to global rv$se
+  showNotification("File loaded ✅", type = "message")
       
       cols <- colnames(SummarizedExperiment::colData(se))
       default_col <- if ("condition" %in% cols) "condition" else cols[1]
@@ -33,7 +33,7 @@ mod_deg_server <- function(input, output, session, rv) {
               width = "100%"
             )
           ),
-          # ---- donor 列
+          # ---- donor column
           radioButtons(
             inputId = "deg_pair_test",
             label = "Paired test",
@@ -53,32 +53,32 @@ mod_deg_server <- function(input, output, session, rv) {
           ),
           
           footer = tagList(
-            modalButton("取消"),
-            actionButton("confirm_deg_group", "开始计算", class = "btn btn-primary")
+            modalButton("Cancel"),
+            actionButton("confirm_deg_group", "Start", class = "btn btn-primary")
           ),
           size = "m",
           easyClose = TRUE
         )
       )
     }, error = function(e) {
-      showNotification(paste0("读取失败：", e$message), type = "error", duration = NULL)
+      showNotification(paste0("Load failed: ", e$message), type = "error", duration = NULL)
     })
   })
   
   # --------------------------------------------------
-  # 2️⃣ 用户选择分组列后，弹窗选择 Reference / Compare
+  # 2️⃣ After choosing grouping column, select reference/compare
   # --------------------------------------------------
   observeEvent(input$confirm_deg_group, {
     req(rv$se, input$deg_group_col)
     removeModal()
     
     tryCatch({
-      withProgress(message = "读取 SummarizedExperiment ...", value = 0.1, {
+  withProgress(message = "Loading SummarizedExperiment ...", value = 0.1, {
         sel_col <- input$deg_group_col
         se_obj <- rv$se
         
         if (!sel_col %in% colnames(colData(se_obj))) {
-          showNotification(paste0("列 ", sel_col, " 不存在！"), type = "error")
+          showNotification(paste0("Column ", sel_col, " does not exist!"), type = "error")
           return(NULL)
         }
         
@@ -86,37 +86,37 @@ mod_deg_server <- function(input, output, session, rv) {
         
         showModal(
           modalDialog(
-            title = paste0("选择分组进行比较 (", sel_col, ")"),
+            title = paste0("Select groups to compare (", sel_col, ")"),
             selectInput("ref_group", "Reference group", choices = group_levels, width = "100%"),
             selectInput("cmp_group", "Compare group", choices = group_levels, width = "100%"),
             footer = tagList(
-              modalButton("取消"),
-              actionButton("confirm_deg_run", "开始计算", class = "btn btn-primary")
+              modalButton("Cancel"),
+              actionButton("confirm_deg_run", "Start", class = "btn btn-primary")
             ),
             easyClose = TRUE
           )
         )
       })
     }, error = function(e) {
-      showNotification(paste0("分组选择失败：", e$message), type = "error", duration = NULL)
+      showNotification(paste0("Group selection failed: ", e$message), type = "error", duration = NULL)
     })
   })
   
   # --------------------------------------------------
-  # 3️⃣ 差异分析计算
+  # 3️⃣ Differential analysis
   # --------------------------------------------------
   observeEvent(input$confirm_deg_run, {
     removeModal()
     
     tryCatch({
-      withProgress(message = "开始差异分析 ...", value = 0.1, {
+  withProgress(message = "Running differential analysis ...", value = 0.1, {
         sel_col <- input$deg_group_col
         ref <- input$ref_group
         cmp <- input$cmp_group
         se_obj <- rv$se
         
         if (ref == cmp) {
-          showNotification("Reference 与 Compare 不能相同！", type = "error")
+          showNotification("Reference and Compare cannot be the same!", type = "error")
           return(NULL)
         }
 
@@ -124,7 +124,7 @@ mod_deg_server <- function(input, output, session, rv) {
         se_sub <- se_obj[, keep_cells]
         
         
-        incProgress(0.3, detail = paste0("计算 ", ref, " vs ", cmp, " ..."))
+  incProgress(0.3, detail = paste0("Computing ", ref, " vs ", cmp, " ..."))
         pair_on <- !is.null(input$deg_pair_col) && input$deg_pair_test == "YES"
         if (pair_on) {
           message("### Running Paired DEG test ###")
@@ -152,18 +152,18 @@ mod_deg_server <- function(input, output, session, rv) {
           )
         }
 
-        incProgress(0.5, detail = "分析完成")
+  incProgress(0.5, detail = "Done")
         
         rv$DEGs <- DEGs_df
       })
-      showNotification("计算完成 ✅", type = "message")
+      showNotification("Completed ✅", type = "message")
     }, error = function(e) {
-      showNotification(paste0("计算失败：", e$message), type = "error", duration = NULL)
+      showNotification(paste0("Computation failed: ", e$message), type = "error", duration = NULL)
     })
   })
   
   # --------------------------------------------------
-  # 4️⃣ 差异结果表格
+  # 4️⃣ Differential result table
   # --------------------------------------------------
   output$DEGs_table <- renderDT({
     req(rv$DEGs)
@@ -176,7 +176,7 @@ mod_deg_server <- function(input, output, session, rv) {
   })
   
   # --------------------------------------------------
-  # 5️⃣ 结果下载
+  # 5️⃣ Download results
   # --------------------------------------------------
   output$download_DEGs <- downloadHandler(
     filename = function() {
@@ -190,6 +190,6 @@ mod_deg_server <- function(input, output, session, rv) {
   
   output$download_DEGs_ui <- renderUI({
     req(rv$DEGs)
-    downloadButton("download_DEGs", "下载结果")
+    downloadButton("download_DEGs", "Download results")
   })
 }

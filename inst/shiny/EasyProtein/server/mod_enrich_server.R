@@ -1,13 +1,13 @@
 # ======================================================
 # Module: Enrichment + STRING server
-# 功能：GO / KEGG / GSEA 富集分析 + STRING 网络生成
-# 保持原始逻辑、UI ID 完全不变
+# Purpose: GO / KEGG / GSEA enrichment + STRING network generation
+# Keep original logic and UI IDs unchanged
 # ======================================================
 
 mod_enrich_server <- function(input, output, session) {
   
   # ----------------------------------------
-  # 1️⃣ 通用数据容器
+  # 1️⃣ Shared data container
   # ----------------------------------------
   enriched_data <- reactiveVal(NULL)
   rv <- reactiveValues(latest_url = NULL)
@@ -47,7 +47,7 @@ mod_enrich_server <- function(input, output, session) {
     removeModal()
     showModal(modalDialog(
       title = NULL,
-      "正在运行富集分析，请稍候...",
+      "Running enrichment analysis, please wait...",
       footer = NULL,
       easyClose = FALSE
     ))
@@ -97,7 +97,7 @@ mod_enrich_server <- function(input, output, session) {
     removeModal()
     showModal(modalDialog(
       title = NULL,
-      "正在运行富集分析，请稍候...",
+      "Running enrichment analysis, please wait...",
       footer = NULL,
       easyClose = FALSE
     ))
@@ -141,7 +141,7 @@ mod_enrich_server <- function(input, output, session) {
     removeModal()
     showModal(modalDialog(
       title = NULL,
-      "正在运行富集分析，请稍候...",
+      "Running enrichment analysis, please wait...",
       footer = NULL,
       easyClose = FALSE
     ))
@@ -194,7 +194,7 @@ mod_enrich_server <- function(input, output, session) {
     removeModal()
     showModal(modalDialog(
       title = NULL,
-      "正在运行富集分析，请稍候...",
+      "Running enrichment analysis, please wait...",
       footer = NULL,
       easyClose = FALSE
     ))
@@ -227,23 +227,23 @@ mod_enrich_server <- function(input, output, session) {
   })
   
   # =====================================================
-  #                STRING 网络生成
+  #                STRING network generation
   # =====================================================
   parse_genes <- reactive({
     g <- str_split(input$genes %||% "", pattern = "[,;\\s]+")[[1]]
     g <- unique(g[g != ""])
-    validate(need(length(g) > 0, "请至少输入一个基因"))
+  validate(need(length(g) > 0, "Please enter at least one gene"))
     g
   })
   
   observeEvent(input$open, {
     showModal(
       modalDialog(
-        title = "确认",
-        tags$p("将向 STRING 服务器发起请求以生成网络链接。是否继续？"),
+        title = "Confirm",
+        tags$p("This will send a request to the STRING server to generate a network link. Continue?"),
         footer = tagList(
-          modalButton("取消"),
-          actionButton("confirm_call", "确认生成", class = "btn btn-primary")
+          modalButton("Cancel"),
+          actionButton("confirm_call", "Generate", class = "btn btn-primary")
         ),
         easyClose = TRUE
       )
@@ -254,8 +254,8 @@ mod_enrich_server <- function(input, output, session) {
     removeModal()
     genes <- parse_genes()
     
-    withProgress(message = "正在调用 STRING API …", value = 0, {
-      incProgress(0.2, detail = "ID 映射")
+    withProgress(message = "Calling STRING API ...", value = 0, {
+      incProgress(0.2, detail = "ID mapping")
       idmap <- tryCatch(
         string_post_tsv(
           "get_string_ids",
@@ -263,16 +263,16 @@ mod_enrich_server <- function(input, output, session) {
           body  = list(identifiers = paste(genes, collapse = "\r"))
         ),
         error = function(e) {
-          showNotification(paste("ID 映射失败：", e$message), type = "error")
+          showNotification(paste("ID mapping failed:", e$message), type = "error")
           NULL
         }
       )
       req(!is.null(idmap), nrow(idmap) > 0)
       idmap <- pick_one_per_query(idmap)
       ids <- unique(idmap$stringId)
-      validate(need(length(ids) > 0, "没有映射到任何 STRING ID"))
+      validate(need(length(ids) > 0, "No STRING IDs were mapped"))
       
-      incProgress(0.7, detail = "生成链接")
+      incProgress(0.7, detail = "Generating link")
       linkdf <- tryCatch(
         string_post_tsv(
           "get_link",
@@ -285,25 +285,25 @@ mod_enrich_server <- function(input, output, session) {
           body = list(identifiers = paste(ids, collapse = "\r"))
         ),
         error = function(e) {
-          showNotification(paste("获取链接失败：", e$message), type = "error")
+          showNotification(paste("Failed to get link:", e$message), type = "error")
           NULL
         }
       )
       req(!is.null(linkdf), nrow(linkdf) > 0)
       url_col <- intersect(c("url", "string_network_url", "network_url"), names(linkdf))
-      validate(need(length(url_col) > 0, "未返回可用链接列"))
+      validate(need(length(url_col) > 0, "No usable link column returned"))
       url <- linkdf[[url_col[1]]][1]
-      validate(need(!is.na(url) && nzchar(url), "返回了空链接"))
+      validate(need(!is.na(url) && nzchar(url), "Returned an empty link"))
       rv$latest_url <- url
       incProgress(1)
       
       showModal(
         modalDialog(
-          title = "STRING 链接已生成",
-          tags$p("点击下方按钮在新标签页打开 STRING 原生页面。"),
-          actionButton("open_newtab", "在新标签页打开", class = "btn btn-primary"),
+          title = "STRING link generated",
+          tags$p("Click the button below to open the STRING page in a new tab."),
+          actionButton("open_newtab", "Open in new tab", class = "btn btn-primary"),
           tags$hr(),
-          tags$small("或复制下面的链接手动打开："),
+          tags$small("Or copy the link below to open manually:"),
           tags$pre(style = "white-space:pre-wrap; word-break:break-all; margin-top:6px;", url),
           easyClose = TRUE, footer = NULL
         )

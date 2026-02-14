@@ -1,18 +1,18 @@
 # ======================================================
 # Module: Filter Server
-# 功能：读取 se 文件 → 移除样本 / 筛选基因 → PCA + QC 绘图 → 导出 zip
-# 适配原 UI，输出 ID 不改。
+# Purpose: read SE file → select samples / filter genes → PCA + QC plots → export zip
+# Keep compatibility with existing UI (do not change output IDs).
 # ======================================================
 
-# 两个参数输入模式可选：
-# 一个是选择基因数量，看占比
-# 一个是选择占比，看基因数量（可以把基因描述都放上），
-# 后面导出的表格，建议都把描述都放上，或者所有描述性列全部保留
+# Two input modes are optional:
+# - Select gene count to view proportions
+# - Select proportions to view gene count (can include gene descriptions)
+# For exported tables, it is recommended to keep all descriptive columns.
 
 mod_QC_server <- function(input, output, session) {
 
   # -----------------------------
-  # 1️⃣ 数据读取
+  # 1️⃣ Data loading
   # -----------------------------
   se_data <- reactiveVal(NULL)
 
@@ -23,7 +23,7 @@ mod_QC_server <- function(input, output, session) {
   })
 
   # -----------------------------
-  # 2️⃣ 选择样本逻辑（默认全选）
+  # 2️⃣ Sample selection logic (default: select all)
   # -----------------------------
   selected_samples <- reactiveVal(NULL)
 
@@ -48,9 +48,9 @@ mod_QC_server <- function(input, output, session) {
         #   selected = remove_samples(),
         #   multiple = TRUE,
         #   options = list(
-        #     `actions-box` = TRUE,       # 全选/全不选按钮
-        #     `live-search` = TRUE,       # 搜索功能
-        #     size = 10                   # 下拉显示行数
+  #     `actions-box` = TRUE,       # select all / deselect all
+  #     `live-search` = TRUE,       # search enabled
+  #     size = 10                   # number of rows in dropdown
         #   )
         # ),
         footer = tagList(
@@ -73,8 +73,8 @@ mod_QC_server <- function(input, output, session) {
       removeModal()
       return()
     }
-    col_name <- sub("\\|\\|.*$", "", sel[1])     # 所选列名（只有一个）
-    vals     <- sub("^.*\\|\\|", "", sel)        # 多个取值
+  col_name <- sub("\\|\\|.*$", "", sel[1])     # selected column name (single column)
+  vals     <- sub("^.*\\|\\|", "", sel)        # multiple values
     samples_to_keep <- rownames(col_df)[col_df[[col_name]] %in% vals]
     selected_samples(samples_to_keep)
 
@@ -83,7 +83,7 @@ mod_QC_server <- function(input, output, session) {
 
 
   # -----------------------------
-  # 3️⃣ 基因筛选逻辑
+  # 3️⃣ Gene filtering logic
   # -----------------------------
   gene_keep <- reactiveVal(NULL)
   uploaded_gene_df <- reactiveVal(NULL)
@@ -138,7 +138,7 @@ mod_QC_server <- function(input, output, session) {
       gene_keep(genes)
       showNotification(paste0("✅ Loaded ", length(genes), " genes from the only column."), type = "message")
     } else {
-      show_gene_selection_modal(df)  # 保留原逻辑
+  show_gene_selection_modal(df)  # keep original logic
     }
   })
 
@@ -172,7 +172,7 @@ mod_QC_server <- function(input, output, session) {
   })
 
   # -----------------------------
-  # 4️⃣ 过滤数据（样本 + 基因）
+  # 4️⃣ Filter data (samples + genes)
   # -----------------------------
   se_filtered <- reactive({
     req(se_data())
@@ -193,15 +193,15 @@ mod_QC_server <- function(input, output, session) {
   })
 
   # -----------------------------
-  # 5️⃣ PCA 分析
+  # 5️⃣ PCA analysis
   # -----------------------------
   pca_results <- reactive({
     req(se_filtered())
     se <- se_filtered()
     validate(
-      need(ncol(se) >= 2, "至少需要保留 2 个样本才能计算 PCA"),
+   need(ncol(se) >= 2, "At least 2 samples are required to compute PCA"),
       need("intensity" %in% assayNames(se),
-           "未找到 assay 'intensity'，请检查对象或更换 assay 名称")
+     "Assay 'intensity' not found; please check the object or use a different assay name")
     )
     intersity_mtx <- as.matrix(assay(se, "intensity"))
     FactoMineR::PCA(t(intersity_mtx), scale.unit = TRUE, graph = FALSE)
@@ -219,7 +219,7 @@ mod_QC_server <- function(input, output, session) {
   })
 
   # -----------------------------
-  # 6️⃣ QC / PCA 绘图
+  # 6️⃣ QC / PCA plots
   # -----------------------------
   output$color_selector <- renderUI({
     req(se_filtered())
@@ -269,7 +269,7 @@ mod_QC_server <- function(input, output, session) {
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   # -----------------------------
-  # 7️⃣ 导出 Zip
+  # 7️⃣ Export zip
   # -----------------------------
   output$download_pca_pdf <- make_download_pdf(
     plot_expr   = function() plot_pca(pca_df(), pca_results(), input$colorby, input$labelby),
@@ -317,10 +317,10 @@ mod_QC_server <- function(input, output, session) {
   )
 
   output$download_se2 <- make_download_se_zip(
-    se_reactive   = se_filtered,   # 传 reactiveExpr（不要加 ()）
+    se_reactive   = se_filtered,   # pass reactiveExpr (do not add ())
     input         = input,
-    file_input_id = "se_file",     # 上传文件 ID
-    suffix        = "_filtered",   # 可选
+    file_input_id = "se_file",     # upload file ID
+    suffix        = "_filtered",   # optional
     session       = session
   )
 

@@ -628,7 +628,7 @@ ivolcano <- function(
   for (nm in names(sig_colors)) {
     if (!nm %in% names(sig_counts)) sig_counts[nm] <- 0
   }
-  sig_counts <- sig_counts[names(sig_colors)]  # 保证顺序一致
+  sig_counts <- sig_counts[names(sig_colors)]  # keep order aligned
   sig_labels <- sprintf("%s (n=%d)", names(sig_colors), sig_counts)
 
   p <- ggplot(df, aes_args) +
@@ -641,8 +641,8 @@ ivolcano <- function(
     } +
     scale_color_manual(
       values = sig_colors,
-      labels = sig_labels,     # ✅ 图例标签带数量
-      name = "Significance"    # 图例标题
+  labels = sig_labels,     # ✅ legend labels include counts
+  name = "Significance"    # legend title
     ) +
     labs(title = title, x = "log2 Fold Change", y = "-log10(FDR)") +
     theme_minimal()
@@ -1012,7 +1012,7 @@ plot_heatmap_withline <- function(mat = NULL,
       col_groups <- factor(column_split)
       group_levels <- levels(col_groups)
 
-      # 计算每个组的均值
+  # Calculate mean for each group
       means <- sapply(group_levels, function(g) {
         cols <- which(col_groups == g)
         vals <- as.numeric(tmpmat[, cols])
@@ -1026,12 +1026,12 @@ plot_heatmap_withline <- function(mat = NULL,
       x_coords <- seq_along(means)
       from_range <- range(means, na.rm = TRUE)
 
-      # ✅ 缩放到 0.05–0.95，并强制不越界
+  # ✅ Rescale to 0.05–0.95 and clamp to bounds
       clip_range <- function(x) pmin(pmax(x, 0.05), 0.95)
       y_mean <- clip_range(scales::rescale(means, to = c(0.05, 0.95), from = from_range))
       x_scaled <- clip_range(scales::rescale(x_coords, to = c(0.05, 0.95)))
 
-      # ✅ 绘制均值线（用 NPC 单位确保不超 panel）
+  # ✅ Draw mean line (use NPC units to avoid panel overflow)
       grid::grid.lines(
         x = unit(x_scaled, "npc"),
         y = unit(y_mean, "npc"),
@@ -1050,7 +1050,7 @@ plot_heatmap_withline <- function(mat = NULL,
       )
     }
 
-    # ✅ 添加文字标签
+  # ✅ Add text label
     grid.textbox <- utils::getFromNamespace("grid.textbox", "ComplexHeatmap")
     text <- paste("Gene number:", length(index))
     grid.textbox(

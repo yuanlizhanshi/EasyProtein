@@ -1,7 +1,7 @@
 # ======================================================
 # Module: Pattern Server
-# 功能：加载 SummarizedExperiment -> 参数选择 -> 聚类分析 -> 热图 -> 导出
-# 保持 UI ID 和外部接口不变
+# Purpose: load SummarizedExperiment -> parameter selection -> clustering -> heatmap -> export
+# Keep UI IDs and external interfaces unchanged
 # ======================================================
 
 mod_pattern_server <- function(input, output, session) {
@@ -18,7 +18,7 @@ mod_pattern_server <- function(input, output, session) {
   pdf_path <- reactiveVal(NULL)
 
   # =============================
-  # 1. 上传 SE
+  # 1. Upload SE
   # =============================
   observeEvent(input$matrix_file, {
     req(input$matrix_file)
@@ -39,7 +39,7 @@ mod_pattern_server <- function(input, output, session) {
     )$server(input, output, session)
   })
 
-  # 重置参数（重新弹窗）
+  # Reset parameters (reopen modal)
   observeEvent(input$reset_params, {
     req(rv$se)
     removeModal()
@@ -59,7 +59,7 @@ mod_pattern_server <- function(input, output, session) {
   })
 
   # =============================
-  # 2. colData 动态更新 + 分组选择器
+  # 2. colData dynamic update + grouping selector
   # =============================
   observe({
     req(rv$se)
@@ -70,7 +70,7 @@ mod_pattern_server <- function(input, output, session) {
   output$coldata_col_selector <- renderUI({
     req(rv$se)
     all_cols <- as.data.frame(colData(rv$se))
-    # 真正显示在 UI 里的 coldata 分组选择下拉框
+  # Actual colData grouping selector shown in UI
     selectInput(
       "coldata_col_selector",
       "Select grouping column from colData",
@@ -87,7 +87,7 @@ mod_pattern_server <- function(input, output, session) {
   output$coldata_row_selector <- renderUI({
     req(rv$se)
     all_rows <- as.data.frame(rowData(rv$se))
-    # 真正显示在 UI 里的 coldata 分组选择下拉框
+  # Actual rowData grouping selector shown in UI
     selectInput(
       "coldata_row_selector",
       "Select grouping column from rowData",
@@ -98,7 +98,7 @@ mod_pattern_server <- function(input, output, session) {
 
 
   # =============================
-  # 3. 主逻辑：确认参数 -> 子集 -> 聚类 -> 热图
+  # 3. Main logic: confirm params -> subset -> clustering -> heatmap
   # =============================
   observeEvent(input$confirm_params, {
     req(rv$se)
@@ -117,7 +117,7 @@ mod_pattern_server <- function(input, output, session) {
     col_df <- as.data.frame(colData(se))
     sample_names <- rownames(col_df)
     if (is.null(sample_names)) {
-      # 如果 colData 没有 rownames，则用列名当样本名
+  # If colData has no rownames, use column names as sample names
       sample_names <- colnames(se)
     }
 
@@ -127,7 +127,7 @@ mod_pattern_server <- function(input, output, session) {
       return()
     }
 
-    #row
+  # Row
     sel_row <- input$selected_rows
     row_df <- as.data.frame(rowData(se))
     gene_names <- rownames(row_df)
@@ -157,7 +157,7 @@ mod_pattern_server <- function(input, output, session) {
     }
 
 
-    #subset here
+  # Subset here
     se_sub <- se[matched_genes, matched_samples, drop = FALSE]
 
 
@@ -181,7 +181,7 @@ mod_pattern_server <- function(input, output, session) {
     intersity_scale <- scale_mtx(intersity_mtx)
     mat_data(intersity_scale)
 
-    # 加载弹窗
+  # Loading modal
     showModal(modalDialog(
       title = NULL,
       "Loading... Please wait a second",
@@ -190,9 +190,9 @@ mod_pattern_server <- function(input, output, session) {
     ))
 
     # =============================
-    # 3.3 行聚类
+  # 3.3 Row clustering
     # =============================
-    # 返回 data.frame: gene + km_cluster
+  # Returns data.frame: gene + km_cluster
 
     if (identical(input$row_k, "AUTO")) {
       row_cluster_df <- auto_cluster_matrix_pca_one(intersity_scale, mode = "row")
@@ -204,7 +204,7 @@ mod_pattern_server <- function(input, output, session) {
       )
     }
 
-    # 对齐 se_sub 行顺序，写入 rowData
+  # Align with se_sub rows and write into rowData
     row_cluster_vec <- row_cluster_df$km_cluster[
       match(rownames(se_sub), row_cluster_df$gene)
     ]
@@ -224,7 +224,7 @@ mod_pattern_server <- function(input, output, session) {
     rowData(se_sub)[[new_col_name]] <- as.character(row_cluster_vec)
 
     # =============================
-    # 3.4 列聚类
+  # 3.4 Column clustering
     # =============================
     if (input$col_cluster_mode == "kmeans") {
       if (identical(input$col_k, "AUTO")) {
@@ -251,11 +251,11 @@ mod_pattern_server <- function(input, output, session) {
       colData(se_sub)$col_cluster <- as.character(col_cluster_vec)
     }
 
-    # 缓存给下游使用
+  # Cache for downstream use
     rv$se_sub <- se_sub
 
     # =============================
-    # 3.5 构造 row_info（导出用）
+  # 3.5 Build row_info (for export)
     # =============================
     mean_expr <- calc_gene_mean_by_condition(se_sub, assay_name = "conc",
                                              method = "mean",condition_col = "col_cluster") %>%
@@ -273,9 +273,9 @@ mod_pattern_server <- function(input, output, session) {
     col_info(col_cluster_df)
 
     # =============================
-    # 3.6 画热图 PDF
+  # 3.6 Draw heatmap PDF
     # =============================
-    # 顶部注释
+  # Top annotation
     top_anno <- NULL
     if (input$top_annotaion_legend != "NULL") {
       group_col <- input$top_annotaion_legend
@@ -288,7 +288,7 @@ mod_pattern_server <- function(input, output, session) {
       }
     }
 
-    # 行、列 split 向量（严格对齐）
+  # Row/column split vectors (strictly aligned)
     row_split_vec <- rowData(se_sub)[[new_col_name]]
     col_split_vec <- factor(colData(se_sub)$col_cluster,levels = unique(colData(se_sub)$col_cluster))
 
@@ -337,7 +337,7 @@ mod_pattern_server <- function(input, output, session) {
     ht_obj(ht)
     removeModal()
     # =============================
-    # 3.7 输出 UI：PDF 预览 + 按钮
+  # 3.7 Output UI: PDF preview + buttons
     # =============================
     # output$heatmap_plot <- renderPlot({
     #   req(ht_obj())
@@ -371,7 +371,7 @@ mod_pattern_server <- function(input, output, session) {
   })
 
   # =============================
-  # 4. 下载聚类结果
+  # 4. Download clustering results
   # =============================
 
   output$download_heatmap_pdf <- make_download_pdf(
@@ -414,7 +414,7 @@ mod_pattern_server <- function(input, output, session) {
 
 
   # =============================
-  # 5. 下载带聚类信息的 SE
+  # 5. Download SE with clustering info
   # =============================
   output$download_pattern_se <- make_download_time_se_zip(
     se_reactive   = reactive(rv$se_sub),

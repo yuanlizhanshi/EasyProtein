@@ -582,7 +582,7 @@ calc_gene_mean_by_condition <- function(
   if (is.null(colnames(mtx))) stop("assay matrix has no colnames.")
   if (length(grp) != ncol(mtx)) stop("Length of grouping vector != ncol(assay).")
 
-  # 分组顺序：保持出现顺序（而不是字母序）
+  # Group order: keep first-seen order (not alphabetical)
   lvls <- unique(grp)
 
   out <- sapply(lvls, function(g) {

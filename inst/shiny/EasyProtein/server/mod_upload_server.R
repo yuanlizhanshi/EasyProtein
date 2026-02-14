@@ -209,14 +209,14 @@ mod_upload_server <- function(input, output, session, rv) {
 
     # ✅ Update reactiveVal
     se_rv(se)
-    rv$se <- se  # 确保全局同步
+  rv$se <- se  # ensure global state stays in sync
 
     # ✅ Update edit table to avoid overwriting on save
     df_new <- as.data.frame(S4Vectors::DataFrame(
       cell_id = colnames(se),
       colData(se)
     ))
-    edit_df(df_new)  # 更新显示与保存内容同步
+  edit_df(df_new)  # keep display and saved content in sync
 
     showNotification(paste("✅ Added columns:", paste(new_cols, collapse = ", ")), type = "message")
   })

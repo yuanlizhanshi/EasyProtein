@@ -10,17 +10,17 @@ source("server/mod_tools_server.R")
 server <- function(input, output, session) {
 
   rv <- reactiveValues(
-    se = NULL,                 # 主 SummarizedExperiment
-    se_filtered = NULL,        # 过滤后的 SE
-    DEGs = NULL,               # 差异分析结果
-    genes_keep = NULL,         # 用户上传的保留基因列表
-    removed_samples = NULL,    # 用户移除的样本
-    enriched_data = NULL,      # 富集分析数据（GO/KEGG/GSEA）
-    pattern_matrix = NULL,     # 模式识别矩阵
-    row_info = NULL,           # 聚类结果（行）
-    col_info = NULL,           # 聚类结果（列）
-    pdf_path = NULL,           # 热图 PDF 路径
-    string_url = NULL          # STRING 网络链接
+    se = NULL,                 # main SummarizedExperiment
+    se_filtered = NULL,        # filtered SE
+    DEGs = NULL,               # differential analysis results
+    genes_keep = NULL,         # user-uploaded gene keep list
+    removed_samples = NULL,    # user-removed samples
+    enriched_data = NULL,      # enrichment data (GO/KEGG/GSEA)
+    pattern_matrix = NULL,     # pattern discovery matrix
+    row_info = NULL,           # clustering results (rows)
+    col_info = NULL,           # clustering results (columns)
+    pdf_path = NULL,           # heatmap PDF path
+    string_url = NULL          # STRING network link
   )
 
   

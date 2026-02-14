@@ -5,7 +5,7 @@ ui <- {
     tags$div(id = "download_loading_overlay",
              tags$div(class = "overlay-box",
                       icon("spinner", class = "fa-spin"),
-                      span(id = "download_loading_text", " 正在准备下载，请稍候...")
+                      span(id = "download_loading_text", " Preparing download, please wait...")
              )
     ),
     tags$head(
@@ -117,7 +117,7 @@ ui <- {
                      ),
                      verbatimTextOutput("se_summary"),
 
-                     downloadButton("download_se", "下载结果")
+                     downloadButton("download_se", "Download results")
                    ),style = "font-size:125%;width:80%;")
         ),
         ###Quality Control----
@@ -310,7 +310,7 @@ ui <- {
           fluidPage(
             tags$head(
               tags$style(HTML("
-        /* 控制 tab 标签宽度与主体宽度 */
+  /* Control tab width and content width */
         .nav-tabs > li > a {
           min-width: 150px;
         }
@@ -416,10 +416,10 @@ ui <- {
                     column(
                       6,
                       tags$br(),
-                      fileInput("gene_file", "上传基因 Excel", accept = c(".xls", ".xlsx")),
-                      tags$small("可直接输入基因（换行/逗号/空格分隔）"),
+                      fileInput("gene_file", "Upload gene Excel", accept = c(".xls", ".xlsx")),
+                      tags$small("You can also input genes directly (newline/comma/space separated)"),
                       textAreaInput(
-                        "genes", "基因列表", rows = 8,
+                        "genes", "Gene list", rows = 8,
                         value = "TP53\nMDM2\nCDKN1A\nRB1",
                         placeholder = "TP53, MDM2, CDKN1A, RB1"
                       )
@@ -428,7 +428,7 @@ ui <- {
                       6,
                       tags$br(),
                       selectInput(
-                        "species", "物种 (NCBI Taxon)",
+                        "species", "Species (NCBI Taxon)",
                         choices = c("Human (9606)" = 9606, "Mouse (10090)" = 10090, "Rat (10116)" = 10116),
                         selected = 9606
                       ),
@@ -443,7 +443,7 @@ ui <- {
                         selected = "functional", inline = TRUE
                       ),
                       br(),
-                      actionButton("open", "生成 STRING 链接", class = "btn btn-primary")
+                      actionButton("open", "Generate STRING link", class = "btn btn-primary")
                     )
                   )
                 )
@@ -459,10 +459,10 @@ ui <- {
                  fluidPage(
                    tags$head(
                      tags$style(HTML("
-                        /* 控制 nav-tabs 下每个 tabPanel 的宽度 */
+                        /* Control tabPanel width under nav-tabs */
                         .nav-tabs > li > a {
-                          min-width: 200px;   /* 每个标签最小宽度 */
-                          text-align: center; /* 文字居中 */
+                          min-width: 200px;   /* Minimum width per tab */
+                          text-align: center; /* Center text */
                         }
                       "))
                    ),
@@ -569,15 +569,15 @@ ui <- {
                                 )
                               )
                      )
-                     # tabPanel("图D", value = "plotD",
+                     # tabPanel("Plot D", value = "plotD",
                      #          fluidPage(
-                     #            h4("这里放图D内容"),
+                     #            h4("Place Plot D here"),
                      #            plotOutput("plot_D")
                      #          )
                      # ),
-                     # tabPanel("图E", value = "plotE",
+                     # tabPanel("Plot E", value = "plotE",
                      #          fluidPage(
-                     #            h4("这里放图E内容"),
+                     #            h4("Place Plot E here"),
                      #            plotOutput("plot_E")
                      #          )
                      # )

@@ -1,13 +1,13 @@
 # ======================================================
 # Module: Import Server
-# 功能：上传 TSV → 构建 SummarizedExperiment → 编辑 colData → 导出 zip
-# 兼容原 UI，不改任何输出 ID。
+# Purpose: upload TSV → build SummarizedExperiment → edit colData → export zip
+# Keep compatibility with the existing UI (do not change output IDs).
 # ======================================================
 
 mod_upload_server <- function(input, output, session, rv) {
 
   # -----------------------------
-  # 1️⃣ SummarizedExperiment 构建
+  # 1️⃣ Build SummarizedExperiment
   # -----------------------------
   se_rv <- reactiveVal(NULL)
   un_stable_gene_rv <- reactiveVal(NULL)
@@ -19,7 +19,7 @@ mod_upload_server <- function(input, output, session, rv) {
     is_tsv <- tolower(tools::file_ext(input$upload_tsv$name)) %in% c("tsv")
 
     if (!is_tsv) {
-      showNotification("文件类型不符合要求：需要 .tsv ", type = "error", duration = NULL)
+  showNotification("Invalid file type: .tsv required.", type = "error", duration = NULL)
       return(NULL)
     }
 
@@ -31,21 +31,21 @@ mod_upload_server <- function(input, output, session, rv) {
       number_of_sample <- cols_preview[stringr::str_detect(cols_preview, "raw")]
       number_of_group <- unique(stringr::str_extract(number_of_sample, "\\w+(?=_[^_]*$)"))
       showModal(modalDialog(
-        title = "选择 Observation ID 列",
+  title = "Select Observation ID column",
         size = "m",
         easyClose = FALSE,
         footer = tagList(
-          modalButton("取消"),
-          actionButton("confirm_obscol", "确认", class = "btn btn-primary")
+          modalButton("Cancel"),
+          actionButton("confirm_obscol", "Confirm", class = "btn btn-primary")
         ),
 
         selectInput(
           "obscol_select",
-          label = "请选择用于作为行名的列（Observation ID）",
+          label = "Select the column to use as row names (Observation ID)",
           choices = obs_choices,
           selected = default_obs
         ),
-        helpText("默认优先使用 Gene，如无该列则使用第一列。"),
+  helpText("Gene is preferred by default; otherwise the first column is used."),
         sliderInput(
           inputId = "valid_group_cutoff_threhold",
           label   = "Remove genes with ≤ N valid groups ( < 0.5 missing)",
@@ -65,11 +65,11 @@ mod_upload_server <- function(input, output, session, rv) {
         )
       ))
 
-      # ---- 确认按钮后执行构建 SummarizedExperiment ----
+  # ---- Build SummarizedExperiment after confirmation ----
       observeEvent(input$confirm_obscol, {
         removeModal()
-        withProgress(message = "构建 SummarizedExperiment ...", value = 0.1, {
-          incProgress(0.3, detail = "读取与解析文件")
+        withProgress(message = "Building SummarizedExperiment ...", value = 0.1, {
+          incProgress(0.3, detail = "Reading and parsing file")
           se_list <- rawdata2se(
             exp_file = exp_path,
             obs_col = input$obscol_select,
@@ -78,18 +78,18 @@ mod_upload_server <- function(input, output, session, rv) {
             min_stable_groups = input$valid_cv_cutoff_threhold
           )
 
-          incProgress(0.5, detail = "完成")
+          incProgress(0.5, detail = "Done")
         })
         se_rv(se_list$se)
         missing_gene_rv(se_list$missing_gene_df)
         un_stable_gene_rv(se_list$un_stable_gene)
 
         rv$se <- se_rv()
-        showNotification(paste0("数据载入完成 ✅ (使用列: ", input$obscol_select, ")"), type = "message")
+        showNotification(paste0("Data loaded ✅ (column: ", input$obscol_select, ")"), type = "message")
       }, once = TRUE)
 
     }, error = function(e) {
-      showNotification(paste0("载入失败：", e$message), type = "error", duration = NULL)
+      showNotification(paste0("Load failed: ", e$message), type = "error", duration = NULL)
     })
   }, ignoreInit = TRUE)
 
@@ -121,7 +121,7 @@ mod_upload_server <- function(input, output, session, rv) {
 
   output$edit_coldata_ui <- renderUI({
     req(se_rv())
-    actionButton("edit_coldata", "编辑 colData", icon = icon("pen-to-square"))
+  actionButton("edit_coldata", "Edit colData", icon = icon("pen-to-square"))
   })
 
   observeEvent(input$edit_coldata, {
@@ -183,7 +183,7 @@ mod_upload_server <- function(input, output, session, rv) {
 
     new_meta <- readxl::read_excel(input$meta_excel$datapath)
     if (ncol(new_meta) < 2) {
-      showNotification("❌ Excel 至少需要一列样本名和一列 metadata！", type = "error")
+      showNotification("❌ Excel must contain at least one sample column and one metadata column!", type = "error")
       return(NULL)
     }
 
@@ -191,40 +191,40 @@ mod_upload_server <- function(input, output, session, rv) {
     new_meta <- as.data.frame(new_meta)
     colnames(new_meta)[1] <- "sample"
 
-    # ---- 按样本名重新排序 ----
+    # ---- Reorder by sample name ----
     new_meta <- new_meta[match(colnames(se), new_meta$sample), ]
 
-    # ---- 去除重复列 ----
+    # ---- Remove duplicate columns ----
     new_cols <- setdiff(colnames(new_meta), c("sample", colnames(colData(se))))
 
     if (length(new_cols) == 0) {
-      showNotification("没有可加入的新列（所有列都已存在）", type = "message")
+      showNotification("No new columns to add (all columns already exist).", type = "message")
       return(NULL)
     }
 
-    # ---- 加入新列 ----
+    # ---- Add new columns ----
     for (col in new_cols) {
       se[[col]] <- new_meta[[col]]
     }
 
-    # ✅ 更新 reactiveVal
+    # ✅ Update reactiveVal
     se_rv(se)
     rv$se <- se  # 确保全局同步
 
-    # ✅ 同时更新编辑表格（防止 save 时被覆盖）
+    # ✅ Update edit table to avoid overwriting on save
     df_new <- as.data.frame(S4Vectors::DataFrame(
       cell_id = colnames(se),
       colData(se)
     ))
     edit_df(df_new)  # 更新显示与保存内容同步
 
-    showNotification(paste("✅ 成功添加列：", paste(new_cols, collapse = ", ")), type = "message")
+    showNotification(paste("✅ Added columns:", paste(new_cols, collapse = ", ")), type = "message")
   })
 
 
 
 
-  # ---- 编辑表格单元格 ----
+  # ---- Edit table cells ----
   observeEvent(input$coldata_table_cell_edit, {
     info <- input$coldata_table_cell_edit
     df <- isolate(edit_df())
@@ -238,7 +238,7 @@ mod_upload_server <- function(input, output, session, rv) {
     replaceData(dataTableProxy("coldata_table"), df, resetPaging = FALSE, rownames = FALSE)
   })
 
-  # ---- 保存修改并写回 SummarizedExperiment ----
+  # ---- Save changes and write back to SummarizedExperiment ----
   observeEvent(input$save_coldata, {
     req(edit_df())
     df <- edit_df()
@@ -248,7 +248,7 @@ mod_upload_server <- function(input, output, session, rv) {
 
     sce <- se_rv()
     if (!setequal(cell_ids, colnames(sce))) {
-      showNotification("cell_id 与 SCE 列名不一致，已按 SCE 列名顺序自动对齐。", type = "warning")
+      showNotification("cell_id does not match SCE column names; auto-aligned by SCE column order.", type = "warning")
     }
 
     new_cd_df <- S4Vectors::DataFrame(new_cd, row.names = cell_ids)
@@ -256,10 +256,10 @@ mod_upload_server <- function(input, output, session, rv) {
 
     colData(sce) <- new_cd_df
     se_rv(sce)
-    rv$se <- sce  # ✅ 更新全局 rv
+  rv$se <- sce  # ✅ Update global rv
 
     removeModal()
-    showNotification("已保存：colData 已更新。", type = "message")
+  showNotification("Saved: colData updated.", type = "message")
 
     output$coldata_preview <- renderDT({
       df2 <- as.data.frame(S4Vectors::DataFrame(
@@ -271,7 +271,7 @@ mod_upload_server <- function(input, output, session, rv) {
   })
 
   # -----------------------------
-  # 4️⃣ 导出 zip
+  # 4️⃣ Export zip
   # -----------------------------
   output$download_se <- make_download_se_qc_zip(
     se_reactive   = se_rv,

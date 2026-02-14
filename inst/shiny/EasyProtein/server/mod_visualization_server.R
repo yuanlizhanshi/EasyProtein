@@ -1,13 +1,13 @@
 # ======================================================
 # Module: Visualization Server
-# 功能：差异分析结果可视化（Volcano plot + GO dotplot）
-# 保持所有 UI 输出 ID 和逻辑完全不变
+# Purpose: visualize differential analysis results (Volcano plot + GO dotplot)
+# Keep all UI output IDs and logic unchanged
 # ======================================================
 
 mod_visualization_server <- function(input, output, session) {
 
   # =====================================================
-  # 1️⃣ Volcano plot 部分
+  # 1️⃣ Volcano plot section
   # =====================================================
   DEGs_rv2 <- reactiveVal(NULL)
 
@@ -50,7 +50,7 @@ mod_visualization_server <- function(input, output, session) {
 
 
   # =====================================================
-  # 2️⃣ GO enrichment dotplot 部分
+  # 2️⃣ GO enrichment dotplot section
   # =====================================================
   go_df <- reactive({
     req(input$go_file)
@@ -162,24 +162,24 @@ mod_visualization_server <- function(input, output, session) {
     se_data(se)
   })
   output$gene_selector_ui <- renderUI({
-    req(se_data())   # 等 se 上传后才触发
+  req(se_data())   # wait for SE upload before rendering
     se <- se_data()
     gene_list <- rownames(se)
     col_vars <- colnames(colData(se))
     tagList(
       selectizeInput(
         inputId = "gene_select",
-        label = "选择基因：",
+  label = "Select genes:",
         choices = gene_list,
         multiple = TRUE,
         options = list(
-          placeholder = "请选择或输入基因名称...",
-          maxOptions = 1000   # 避免太多选项一次加载
+          placeholder = "Select or enter gene names...",
+          maxOptions = 1000   # avoid loading too many options at once
         )
       ),
       selectInput(
         inputId = "group_col",
-        label = "选择分组列",
+        label = "Select grouping column",
         choices = col_vars,
         selected = if ("condition" %in% col_vars) "condition" else col_vars[1]
       )

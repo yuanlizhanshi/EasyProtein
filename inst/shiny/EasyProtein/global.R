@@ -15,12 +15,12 @@ library(shinyWidgets)
 library(ggiraph)
 
 
-# 控制用户文件上传最大为2G
+# Limit user file uploads to 2GB
 options(shiny.maxRequestSize=1024*1024^2)
 
 col<- rev(colorRampPalette(c("#cc0000", "#FFff00",'#66ccff','#000066'))(50))
 
-# 定义自定义颜色custom_colors
+# Define custom color palette
 custom_colors <- c(
   "#BDBDBD", "#8DB5CE", "#542E8B", "#D7BD90", "#C82129", "#F296C0", "#647950", "#114B9B", "#FBBD90", "#193E51", "#BE93BF")
 
@@ -59,7 +59,7 @@ js_escape  <- function(x) gsub("'", "\\\\'", x, fixed = TRUE)
 #       w <- if (is.function(width))  width()  else width
 #       h <- if (is.function(height)) height() else height
 #       cairo_pdf(file, width = w, height = h, fallback_resolution = 300)
-#       print(plot_expr())  # plot_expr() 必须返回 ggplot
+#       print(plot_expr())  # plot_expr() must return a ggplot
 #       dev.off()
 #     }
 #   )
@@ -79,7 +79,7 @@ make_download_pdf <- function(plot_expr, input, suffix = NULL,
 
       showModal(modalDialog(
         title = NULL,
-        "正在生成 PDF，请稍候...",
+  "Generating PDF, please wait...",
         footer = NULL,
         easyClose = FALSE
       ))
@@ -166,12 +166,12 @@ timeFilterUI <- function(id) {
   TRUE
 }
 make_download_se_qc_zip <- function(
-    se_reactive,        # reactiveExpr: 返回 SummarizedExperiment 对象
-    miss_gene,          # reactiveVal: missing_gene_rv
-    unstable_gene,      # reactiveVal: un_stable_gene_rv
-    input,              # Shiny input 对象
-    file_input_id,      # 上传文件ID
-    suffix = "_filtered",  # 输出文件后缀
+  se_reactive,        # reactiveExpr: returns a SummarizedExperiment
+  miss_gene,          # reactiveVal: missing_gene_rv
+  unstable_gene,      # reactiveVal: un_stable_gene_rv
+  input,              # Shiny input object
+  file_input_id,      # upload file ID
+  suffix = "_filtered",  # output filename suffix
     session = NULL
 ) {
   downloadHandler(
@@ -183,7 +183,7 @@ make_download_se_qc_zip <- function(
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
       if (!is.null(session)) {
-        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+  session$sendCustomMessage("download_status", list(show = TRUE, text = "Packaging files for download, please wait..."))
       }
       on.exit({
         if (!is.null(session)) {
@@ -192,14 +192,14 @@ make_download_se_qc_zip <- function(
       }, add = TRUE)
 
       se_obj <- se_reactive()
-      miss_gene_df <- miss_gene()         # ✅ reactive 取值
-      unstable_gene_df <- unstable_gene() # ✅ reactive 取值
+  miss_gene_df <- miss_gene()         # ✅ reactive value
+  unstable_gene_df <- unstable_gene() # ✅ reactive value
 
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
       tmpdir <- tempfile("pack_")
       dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
 
-      # ---- 定义输出路径
+  # ---- Define output paths
       rds_path   <- file.path(tmpdir, paste0(base_full, "_se.Rds"))
       excel1_path <- file.path(tmpdir, paste0(base_full, "_imputed_intensity.xlsx"))
       excel2_path <- file.path(tmpdir, paste0(base_full, "_normalized_expression.xlsx"))
@@ -207,7 +207,7 @@ make_download_se_qc_zip <- function(
       excel4_path <- file.path(tmpdir, paste0(base_full, "_many_missing_value_gene.xlsx"))
       excel5_path <- file.path(tmpdir, paste0(base_full, "_unstable_gene.xlsx"))
 
-      # ---- 写文件
+  # ---- Write files
       saveRDS(se_obj, rds_path)
       writexl::write_xlsx(se2internstiy(se_obj), path = excel1_path)
       writexl::write_xlsx(se2conc(se_obj), path = excel2_path)
@@ -215,7 +215,7 @@ make_download_se_qc_zip <- function(
       if (!is.null(miss_gene_df)) writexl::write_xlsx(miss_gene_df, path = excel4_path)
       if (!is.null(unstable_gene_df)) writexl::write_xlsx(unstable_gene_df, path = excel5_path)
 
-      # ---- 打包 ZIP
+  # ---- Package ZIP
       zip::zipr(
         zipfile = file,
         files = c(
@@ -234,10 +234,10 @@ make_download_se_qc_zip <- function(
 }
 
 make_download_se_zip <- function(
-    se_reactive,        # reactiveExpr：返回 SummarizedExperiment 对象
-    input,              # Shiny input 对象
-    file_input_id,      # e.g. "se_file" —— 上传文件 ID，用来取原始文件名
-    suffix = "_filtered",  # 文件名后缀（可选）
+  se_reactive,        # reactiveExpr: returns a SummarizedExperiment
+  input,              # Shiny input object
+  file_input_id,      # e.g. "se_file" — upload file ID for filename
+  suffix = "_filtered",  # filename suffix (optional)
     session = NULL
 ) {
   downloadHandler(
@@ -249,7 +249,7 @@ make_download_se_zip <- function(
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
       if (!is.null(session)) {
-        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+  session$sendCustomMessage("download_status", list(show = TRUE, text = "Packaging files for download, please wait..."))
       }
       on.exit({
         if (!is.null(session)) {
@@ -262,19 +262,19 @@ make_download_se_zip <- function(
       tmpdir <- tempfile("pack_")
       dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
 
-      # 临时文件路径
+  # Temporary file paths
       rds_path   <- file.path(tmpdir, paste0(base_full, "_se.Rds"))
       excel1_path <- file.path(tmpdir, paste0(base_full, "_imputated_intensity.xlsx"))
       excel2_path <- file.path(tmpdir, paste0(base_full, "_normalized_expression.xlsx"))
       excel3_path <- file.path(tmpdir, paste0(base_full, "_Zscaled_expression.xlsx"))
 
-      # 写文件
+  # Write files
       saveRDS(se_obj, rds_path)
       writexl::write_xlsx(se2internstiy(se_obj), path = excel1_path)
       writexl::write_xlsx(se2conc(se_obj),       path = excel2_path)
       writexl::write_xlsx(se2scale(se_obj),      path = excel3_path)
 
-      # 打包 ZIP
+  # Package ZIP
       zip::zipr(
         zipfile = file,
         files = c(rds_path, excel1_path, excel2_path, excel3_path),
@@ -300,7 +300,7 @@ make_download_time_se_zip <- function(
     content = function(file) {
       req(se_reactive(), input[[file_input_id]])
       if (!is.null(session)) {
-        session$sendCustomMessage("download_status", list(show = TRUE, text = "正在打包下载文件，请稍候..."))
+  session$sendCustomMessage("download_status", list(show = TRUE, text = "Packaging files for download, please wait..."))
       }
       on.exit({
         if (!is.null(session)) {
@@ -313,7 +313,7 @@ make_download_time_se_zip <- function(
       tmpdir <- tempfile("pack_")
       dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
 
-      # 临时文件路径
+  # Temporary file paths
       rds_path    <- file.path(tmpdir, paste0(base_full, "_se.Rds"))
       excel2_path <- file.path(tmpdir, paste0(base_full, "_normalized_expression.xlsx"))
       excel3_path <- file.path(tmpdir, paste0(base_full, "_Zscaled_expression.xlsx"))
@@ -334,7 +334,7 @@ make_download_time_se_zip <- function(
         files_to_zip <- c(files_to_zip, excel3_path)
       }
 
-      # 打包 ZIP
+  # Package ZIP
       zip::zipr(
         zipfile = file,
         files = files_to_zip,
@@ -353,24 +353,24 @@ make_download_time_se_zip <- function(
 #   })
 #   names(choices) <- names(df)
 #
-#   # 去掉 rep / group
+#   # Remove rep / group
 #   choices <- choices[!names(choices) %in% c("rep", "group")]
 #   choices <- choices[c(2:length(choices),1)]
 #
 #   default_selected <- NULL
 #   if (default_all && length(choices) > 0) {
-#     default_selected <- unname(unlist(choices[[1]]))  # 默认选中第一个分组全部选项
+#     default_selected <- unname(unlist(choices[[1]]))  # Default: select all values of the first group
 #   }
 #
 #
 #   ui <- virtualSelectInput(
 #     inputId = id,
-#     label   = "选择一个列（单列多值）",
+#     label   = "Select a column (single column, multiple values)",
 #     choices = choices,
 #     multiple = TRUE,
 #     search = TRUE,
 #     selected = default_selected,
-#     placeholder = "选择列及取值..."
+#     placeholder = "Select column values..."
 #   )
 #
 #
@@ -431,7 +431,7 @@ make_grouped_select <- function(id,
       multiple = TRUE,
       search = TRUE,
       selected = NULL,
-      placeholder = "选择列对应的取值..."
+  placeholder = "Select values for the chosen column..."
     )
   )
 
@@ -481,7 +481,7 @@ show_heatmap_param_modal <- function(se_data = NULL) {
         fluidRow(
 
           ## ===============================
-          ## 左列：列 / 样本选择
+          ## Left column: column / sample selection
           ## ===============================
           column(
             width = 6,
@@ -544,7 +544,7 @@ show_heatmap_param_modal <- function(se_data = NULL) {
           ),
 
           ## ===============================
-          ## 右列：Heatmap 参数
+          ## Right column: heatmap parameters
           ## ===============================
           column(
             width = 6,
@@ -679,7 +679,7 @@ show_gene_selection_modal_go <- function(df) {
     modalDialog(
       title = "Select gene column and optional grouping",
 
-      # 如果多于 1 列，提供选择列的选项
+  # If there is more than one column, provide a column selector
       if (ncol(df) > 1) {
         tagList(
           selectInput(

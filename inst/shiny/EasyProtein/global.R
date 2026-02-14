@@ -77,6 +77,14 @@ make_download_pdf <- function(plot_expr, input, suffix = NULL,
       w <- if (is.function(width))  width()  else width
       h <- if (is.function(height)) height() else height
 
+      showModal(modalDialog(
+        title = NULL,
+        "正在生成 PDF，请稍候...",
+        footer = NULL,
+        easyClose = FALSE
+      ))
+      on.exit(removeModal(), add = TRUE)
+
       cairo_pdf(file, width = w, height = h, fallback_resolution = 300)
 
       p <- plot_expr()

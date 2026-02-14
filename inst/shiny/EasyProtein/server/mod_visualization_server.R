@@ -38,15 +38,13 @@ mod_visualization_server <- function(input, output, session) {
     make_vol_plot()$ggiraph_obj
   })
 
-  output$download_vol_pdf <- downloadHandler(
-    filename = function() {
-      base_full <- tools::file_path_sans_ext(basename(input$Upload_DEG_table1$name))
-      paste0(base_full, "_volcano.pdf")
-    },
-    content = function(file) {
-      p <- make_vol_plot()$ggobj
-  ggplot2::ggsave(file, plot = p, device = grDevices::cairo_pdf, width = 8, height = 6, dpi = 600)
-    }
+  output$download_vol_pdf <- make_download_pdf(
+    plot_expr   = function() make_vol_plot()$ggobj,
+    input       = input,
+    suffix      = "volcano",
+    width       = 8,
+    height      = 6,
+    input_field = "Upload_DEG_table1"
   )
 
 

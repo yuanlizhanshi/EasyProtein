@@ -73,7 +73,7 @@ launch_EasyProtein <- function(install_missing = TRUE, ...) {
   ## --------------------------------------------------
   ## 3. Launch Shiny app
   ## --------------------------------------------------
-  runApp(
+  shiny::runApp(
     system.file("shiny/EasyProtein", package="EasyProtein"),
     launch.browser = TRUE,
     ...

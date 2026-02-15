@@ -158,6 +158,84 @@ impute_low1pct_or_median_raw <- function(
     dplyr::arrange(.data[[id_col]], .data[[condition_col]], .data[[sample_col]])
 }
 
+
+#' Perform fuzzy clustering on gene-level time-course matrix using Mfuzz
+#'
+#' @description
+#' Applies fuzzy c-means clustering (via \pkg{Mfuzz}) to a gene-by-sample
+#' numeric matrix (e.g., log2FC, expression, or kinetic values).
+#' Each gene is assigned to the cluster with the highest membership score.
+#'
+#' This function is typically used to classify dynamic genes (e.g., DEGs)
+#' into temporal response patterns.
+#'
+#' @param mat A numeric matrix or data.frame with genes in rows and
+#'   samples/time points in columns. Row names must contain gene IDs.
+#' @param k Integer. Number of clusters (default = 10).
+#' @param min_sd Numeric. Minimum standard deviation threshold for filtering
+#'   low-variance genes prior to clustering (default = 0).
+#'
+#' @return A tibble with three columns:
+#' \describe{
+#'   \item{gene}{Gene identifier (rownames of input matrix).}
+#'   \item{gene_group}{Cluster assignment label (e.g., "C1", "C2", ...).}
+#'   \item{type}{Character label, default set to "DEGs".}
+#' }
+#'
+#' @details
+#' The workflow includes:
+#' \enumerate{
+#'   \item Filtering genes by row-wise standard deviation.
+#'   \item Z-score standardization using \code{Mfuzz::standardise()}.
+#'   \item Automatic estimation of fuzzifier parameter \code{m}.
+#'   \item Fuzzy c-means clustering.
+#'   \item Hard assignment based on maximum membership.
+#' }
+#'
+#' @seealso \code{\link[Mfuzz]{mfuzz}}, \code{\link[Mfuzz]{mestimate}},
+#'   \code{\link[Mfuzz]{standardise}}
+#'
+#' @importFrom Biobase ExpressionSet
+#' @importFrom Mfuzz standardise mestimate mfuzz
+#' @importFrom tibble tibble
+#'
+#' @examples
+#' \dontrun{
+#' # Example: clustering a log2FC matrix
+#' set.seed(1)
+#' mat <- matrix(rnorm(1000), nrow = 100)
+#' rownames(mat) <- paste0("Gene", 1:100)
+#' colnames(mat) <- paste0("T", 1:10)
+#'
+#' res <- run_mfuzz_clustering(mat, k = 5)
+#' head(res)
+#' }
+#'
+#' @export
+run_mfuzz_clustering <- function(mat, k = 10, min_sd = 0) {
+  stopifnot(is.matrix(mat) || is.data.frame(mat))
+  mat <- as.matrix(mat)
+
+  if (is.null(rownames(mat)))
+    stop("mat must have rownames as gene IDs")
+
+  sd_all <- apply(mat, 1, sd, na.rm = TRUE)
+  mat <- mat[sd_all >= min_sd, , drop = FALSE]
+  eset <- Biobase::ExpressionSet(mat)
+
+  eset <- Mfuzz::standardise(eset)
+  m <- Mfuzz::mestimate(eset)
+  cl <- Mfuzz::mfuzz(eset, c = k, m = m)
+  membership <- cl$membership
+  cluster_id <- apply(membership, 1, which.max)
+
+  tibble::tibble(
+    gene = rownames(membership),
+    gene_group = paste0("C", cluster_id),
+    type = 'DEGs'
+  )
+}
+
 #' Classify genes by multi-round monotonic time-course patterns
 #'
 #' This function classifies genes based on monotonic temporal trends
@@ -869,7 +947,7 @@ get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20, use = c("c
     gene = rownames(mat),
     value = mat[, pc_name]
   ) %>%
-    left_join(as.data.frame(rowData(se_obj)),by = 'gene') 
+    left_join(as.data.frame(rowData(se_obj)),by = 'gene')
 
 
   df <- df[!is.na(df$value), ]

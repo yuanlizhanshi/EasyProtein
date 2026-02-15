@@ -257,15 +257,26 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
   # 3.5 Build row_info (for export)
     # =============================
-    mean_expr <- calc_gene_mean_by_condition(se_sub, assay_name = "conc",
-                                             method = "mean",condition_col = "col_cluster") %>%
+    mean_expr <- calc_gene_mean_by_condition(
+      se_sub,
+      assay_name = "conc",
+      method = "mean",
+      condition_col = "col_cluster"
+    ) %>%
       as.data.frame() %>%
       tibble::rownames_to_column("gene")
+
+    mean_expr <- mean_expr %>%
+      dplyr::rename_with(
+        ~ paste0("Mean_", .x),
+        .cols = -"gene"
+      )
 
     row_info_df <- row_cluster_df %>%
       dplyr::left_join(mean_expr, by = c( "gene")) %>%
       dplyr::left_join(
-        se2conc(se_sub),
+        se2conc(se_sub) %>%
+          dplyr::select(-dplyr::matches("^km_cluster")),
         by = c("gene")
       )
 

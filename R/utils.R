@@ -199,6 +199,8 @@ se2scale <- function(se) {
 #' @param ref Reference group (optional).
 #' @param cmp Comparison group (optional).
 #' @param pair_col Optional column for paired analysis.
+#' @param logFC_cutoff Absolute logFC threshold for DEG classification.
+#' @param adj_p_cutoff Adjusted p-value threshold for DEG classification.
 #'
 #' @return A data.frame with DEG statistics and annotations.
 #' @export
@@ -206,7 +208,9 @@ se2DEGs <- function(se,
                     compare_col = "condition",
                     ref = NULL,
                     cmp = NULL,
-                    pair_col = NULL) {
+                    pair_col = NULL,
+                    logFC_cutoff = 1,
+                    adj_p_cutoff = 0.05) {
 
   mtx <- assay(se, "conc")
   meta <- as.data.frame(colData(se))
@@ -260,6 +264,17 @@ se2DEGs <- function(se,
     dplyr::left_join(exp_df, by = c("gene")) %>%
     dplyr::left_join(DEGs_res[, c(1, 8, 9, 2, 5, 6)], by = c("gene" = "feature")) %>%
     dplyr::left_join(med_df, by = c("gene"))
+
+  if (all(c("logFC", "adj.P.Val") %in% colnames(final_df))) {
+    final_df <- final_df %>%
+      dplyr::mutate(
+        DEGs_types = dplyr::case_when(
+          .data$logFC >= logFC_cutoff & .data$adj.P.Val <= adj_p_cutoff ~ "UP",
+          .data$logFC <= -logFC_cutoff & .data$adj.P.Val <= adj_p_cutoff ~ "DOWN",
+          TRUE ~ "NS"
+        )
+      )
+  }
 
   # store attributes so downstream functions know group info
   attr(final_df, "ref_group") <- ref

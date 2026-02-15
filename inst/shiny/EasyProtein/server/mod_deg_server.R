@@ -89,6 +89,22 @@ mod_deg_server <- function(input, output, session, rv) {
             title = paste0("Select groups to compare (", sel_col, ")"),
             selectInput("ref_group", "Reference group", choices = group_levels, width = "100%"),
             selectInput("cmp_group", "Compare group", choices = group_levels, width = "100%"),
+            sliderInput(
+              "deg_logFC_cutoff",
+              "logFC cutoff",
+              min = 0,
+              max = 10,
+              value = 1,
+              step = 0.1
+            ),
+            sliderInput(
+              "deg_adj_p_cutoff",
+              "Adjusted p-value cutoff",
+              min = 0,
+              max = 0.1,
+              value = 0.05,
+              step = 0.001
+            ),
             footer = tagList(
               modalButton("Cancel"),
               actionButton("confirm_deg_run", "Start", class = "btn btn-primary")
@@ -137,7 +153,9 @@ mod_deg_server <- function(input, output, session, rv) {
             compare_col = sel_col,
             ref = ref,
             cmp = cmp,
-            pair_col = input$deg_pair_col
+            pair_col = input$deg_pair_col,
+            logFC_cutoff = input$deg_logFC_cutoff,
+            adj_p_cutoff = input$deg_adj_p_cutoff
           )
         } else {
           message("### Running Unpaired DEG test ###")
@@ -148,7 +166,9 @@ mod_deg_server <- function(input, output, session, rv) {
             se_sub,
             compare_col = sel_col,
             ref = ref,
-            cmp = cmp
+            cmp = cmp,
+            logFC_cutoff = input$deg_logFC_cutoff,
+            adj_p_cutoff = input$deg_adj_p_cutoff
           )
         }
 

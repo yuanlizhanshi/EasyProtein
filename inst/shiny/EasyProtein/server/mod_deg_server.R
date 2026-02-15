@@ -192,7 +192,7 @@ mod_deg_server <- function(input, output, session, rv) {
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = 3:ncol(rv$DEGs), digits = 2)
+      formatRound(columns = 3:(ncol(rv$DEGs)-1), digits = 2)  
   })
   
   # --------------------------------------------------

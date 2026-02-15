@@ -253,7 +253,7 @@ plotSE_density <- function(se){
     dplyr::filter(!is.na(intersity)) %>%
     mutate(log2intersity = log2(intersity))
 
-  rawdata_df$Sample <- factor(rawdata_df$Sample, levels = unique(colnames(se)))
+  rawdata_df$Sample <- factor(rawdata_df$Sample, levels = rev(unique(colnames(se))))
 
   ggplot(rawdata_df, aes(x = log2intersity, y = Sample, fill = Sample)) +
     geom_violin() +
@@ -294,7 +294,7 @@ plotSE_missing_value <- function(se){
     dplyr::select(Sample, missing_number) %>%
     distinct()
 
-  missing_df$Sample <- factor(missing_df$Sample, levels = unique(colnames(se)))
+  missing_df$Sample <- factor(missing_df$Sample, levels = rev(unique(colnames(se))))
 
   ggplot(missing_df, aes(x = missing_number, y = Sample)) +
     geom_segment(aes(x = 0, xend = missing_number), color = "grey60") +
@@ -334,7 +334,7 @@ plotSE_protein_number <- function(se){
     dplyr::select(Sample, protein_number) %>%
     distinct()
 
-  df$Sample <- factor(df$Sample, levels = unique(colnames(se)))
+  df$Sample <- factor(df$Sample, levels = rev(unique(colnames(se))))
 
   ggplot(df, aes(x = protein_number, y = Sample)) +
     geom_segment(aes(x = 0, xend = protein_number), color = "grey60") +
@@ -363,7 +363,7 @@ plotCV_density <- function(se){
     return(NULL)
   }
 
-  cv_df$condition <- factor(cv_df$condition, levels = unique(cv_df$condition))
+  cv_df$condition <- factor(cv_df$condition, levels = rev(unique(cv_df$condition)))
 
   ggplot(cv_df, aes(CV, condition, fill = condition)) +
     geom_violin() +

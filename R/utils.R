@@ -333,99 +333,124 @@ get_batch_DEGs <- function(se,
 #' @param se A SummarizedExperiment object.
 #' @param assay Assay name to use (default "conc").
 #' @param group_by Column in colData(se) defining sample ordering.
-#' @param time_threhold  thresholds for up/down classification.
 #' @param min_expresion_threhold Minimum mean expression.
 #' @param CV_with_time_threhold CV threshold used to define stable genes.
 #' @param padj_threhold Adjusted p-value threshold for DEGs.
-#'
+#' @param k_cluster  Number of clusters for mufzz
 #' @return Updated SummarizedExperiment with gene grouping added to rowData.
 #' @export
 se2gene_group <- function(se,
-                          assay = 'conc',
+                          assay_name = 'conc',
                           group_by = 'condition',
-                          time_threhold = 0.75,
                           min_expresion_threhold = 1,
                           CV_with_time_threhold =  0.1,
-                          padj_threhold = 0.05
+                          padj_threhold = 0.05,
+                          k_cluster = 10
 ){
-  expr <- assay(se, assay)
-  expr_log <- log2(expr)
+  expr <- assay(se, assay_name)
 
-  expr_mean <- calc_gene_mean_by_condition(se = se, method = 'mean',assay_name= assay,condition_col = group_by)
-
-  if (!all(rownames(expr_mean) == rownames(expr))) {
-    stop('Error')
-  }
-
-
-  gene_info <- tibble(
-    Protein.Ids = rownames(expr),
-    Genes = rowData(se)[['Genes']],
-    Mean_expression = rowMeans(expr),
-    Median_exprssion = rowMedians(expr),
-    CV_with_time = apply(expr_mean,1,calculate_cv),
-    Spearman_with_time = apply(expr_mean,1,function(x,N = NULL){
-      cor(x,1:N,method = 'spearman')
-    },N = ncol(expr_mean))
+  expr_mean <- calc_gene_mean_by_condition(
+    se = se,
+    assay_name = assay_name,
+    condition_col = group_by
   )
 
-
+  gene_info <- tibble(
+    gene = rownames(expr),
+    Mean_expression = rowMeans(expr),
+    Median_expression = matrixStats::rowMedians(expr),
+    CV_with_time = apply(expr_mean, 1, calculate_cv),
+    Spearman_with_time = apply(expr_mean, 1, function(x){
+      cor(x, seq_along(x), method = "spearman")
+    })
+  )
 
 
   gene_with_low_mean <- gene_info %>%
-    dplyr::filter(Mean_expression < min_expresion_threhold)
+    filter(Mean_expression < min_expresion_threhold)
 
   gene_with_low_CV <- gene_info %>%
-    dplyr::filter(Mean_expression >= min_expresion_threhold)%>%
-    dplyr::filter(CV_with_time <= CV_with_time_threhold)
+    filter(Mean_expression >= min_expresion_threhold) %>%
+    filter(CV_with_time <= CV_with_time_threhold)
 
-  gene_with_low_mean_and_low_cv <- union(gene_with_low_mean$Protein.Ids,gene_with_low_CV$Protein.Ids)
-  gene_with_low_mean_and_low_cv_df <- tibble(
-    gene = gene_with_low_mean_and_low_cv,
-    gene_group = c(rep('Low expression',length(gene_with_low_mean$Protein.Ids)),
-                   rep('Low CV',length(gene_with_low_CV$Protein.Ids))
+  gene_with_low_mean_and_low_cv_df <- bind_rows(
+    tibble(
+      gene = gene_with_low_mean$gene,
+      gene_group = "Low expression",
+      type = "Low expression"
     ),
-    type = c(rep('Low expression',length(gene_with_low_mean$Protein.Ids)),
-             rep('Low CV',length(gene_with_low_CV$Protein.Ids))
+    tibble(
+      gene = gene_with_low_CV$gene,
+      gene_group = "Low CV",
+      type = "Low CV"
     )
-  )
+  ) %>%
+    dplyr::distinct(gene, .keep_all = TRUE)
 
 
 
-  gene_left <- gene_info %>% dplyr::filter(!(Protein.Ids %in% gene_with_low_mean_and_low_cv))
+  all_DEGs <- get_batch_DEGs(se, compare_col = group_by, start_col = 1)
 
-
-  gene_group_left <- classify_timecourse_by_round(expr_mean[gene_left$Protein.Ids,],rho_cut = time_threhold)
-
-  gene_group_final <- bind_rows(gene_group_left,gene_with_low_mean_and_low_cv_df
-  )
-  gene_info_full <- left_join(gene_info,gene_group_final,by = c('Protein.Ids' = 'gene'))
-
-  #Get log2FC
-  all_DEGs <- get_batch_DEGs(se,compare_col = group_by,start_col = 1)
   gene_FC_matrix <- map2(all_DEGs,names(all_DEGs),function(df,name,padj_threhold = padj_threhold){
     df <- df %>% dplyr::filter(adj.P.Val <= padj_threhold) %>%
-      dplyr::select(Protein.Ids,logFC)
+      dplyr::select(gene,logFC)
     colnames(df)[2] <- name
     return(df)
-  },padj_threhold = padj_threhold) %>% purrr::reduce(full_join,by = 'Protein.Ids') %>%
+  },padj_threhold = padj_threhold) %>% purrr::reduce(full_join,by = 'gene') %>%
     mutate(
       across(everything(), ~replace_na(.x, 0))
     )
-  colnames(gene_FC_matrix)[-1] <- paste0('log2FC_',colnames(gene_FC_matrix)[-1])
+  colnames(gene_FC_matrix)[-1] <- paste0("log2FC_", colnames(gene_FC_matrix)[-1])
 
 
-  gene_info_full <- gene_info_full %>% left_join(gene_FC_matrix,by = 'Protein.Ids') %>%
-    mutate(
-      across(everything(), ~replace_na(.x, 0))
-    )
+  gene_FC_mtx <- as.matrix(gene_FC_matrix[, -1, drop = FALSE])
+  rownames(gene_FC_mtx) <- gene_FC_matrix$gene
+
+  deg_like <- rowSums(abs(gene_FC_mtx) > 0) > 0
+
+  mfuzz_res <- run_mfuzz_clustering(
+    gene_FC_mtx[deg_like, , drop = FALSE],
+    k = k_cluster
+  )
 
 
-  if (all(rownames(rowData(se)) == gene_info_full$Protein.Ids)) {
-    for (col in colnames(gene_info_full)) {
-      if (!(col %in% colnames(rowData(se)))) {
-        rowData(se)[col] = gene_info_full[col]
-      }
+
+  gene_info_full <- gene_info %>%
+    dplyr::transmute(gene) %>%
+    dplyr::left_join(
+      gene_with_low_mean_and_low_cv_df %>%
+        dplyr::select(gene, low_group = gene_group, low_type = type),
+      by = "gene"
+    ) %>%
+    dplyr::left_join(
+      mfuzz_res %>%
+        dplyr::distinct(gene, .keep_all = TRUE) %>%
+        dplyr::select(gene, mfuzz_group = gene_group),
+      by = "gene"
+    ) %>%
+    dplyr::mutate(
+      type = dplyr::case_when(
+        !is.na(low_type)       ~ low_type,
+        !is.na(mfuzz_group)    ~ "DEGs",
+        TRUE                   ~ "No significant change"
+      ),
+      gene_group = dplyr::case_when(
+        !is.na(low_group)      ~ low_group,
+        !is.na(mfuzz_group)    ~ mfuzz_group,       # "C1..Ck"
+        TRUE                   ~ "No significant change"
+      )
+    ) %>%
+    dplyr::select(gene, gene_group, type)
+
+
+
+  gene_info_full <- gene_info_full[match(rownames(se), gene_info_full$gene),]
+
+  stopifnot(all(gene_info_full$gene == rownames(se)))
+
+  for (col in colnames(gene_info_full)) {
+    if (!(col %in% colnames(rowData(se)))) {
+      rowData(se)[[col]] <- gene_info_full[[col]]
     }
   }
   return(se)

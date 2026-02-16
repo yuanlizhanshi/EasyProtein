@@ -17,6 +17,8 @@ se2gene_group(
 \arguments{
 \item{se}{A SummarizedExperiment object.}
 
+\item{assay_name}{Assay name to use (default "conc").}
+
 \item{group_by}{Column in colData(se) defining sample ordering.}
 
 \item{min_expresion_threhold}{Minimum mean expression.}
@@ -26,8 +28,6 @@ se2gene_group(
 \item{padj_threhold}{Adjusted p-value threshold for DEGs.}
 
 \item{k_cluster}{Number of clusters for mufzz}
-
-\item{assay}{Assay name to use (default "conc").}
 }
 \value{
 Updated SummarizedExperiment with gene grouping added to rowData.

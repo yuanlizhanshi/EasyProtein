@@ -34,11 +34,6 @@ Default is \code{1}.}
     importance to the PC but does not encode direction.}
 }
 Default is \code{"coord"}.}
-
-\item{filter}{Logical. If \code{TRUE}, features are collapsed at the gene level:
-the first entry per gene is kept after filtering non-empty gene names.
-This is useful when multiple proteins/isoforms map to the same gene symbol.
-Default is \code{TRUE}.}
 }
 \value{
 A list with the following components:
@@ -71,9 +66,8 @@ When \code{se_obj} is provided, feature-level annotations are merged from
 \code{rowData(se_obj)} by \code{Protein.Ids}. Gene symbols are extracted from
 the \code{Genes} column (taking the first symbol before a semicolon).
 
-If \code{filter = TRUE}, the results are collapsed at the gene level by keeping
-only one representative entry per gene, which is recommended when multiple
-protein entries map to the same gene.
+If multiple protein entries map to the same gene, consider collapsing results
+at the gene level downstream.
 }
 \examples{
 \dontrun{

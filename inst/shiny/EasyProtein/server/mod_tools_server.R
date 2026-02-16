@@ -56,6 +56,9 @@ mod_tools_server <- function(input, output, session) {
     excel_row_idx <- integer(0)
 
     if (!is.null(input$se_excel_upload)) {
+      if (!load_module_packages("readxl")) {
+        return()
+      }
       ext <- tools::file_ext(input$se_excel_upload$name)
       if (ext %in% c("xls", "xlsx")) {
         excel_path <- input$se_excel_upload$datapath

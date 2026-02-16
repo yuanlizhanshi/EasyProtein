@@ -108,15 +108,7 @@ timeFilterUI <- function(id) {
   div(
     style = "border:1px solid #ddd; padding:15px; border-radius:8px; background:#fafafa;",
 
-    h4( "Time-series parameters"),
-    sliderInput(
-      inputId = ns("time_threshold"),
-      label   = "Time threshold (speaman cor)",
-      min     = 0,
-      max     = 1,
-      value   = c(0.75),
-      step    = 0.05
-    ),
+    h4("Time-series parameters"),
     numericInput(
       inputId = ns("min_expression_threshold"),
       label   = "Minimum expression threshold",
@@ -140,8 +132,28 @@ timeFilterUI <- function(id) {
       max     = 0.1,
       value   = 0.05,
       step    = 0.001
+    ),
+    numericInput(
+      inputId = ns("k_cluster"),
+      label   = "Number of clusters",
+      value   = 10,
+      min     = 2,
+      max     = 20,
+      step    = 1
     )
   )
+}
+
+load_module_packages <- function(pkgs, prefix = "Missing packages: ") {
+  missing <- pkgs[!vapply(pkgs, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1))]
+  if (length(missing) > 0) {
+    showNotification(paste0(prefix, paste(missing, collapse = ", ")), type = "error")
+    return(FALSE)
+  }
+  suppressPackageStartupMessages(
+    lapply(pkgs, library, character.only = TRUE)
+  )
+  TRUE
 }
 
 #server logic------
@@ -497,7 +509,7 @@ show_heatmap_param_modal <- function(se_data = NULL) {
             selectInput(
               "row_k",
               "Row k-means clusters",
-              choices = c("AUTO", 2:10),
+              choices = c("NONE", "AUTO", 2:10),
               selected = "AUTO"
             ),
 

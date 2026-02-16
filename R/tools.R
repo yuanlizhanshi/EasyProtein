@@ -213,6 +213,12 @@ impute_low1pct_or_median_raw <- function(
 #'
 #' @export
 run_mfuzz_clustering <- function(mat, k = 10, min_sd = 0) {
+  if (!requireNamespace("Mfuzz", quietly = TRUE)) {
+    stop("Package 'Mfuzz' is required but not installed.")
+  }
+  if (!requireNamespace("Biobase", quietly = TRUE)) {
+    stop("Package 'Biobase' is required but not installed.")
+  }
   stopifnot(is.matrix(mat) || is.data.frame(mat))
   mat <- as.matrix(mat)
 
@@ -868,11 +874,6 @@ run_gsea <- function(
 #' @param n Integer. Number of top features to return for each direction
 #'   (positive and negative). Default is \code{20}.
 #'
-#' @param filter Logical. If \code{TRUE}, features are collapsed at the gene level:
-#'   the first entry per gene is kept after filtering non-empty gene names.
-#'   This is useful when multiple proteins/isoforms map to the same gene symbol.
-#'   Default is \code{TRUE}.
-#'
 #' @param use Character. Which PCA metric to use:
 #'   \describe{
 #'     \item{\code{"coord"}}{Use signed coordinates (loadings). This preserves
@@ -906,9 +907,8 @@ run_gsea <- function(
 #' \code{rowData(se_obj)} by \code{Protein.Ids}. Gene symbols are extracted from
 #' the \code{Genes} column (taking the first symbol before a semicolon).
 #'
-#' If \code{filter = TRUE}, the results are collapsed at the gene level by keeping
-#' only one representative entry per gene, which is recommended when multiple
-#' protein entries map to the same gene.
+#' If multiple protein entries map to the same gene, consider collapsing results
+#' at the gene level downstream.
 #'
 #' @examples
 #' \dontrun{

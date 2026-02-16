@@ -17,6 +17,9 @@ mod_enrich_server <- function(input, output, session) {
   # =====================================================
   observeEvent(input$enrich_upload_GO, {
     req(input$enrich_upload_GO)
+    if (!load_module_packages("readxl")) {
+      return()
+    }
     ext <- tools::file_ext(input$enrich_upload_GO$name)
     df <- switch(ext,
                  xls  = readxl::read_xls(input$enrich_upload_GO$datapath),
@@ -75,6 +78,9 @@ mod_enrich_server <- function(input, output, session) {
   # =====================================================
   observeEvent(input$enrich_upload_KEGG, {
     req(input$enrich_upload_KEGG)
+    if (!load_module_packages("readxl")) {
+      return()
+    }
     ext <- tools::file_ext(input$enrich_upload_KEGG$name)
     df <- switch(ext,
                  xls  = readxl::read_xls(input$enrich_upload_KEGG$datapath),
@@ -125,6 +131,9 @@ mod_enrich_server <- function(input, output, session) {
   # =====================================================
   observeEvent(input$enrich_upload_gse_GO, {
     req(input$enrich_upload_gse_GO)
+    if (!load_module_packages("readxl")) {
+      return()
+    }
     ext <- tools::file_ext(input$enrich_upload_gse_GO$name)
     df <- switch(ext,
                  xls  = readxl::read_xls(input$enrich_upload_gse_GO$datapath),
@@ -178,6 +187,9 @@ mod_enrich_server <- function(input, output, session) {
   # =====================================================
   observeEvent(input$enrich_upload_gse_kegg, {
     req(input$enrich_upload_gse_kegg)
+    if (!load_module_packages("readxl")) {
+      return()
+    }
     ext <- tools::file_ext(input$enrich_upload_gse_kegg$name)
     df <- switch(ext,
                  xls  = readxl::read_xls(input$enrich_upload_gse_kegg$datapath),

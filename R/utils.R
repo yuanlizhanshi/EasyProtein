@@ -331,7 +331,7 @@ get_batch_DEGs <- function(se,
 #' - coefficient of variation (CV)
 #'
 #' @param se A SummarizedExperiment object.
-#' @param assay Assay name to use (default "conc").
+#' @param assay_name Assay name to use (default "conc").
 #' @param group_by Column in colData(se) defining sample ordering.
 #' @param min_expresion_threhold Minimum mean expression.
 #' @param CV_with_time_threhold CV threshold used to define stable genes.

@@ -179,6 +179,9 @@ mod_upload_server <- function(input, output, session, rv) {
 
   observeEvent(input$meta_excel, {
     req(input$meta_excel)
+    if (!load_module_packages("readxl")) {
+      return()
+    }
     library(readxl)
 
     new_meta <- readxl::read_excel(input$meta_excel$datapath)

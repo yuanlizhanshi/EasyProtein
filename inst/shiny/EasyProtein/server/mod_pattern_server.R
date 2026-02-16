@@ -22,6 +22,9 @@ mod_pattern_server <- function(input, output, session) {
   # =============================
   observeEvent(input$matrix_file, {
     req(input$matrix_file)
+    if (!load_module_packages("ComplexHeatmap")) {
+      return()
+    }
     se_obj <- readRDS(input$matrix_file$datapath)
     rv$se <- se_obj
     show_heatmap_param_modal(rv$se)
@@ -137,6 +140,7 @@ mod_pattern_server <- function(input, output, session) {
       return()
     }
 
+    row_name <- NULL
     if (is.null(sel_row) || length(sel_row) == 0) {
       matched_genes <- gene_names
     } else {
@@ -194,34 +198,57 @@ mod_pattern_server <- function(input, output, session) {
     # =============================
   # Returns data.frame: gene + km_cluster
 
-    if (identical(input$row_k, "AUTO")) {
-      row_cluster_df <- auto_cluster_matrix_pca_one(intersity_scale, mode = "row")
-    } else {
-      rk <- kmeans(intersity_scale, centers = input$row_k, nstart = 1)
+    if (identical(input$row_k, "NONE")) {
+      if (!is.null(row_name)) {
+        if (!row_name %in% colnames(rowData(se_sub))) {
+          showNotification(paste("Row annotation not found:", row_name), type = "error")
+          return()
+        }
+        row_cluster_vec <- as.character(rowData(se_sub)[[row_name]])
+        new_col_name <- row_name
+      } else {
+        row_cluster_vec <- rep("All", nrow(se_sub))
+        new_col_name <- "row_group"
+      }
+
       row_cluster_df <- tibble::tibble(
-        gene = rownames(intersity_scale),
-        km_cluster    = paste0('km',rk$cluster)
+        gene = rownames(se_sub),
+        !!new_col_name := row_cluster_vec
       )
-    }
 
-  # Align with se_sub rows and write into rowData
-    row_cluster_vec <- row_cluster_df$km_cluster[
-      match(rownames(se_sub), row_cluster_df$gene)
-    ]
-
-    if (any(is.na(row_cluster_vec))) {
-      stop("Row clustering result does not match rownames of se_sub.")
-    }
-
-    existing_cols <- colnames(rowData(se_sub))
-    km_cols <- grep("^km_cluster[0-9]*$", existing_cols, value = TRUE)
-    new_col_name <- if (length(km_cols) == 0) {
-      "km_cluster"
+      if (!new_col_name %in% colnames(rowData(se_sub))) {
+        rowData(se_sub)[[new_col_name]] <- as.character(row_cluster_vec)
+      }
     } else {
-      paste0("km_cluster", length(km_cols) + 1)
-    }
+      if (identical(input$row_k, "AUTO")) {
+        row_cluster_df <- auto_cluster_matrix_pca_one(intersity_scale, mode = "row")
+      } else {
+        rk <- kmeans(intersity_scale, centers = input$row_k, nstart = 1)
+        row_cluster_df <- tibble::tibble(
+          gene = rownames(intersity_scale),
+          km_cluster    = paste0('km',rk$cluster)
+        )
+      }
 
-    rowData(se_sub)[[new_col_name]] <- as.character(row_cluster_vec)
+      # Align with se_sub rows and write into rowData
+      row_cluster_vec <- row_cluster_df$km_cluster[
+        match(rownames(se_sub), row_cluster_df$gene)
+      ]
+
+      if (any(is.na(row_cluster_vec))) {
+        stop("Row clustering result does not match rownames of se_sub.")
+      }
+
+      existing_cols <- colnames(rowData(se_sub))
+      km_cols <- grep("^km_cluster[0-9]*$", existing_cols, value = TRUE)
+      new_col_name <- if (length(km_cols) == 0) {
+        "km_cluster"
+      } else {
+        paste0("km_cluster", length(km_cols) + 1)
+      }
+
+      rowData(se_sub)[[new_col_name]] <- as.character(row_cluster_vec)
+    }
 
     # =============================
   # 3.4 Column clustering
@@ -276,7 +303,11 @@ mod_pattern_server <- function(input, output, session) {
       dplyr::left_join(mean_expr, by = c( "gene")) %>%
       dplyr::left_join(
         se2conc(se_sub) %>%
-          dplyr::select(-dplyr::matches("^km_cluster")),
+          dplyr::select(
+            -dplyr::matches("^km_cluster"),
+            -dplyr::matches("^Mean_"),
+            -dplyr::matches("^Median_")
+          ),
         by = c("gene")
       )
 
@@ -300,7 +331,7 @@ mod_pattern_server <- function(input, output, session) {
     }
 
   # Row/column split vectors (strictly aligned)
-    row_split_vec <- rowData(se_sub)[[new_col_name]]
+  row_split_vec <- rowData(se_sub)[[new_col_name]]
     col_split_vec <- factor(colData(se_sub)$col_cluster,levels = unique(colData(se_sub)$col_cluster))
 
     stopifnot(length(row_split_vec) == nrow(intersity_scale))

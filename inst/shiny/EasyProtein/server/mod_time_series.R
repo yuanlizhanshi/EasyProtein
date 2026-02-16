@@ -8,6 +8,12 @@ mod_time_series_server <- function(input, output, session) {
   param_confirmed <- reactiveVal(FALSE)
   observeEvent(input$time_rds_file, {
     req(input$time_rds_file)
+
+
+    if (!load_module_packages(c("Mfuzz", "Biobase", "matrixStats"))) {
+      return()
+    }
+
     se <- readRDS(input$time_rds_file$datapath)
     se_data(se)
     show_time_series_param(se_data())
@@ -23,7 +29,6 @@ mod_time_series_server <- function(input, output, session) {
       req(se_data())
       removeModal()
       
-      # print(input[["time_filter-time_threshold"]])
       # print(input[["time_filter-min_expression_threshold"]])
       # print(input[["time_filter-CV_with_time_threshold"]])
       # print(input[["time_filter-CV_with_time_threshold"]])
@@ -44,11 +49,12 @@ mod_time_series_server <- function(input, output, session) {
       
       new_se <- se2gene_group(
         se = se_sub,
+        assay_name = 'conc',
         group_by = input$coldata_col_selector,
-        time_threhold = input[["time_filter-time_threshold"]],
         min_expresion_threhold = input[["time_filter-min_expression_threshold"]],
         CV_with_time_threhold = input[["time_filter-CV_with_time_threshold"]],
-        padj_threhold = input[["time_filter-padj_threshold"]]
+        padj_threhold = input[["time_filter-padj_threshold"]],
+        k_cluster = input[["time_filter-k_cluster"]]
       )
       
       se_filtered(new_se)
@@ -74,13 +80,13 @@ mod_time_series_server <- function(input, output, session) {
     output$FC_fold_plot <- renderPlot({
       req(se_filtered(), param_confirmed())
       se <- se_filtered()
-      plot_FC_trend(se)
+      plot_deg_trends(se)
     },
     height = function() input$FC_plot_height,
     width = function() input$FC_plot_width)
     
     output$download_FC_fold_plot_pdf <- make_download_pdf(
-      plot_expr   = function() plot_FC_trend(se_filtered()),
+      plot_expr   = function() plot_deg_trends(se_filtered()),
       input       = input,
       suffix      = "FC_trend",
       width       = function() input$FC_plot_width / 100,

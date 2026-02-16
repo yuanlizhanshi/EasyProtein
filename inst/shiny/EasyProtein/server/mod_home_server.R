@@ -5,7 +5,8 @@ mod_home_server <- function(input, output, session) {
       p("Easy Protein, Version 0.2 (Build date: 2025-11-29)"),
       p("Easy Protein, Version 0.3 (Build date: 2025-12-21)"),
       p("Easy Protein, Version 0.4 (Build date: 2026-01-14)"),
-      p("Easy Protein, Version 0.5 (Build date: 2026-02-14)")
+      p("Easy Protein, Version 0.5 (Build date: 2026-02-14)"),
+      p("Easy Protein, Version 0.6 (Build date: 2026-02-16)")
     )
   })
 }

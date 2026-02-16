@@ -9,7 +9,6 @@ get_pc_contributors(
   se_obj = NULL,
   pc = 1,
   n = 20,
-  filter = T,
   use = c("coord", "contrib")
 )
 }
@@ -26,11 +25,6 @@ Default is \code{1}.}
 \item{n}{Integer. Number of top features to return for each direction
 (positive and negative). Default is \code{20}.}
 
-\item{filter}{Logical. If \code{TRUE}, features are collapsed at the gene level:
-the first entry per gene is kept after filtering non-empty gene names.
-This is useful when multiple proteins/isoforms map to the same gene symbol.
-Default is \code{TRUE}.}
-
 \item{use}{Character. Which PCA metric to use:
 \describe{
   \item{\code{"coord"}}{Use signed coordinates (loadings). This preserves
@@ -40,6 +34,11 @@ Default is \code{TRUE}.}
     importance to the PC but does not encode direction.}
 }
 Default is \code{"coord"}.}
+
+\item{filter}{Logical. If \code{TRUE}, features are collapsed at the gene level:
+the first entry per gene is kept after filtering non-empty gene names.
+This is useful when multiple proteins/isoforms map to the same gene symbol.
+Default is \code{TRUE}.}
 }
 \value{
 A list with the following components:

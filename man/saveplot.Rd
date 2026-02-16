@@ -4,7 +4,7 @@
 \alias{saveplot}
 \title{Save plots in multiple formats with standardized resolution}
 \usage{
-saveplot(object, filenames = filename, width = NULL, height = NULL, dpi = 600)
+saveplot(object, filenames = NULL, width = NULL, height = NULL, dpi = 600)
 }
 \arguments{
 \item{object}{A plot object to be saved. Can be a \code{ggplot} object or a

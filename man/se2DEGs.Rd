@@ -4,7 +4,15 @@
 \alias{se2DEGs}
 \title{Extract DEG results from SummarizedExperiment}
 \usage{
-se2DEGs(se, compare_col = "condition", ref = NULL, cmp = NULL, pair_col = NULL)
+se2DEGs(
+  se,
+  compare_col = "condition",
+  ref = NULL,
+  cmp = NULL,
+  pair_col = NULL,
+  logFC_cutoff = 1,
+  adj_p_cutoff = 0.05
+)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
@@ -16,6 +24,10 @@ se2DEGs(se, compare_col = "condition", ref = NULL, cmp = NULL, pair_col = NULL)
 \item{cmp}{Comparison group (optional).}
 
 \item{pair_col}{Optional column for paired analysis.}
+
+\item{logFC_cutoff}{Absolute logFC threshold for DEG classification.}
+
+\item{adj_p_cutoff}{Adjusted p-value threshold for DEG classification.}
 }
 \value{
 A data.frame with DEG statistics and annotations.

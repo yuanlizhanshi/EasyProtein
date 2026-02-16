@@ -7,7 +7,7 @@
 calc_gene_mean_by_condition(
   se,
   assay_name = "conc",
-  method = "mean",
+  method = c("mean", "median"),
   condition_col = "condition"
 )
 }

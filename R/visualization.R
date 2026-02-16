@@ -1094,3 +1094,175 @@ plot_heatmap_withline <- function(mat = NULL,
 }
 
 
+#' Visualize DEG dynamic trends by Mfuzz cluster
+#'
+#' @description
+#' Visualizes dynamic expression trends of differentially expressed genes (DEGs)
+#' grouped by Mfuzz clustering results stored in `rowData(se)`.
+#' The function summarizes gene expression across conditions,
+#' optionally scales expression per gene (z-score),
+#' and displays cluster-level average trends with optional single-gene trajectories.
+#'
+#' @param se A \code{SummarizedExperiment} object.
+#' Must contain:
+#' \itemize{
+#'   \item An assay specified by \code{assay_name}
+#'   \item A column in \code{colData(se)} specified by \code{group_by}
+#'   \item Columns \code{gene}, \code{gene_group}, and \code{type} in \code{rowData(se)}
+#' }
+#'
+#' @param assay_name Character. Name of assay to visualize. Default is \code{"conc"}.
+#'
+#' @param group_by Character. Column name in \code{colData(se)} used to define
+#' condition or time ordering. Default is \code{"condition"}.
+#'
+#' @param scale_by_gene Logical. If \code{TRUE}, expression values are
+#' scaled per gene (z-score across conditions). Recommended for
+#' dynamic pattern visualization. Default is \code{TRUE}.
+#'
+#' @param show_all_genes Logical. If \code{TRUE}, individual gene trajectories
+#' are shown as semi-transparent grey lines. Default is \code{TRUE}.
+#'
+#' @details
+#' The function performs the following steps:
+#' \enumerate{
+#'   \item Filters genes labeled as \code{type == "DEGs"} in \code{rowData(se)}.
+#'   \item Computes mean expression per gene per condition.
+#'   \item Optionally standardizes expression per gene.
+#'   \item Computes cluster-level mean trends.
+#'   \item Generates a faceted line plot by \code{gene_group}.
+#' }
+#'
+#' This function assumes that Mfuzz clustering results have already been
+#' computed and stored in \code{rowData(se)$gene_group}.
+#'
+#' @return
+#' A \code{ggplot2} object showing dynamic expression trends
+#' for each DEG cluster.
+#'
+#' @examples
+#' \dontrun{
+#'   p <- plot_deg_trends(se)
+#'   print(p)
+#' }
+#'
+#' @importFrom SummarizedExperiment assay colData rowData
+#' @importFrom dplyr filter pull group_by summarise mutate ungroup left_join
+#' @importFrom tidyr pivot_longer
+#' @importFrom tibble rownames_to_column
+#' @importFrom ggplot2 ggplot aes geom_line geom_point facet_wrap theme_classic
+#' @export
+plot_deg_trends <- function(se,
+                            assay_name = "conc",
+                            group_by = "condition",
+                            scale_by_gene = TRUE,
+                            show_all_genes = TRUE) {
+
+
+  stopifnot(assay_name %in% assayNames(se))
+  stopifnot(group_by %in% colnames(colData(se)))
+
+  expr <- assay(se, assay_name)
+  meta <- as.data.frame(colData(se))
+  rowinfo <- as.data.frame(rowData(se))
+
+
+  deg_genes <- rowinfo %>%
+    dplyr::filter(type == "DEGs") %>%
+    dplyr::pull(gene)
+
+  if (length(deg_genes) == 0) {
+    stop("No DEGs found.")
+  }
+
+  expr_deg <- expr[deg_genes, , drop = FALSE]
+
+
+  internal_sample_col <- ".__sample_id_internal__."
+
+  df_long <- as.data.frame(expr_deg) %>%
+    tibble::rownames_to_column("gene") %>%
+    tidyr::pivot_longer(
+      cols = -gene,
+      names_to = internal_sample_col,
+      values_to = "value"
+    ) %>%
+    dplyr::left_join(
+      meta %>%
+        tibble::rownames_to_column(internal_sample_col),
+      by = internal_sample_col
+    ) %>%
+    dplyr::left_join(
+      rowinfo %>% dplyr::select(gene, gene_group),
+      by = "gene"
+    )
+
+
+  df_mean <- df_long %>%
+    dplyr::group_by(gene, gene_group, .data[[group_by]]) %>%
+    dplyr::summarise(value = mean(value, na.rm = TRUE), .groups = "drop")
+
+
+  if (scale_by_gene) {
+    df_mean <- df_mean %>%
+      dplyr::group_by(gene) %>%
+      dplyr::mutate(value = scale(value)[,1]) %>%
+      dplyr::ungroup()
+  }
+
+
+  df_cluster_mean <- df_mean %>%
+    dplyr::group_by(gene_group, .data[[group_by]]) %>%
+    dplyr::summarise(mean_trend = mean(value, na.rm = TRUE),
+                     .groups = "drop")
+
+
+  df_mean[[group_by]] <- factor(
+    df_mean[[group_by]],
+    levels = unique(meta[[group_by]])
+  )
+
+  df_cluster_mean[[group_by]] <- factor(
+    df_cluster_mean[[group_by]],
+    levels = unique(meta[[group_by]])
+  )
+
+  p <- ggplot() +
+
+    {if (show_all_genes)
+      geom_line(data = df_mean,
+                aes(x = .data[[group_by]],
+                    y = value,
+                    group = gene),
+                alpha = 0.15,
+                color = "grey60")} +
+
+    geom_line(data = df_cluster_mean,
+              aes(x = .data[[group_by]],
+                  y = mean_trend,
+                  group = gene_group),
+              linewidth = 1.5,
+              color = "#D55E00") +
+
+    geom_point(data = df_cluster_mean,
+               aes(x = .data[[group_by]],
+                   y = mean_trend),
+               size = 2,
+               color = "#D55E00") +
+
+    facet_wrap(~gene_group, scales = "free_y") +
+
+    theme_test(base_size = 14) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      strip.background = element_blank(),
+      panel.border = element_rect(color = "black", fill = NA)
+    ) +
+    labs(
+      x = NULL,
+      y = ifelse(scale_by_gene, "Scaled expression", "Expression")
+    )
+
+  return(p)
+}

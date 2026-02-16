@@ -6,28 +6,28 @@
 \usage{
 se2gene_group(
   se,
-  assay = "conc",
+  assay_name = "conc",
   group_by = "condition",
-  time_threhold = 0.75,
   min_expresion_threhold = 1,
   CV_with_time_threhold = 0.1,
-  padj_threhold = 0.05
+  padj_threhold = 0.05,
+  k_cluster = 10
 )
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
 
-\item{assay}{Assay name to use (default "conc").}
-
 \item{group_by}{Column in colData(se) defining sample ordering.}
-
-\item{time_threhold}{thresholds for up/down classification.}
 
 \item{min_expresion_threhold}{Minimum mean expression.}
 
 \item{CV_with_time_threhold}{CV threshold used to define stable genes.}
 
 \item{padj_threhold}{Adjusted p-value threshold for DEGs.}
+
+\item{k_cluster}{Number of clusters for mufzz}
+
+\item{assay}{Assay name to use (default "conc").}
 }
 \value{
 Updated SummarizedExperiment with gene grouping added to rowData.

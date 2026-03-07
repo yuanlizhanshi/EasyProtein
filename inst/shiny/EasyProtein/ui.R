@@ -61,38 +61,90 @@ ui <- {
         id = "inTabset",
         #theme = bslib::bs_theme(bootswatch = "journal"),
         ###Home-----
-        tabPanel(title = "Home",
-                 icon = icon('home',lib="glyphicon"),
-                 div(class = 'home',
-                     fluidPage(
-                       card(
-                         card_header("Introduction",
-                                     style = "font-size:22px; font-weight:bold; padding:10px 15px;"),
-                         status = "primary",
-                         width = 12,
-                         height = NULL,
-                         card_body(
-                           uiOutput("HOME_output_text")
-                         )
-                       ),
+        tabPanel(
+          title = "Home",
+          icon = icon("home", lib = "glyphicon"),
+          div(
+            class = "home",
+            fluidPage(
+              tags$br(),
 
-                       tags$br(),
-                       #tags$hr(style = "border-top: 2px solid #999999; margin:auto;"),
-                       card(
-                         card_header("Workflow",
-                                     style = "font-size:22px; font-weight:bold; padding:10px 15px;"),
-                         div(
-                           tags$img(
-                             src = "intro_img.png",
-                             style = "max-width: 40%; height: auto; display: block; margin: 0 auto;"
-                           ),
-                           style = "background:#FFFFFF;"
-                         )
-                       ),
+              fluidRow(
+                column(
+                  width = 10, offset = 1,
+                  div(
+                    style = "
+              background: #FFFFFF;
+              border: 1px solid #E5E7EB;
+              border-radius: 12px;
+              padding: 22px 28px 20px 28px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+              margin-bottom: 24px;
+            ",
+                    div(
+                      "Introduction",
+                      style = "
+                font-size: 26px;
+                font-weight: 700;
+                color: #1F2937;
+                border-left: 5px solid #2C7BE5;
+                padding-left: 12px;
+                margin-bottom: 18px;
+                line-height: 1.2;
+              "
+                    ),
+                    uiOutput("HOME_output_text")
+                  )
+                )
+              ),
 
-                       style = "font-size:150%;width:80%;"
-                     )
-                 )
+              fluidRow(
+                column(
+                  width = 10, offset = 1,
+                  div(
+                    style = "
+              background: #FFFFFF;
+              border: 1px solid #E5E7EB;
+              border-radius: 12px;
+              padding: 22px 28px 24px 28px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+              margin-bottom: 30px;
+            ",
+                    div(
+                      "Overview of EasyProtein",
+                      style = "
+                font-size: 26px;
+                font-weight: 700;
+                color: #1F2937;
+                border-left: 5px solid #2C7BE5;
+                padding-left: 12px;
+                margin-bottom: 20px;
+                line-height: 1.2;
+              "
+                    ),
+                    div(
+                      tags$img(
+                        src = "Fig1.jpg",
+                        style = "
+                  max-width: 70%;
+                  height: auto;
+                  display: block;
+                  margin: 0 auto;
+                  border-radius: 8px;
+                "
+                      ),
+                      style = "text-align: center;"
+                    )
+                  )
+                )
+              )
+            ),
+            style = "
+      background-color: #F8FAFC;
+      min-height: 100vh;
+      font-size: 18px;
+    "
+          )
         ),
         ###Data Imputation-----
         tabPanel(title = "Data Imputation",
@@ -591,9 +643,135 @@ ui <- {
                  icon = icon('bookmark',lib = 'glyphicon'),
                  p("Tutorials content.")),
 
-        tabPanel(title = "Contact",
-                 icon =  icon('envelope',lib = 'glyphicon'),
-                 p("If any problem, contact kyh")),
+        tabPanel(
+          title = "Contact",
+          icon = icon("envelope", lib = "glyphicon"),
+
+          fluidPage(
+            fluidRow(
+              column(
+                width = 10, offset = 1,
+
+                div(
+                  style = "
+            background:#FFFFFF;
+            border:1px solid #E5E7EB;
+            border-radius:12px;
+            padding:22px 28px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.04);
+            margin-top:18px;
+            margin-bottom:22px;
+          ",
+
+                  div(
+                    "Contact & Support",
+                    style = "
+              font-size:26px;
+              font-weight:700;
+              color:#1F2937;
+              border-left:5px solid #2C7BE5;
+              padding-left:12px;
+              margin-bottom:18px;
+              line-height:1.2;
+            "
+                  ),
+
+                  p(style="margin-bottom:12px; line-height:1.75; color:#374151;",
+                    "This page provides the recommended channels for questions, bug reports, and feature requests related to EasyProtein."
+                  ),
+
+                  tags$hr(style="border-top:1px solid #E5E7EB; margin:18px 0;"),
+
+                  div(
+                    tags$h4("Project repository", style="margin:0 0 8px 0; font-weight:700; color:#111827;"),
+                    p(style="margin:0; line-height:1.75; color:#374151;",
+                      "Source code and documentation: ",
+                      tags$a(
+                        href = "https://github.com/yuanlizhanshi/EasyProtein",
+                        target = "_blank",
+                        "github.com/yuanlizhanshi/EasyProtein"
+                      )
+                    )
+                  ),
+
+                  tags$hr(style="border-top:1px solid #E5E7EB; margin:18px 0;"),
+
+                  div(
+                    tags$h4("Bug reports & feature requests", style="margin:0 0 8px 0; font-weight:700; color:#111827;"),
+                    tags$ul(
+                      style="margin:0; padding-left:18px; line-height:1.8; color:#374151;",
+                      tags$li(
+                        "Please use GitHub Issues for reproducible bug reports and feature requests: ",
+                        tags$a(
+                          href = "https://github.com/yuanlizhanshi/EasyProtein/issues",
+                          target = "_blank",
+                          "Issues"
+                        )
+                      ),
+                      tags$li("When reporting a bug, include: a minimal example, input data format, expected vs observed results, and the console log/error message."),
+                      tags$li("If the issue is related to visualization, screenshots are helpful.")
+                    )
+                  ),
+
+                  tags$hr(style="border-top:1px solid #E5E7EB; margin:18px 0;"),
+
+                  div(
+                    tags$h4("User questions", style="margin:0 0 8px 0; font-weight:700; color:#111827;"),
+                    p(style="margin:0; line-height:1.75; color:#374151;",
+                      "For usage questions (e.g., recommended inputs, workflow steps, or interpretation of results), please open an Issue with the label ",
+                      tags$code("question"),
+                      " to keep the discussion searchable and reproducible."
+                    )
+                  ),
+
+                  tags$hr(style="border-top:1px solid #E5E7EB; margin:18px 0;"),
+
+                  div(
+                    tags$h4("How to cite", style="margin:0 0 8px 0; font-weight:700; color:#111827;"),
+                    p(style="margin:0; line-height:1.75; color:#374151;",
+                      "If you use EasyProtein in a publication, please cite the project repository. A formal software manuscript and/or Zenodo DOI can be added here once available."
+                    ),
+                    tags$pre(
+                      style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px; padding:12px 14px; margin-top:10px; white-space:pre-wrap;",
+                      "EasyProtein. Open-source platform for downstream analysis of quantitative proteomics data.\nhttps://github.com/yuanlizhanshi/EasyProtein"
+                    )
+                  ),
+
+                  tags$hr(style="border-top:1px solid #E5E7EB; margin:18px 0;"),
+
+                  div(
+                    tags$h4("Reproducibility checklist", style="margin:0 0 8px 0; font-weight:700; color:#111827;"),
+                    tags$ul(
+                      style="margin:0; padding-left:18px; line-height:1.8; color:#374151;",
+                      tags$li("EasyProtein version (or Git commit hash)."),
+                      tags$li("R version and OS (Linux/Windows/macOS)."),
+                      tags$li("Key package versions: Shiny, bslib, and major analysis dependencies."),
+                      tags$li("Input matrix type and preprocessing method (e.g., DIA protein matrix, LFQ/TMT output).")
+                    )
+                  ),
+
+                  tags$hr(style="border-top:1px solid #E5E7EB; margin:18px 0;"),
+
+                  div(
+                    tags$h4("Maintainer", style="margin:0 0 8px 0; font-weight:700; color:#111827;"),
+                    p(style="margin:0; line-height:1.75; color:#374151;",
+                      "Maintained by ",
+                      tags$strong("Yunhui Kong"),
+                    )
+                    ,p(style="margin:6px 0 0 0; line-height:1.75; color:#374151;",
+                       "Email: ", tags$a(href="mailto:kongyunhui1@gmail.com", "kongyunhui1@gmail.com"))
+                  )
+                )
+              )
+            ),
+
+            # page background + font
+            div(style="height:18px;"),
+            tags$style(HTML("
+      body { background-color: #F8FAFC; }
+    "))
+          )
+        ),
         nav_spacer(),
         nav_item(tags$a(shiny::icon("github"), "Kongmou", href = "https://github.com/yuanlizhanshi", target = "_blank"))
       )

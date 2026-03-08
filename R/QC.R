@@ -54,8 +54,9 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 #'   (\code{;}) will be used as the feature name.
 #'
 #' @param raw_prefix Character string used to identify raw expression
-#'   columns. All columns whose names contain this prefix will be treated
-#'   as raw intensity measurements.
+#'   columns. If \'auto\' (default), raw intensity columns will be detected
+#'   automatically from common raw file suffixes such as \'raw\', \'mzML\',
+#'   \'mzXML\', and similar filename-style endings.
 #'
 #' @param enable_detect_outlier_gene Logical flag indicating whether to
 #'   mask extreme outlier measurements within each condition based on
@@ -96,7 +97,7 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 rawdata2se <- function(
     exp_file,
     obs_col = "Genes",
-    raw_prefix = "raw",
+    raw_prefix = "auto",
     enable_detect_outlier_gene = FALSE,
     fc_threshold = 5,
     min_valid_groups = 0,
@@ -119,7 +120,32 @@ rawdata2se <- function(
   var <- data.frame(gene = rawdata$feature)
   rownames(var) <- var$gene
 
-  raw_cols <- stringr::str_detect(colnames(rawdata), raw_prefix)
+  detect_raw_cols <- function(nms, raw_prefix = "auto") {
+    nms_lower <- tolower(nms)
+
+    if (!identical(tolower(raw_prefix), "auto")) {
+      return(stringr::str_detect(nms_lower, tolower(raw_prefix)))
+    }
+
+    suffix_pattern <- paste0(
+      "(",
+      "\\.(raw|mzml|mzxml|wiff|d|dia|txt)$",
+      "|_raw$|_mzml$|_mzxml$|_wiff$|_dia$",
+      "|raw$|mzml$|mzxml$|wiff$",
+      ")"
+    )
+
+    detected <- stringr::str_detect(nms_lower, suffix_pattern)
+
+    if (!any(detected)) {
+      fallback_pattern <- "raw|mzml|mzxml|wiff|\\.d$|_d$"
+      detected <- stringr::str_detect(nms_lower, fallback_pattern)
+    }
+
+    detected
+  }
+
+  raw_cols <- detect_raw_cols(colnames(rawdata), raw_prefix = raw_prefix)
   stopifnot(any(raw_cols))
 
   rawdata_mtx <- rawdata[, raw_cols, drop = FALSE]

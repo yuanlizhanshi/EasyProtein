@@ -247,20 +247,26 @@ mod_QC_server <- function(input, output, session) {
     paste0("Sample info:", kept, " / ", total)
   })
 
+  qc_plot_se <- reactive({
+    req(se_data())
+    req(se_filtered())
+    se_filtered()
+  })
+
   output$intensity_density <- renderPlot({
-    plotSE_density(se_filtered())
+    plotSE_density(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$proteins_number <- renderPlot({
-    plotSE_protein_number(se_filtered())
+    plotSE_protein_number(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$cv_density <- renderPlot({
-    plotCV_density(se_filtered())
+    plotCV_density(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$Miss_value_statistics <- renderPlot({
-    plotSE_missing_value(se_filtered())
+    plotSE_missing_value(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$pca_plot <- renderPlot({

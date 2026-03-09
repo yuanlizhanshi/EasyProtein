@@ -835,7 +835,7 @@ show_se_selector_modal <- function(se_data) {
       )$ui,
 
       tags$hr(),
-      h4("Option1:Subset genes in SE by gene group"),
+      h4("Option1:Subset genes in SE by gene SYMBOL"),
       make_grouped_select(
         id = "se_row_selector",
         df = row_df,
@@ -844,7 +844,7 @@ show_se_selector_modal <- function(se_data) {
       )$ui,
 
 
-      h4("Option2:Upload excel contains protein group"),
+      h4("Option2:Upload excel contains gene SYMBOL"),
       fileInput(
         inputId = "se_excel_upload",
         label   = "Upload Excel file",

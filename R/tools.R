@@ -58,11 +58,6 @@ detect_species_from_symbol <- function(gene) {
 #'   \\item{correlation}{Correlation between each gene and the target profile.}
 #' }
 #'
-#' @examples
-#' \\dontrun{
-#' res <- correlate_genes_to_target(se, gene = c("TP53", "MDM2"))
-#' head(res)
-#' }
 #'
 #' @importFrom SummarizedExperiment assay assayNames rowData
 #' @export

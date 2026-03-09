@@ -31,6 +31,93 @@ detect_species_from_symbol <- function(gene) {
 }
 
 
+#' Calculate gene-wise correlation to target gene profile
+#'
+#' @description
+#' Computes the correlation between every gene in a
+#' \\code{SummarizedExperiment} object and a target gene profile across all
+#' samples. When multiple target genes are provided, their sample-wise median
+#' expression is used as the reference profile.
+#'
+#' The target genes can be matched either against row names of the assay matrix
+#' or, when available, against \\code{rowData(se)$gene}.
+#'
+#' @param se A \\code{SummarizedExperiment} object.
+#' @param gene A character vector of one or more target genes.
+#' @param assay_name Character. Assay name used for correlation calculation.
+#'   Default is \\code{"conc"}.
+#' @param method Character. Correlation method passed to \\code{stats::cor}.
+#'   Default is \\code{"pearson"}.
+#'
+#' @return A data.frame with one row per gene and correlation values.
+#' The returned columns include:
+#' \\describe{
+#'   \\item{feature_id}{Row names of the assay matrix.}
+#'   \\item{gene}{Gene label. Uses \\code{rowData(se)$gene} when available,
+#'   otherwise row names.}
+#'   \\item{correlation}{Correlation between each gene and the target profile.}
+#' }
+#'
+#' @examples
+#' \\dontrun{
+#' res <- correlate_genes_to_target(se, gene = c("TP53", "MDM2"))
+#' head(res)
+#' }
+#'
+#' @importFrom SummarizedExperiment assay assayNames rowData
+#' @export
+correlate_genes_to_target <- function(se,
+                                      gene,
+                                      assay_name = "conc",
+                                      method = "spearman") {
+  stopifnot(assay_name %in% SummarizedExperiment::assayNames(se))
+
+  gene <- as.character(gene)
+  gene <- unique(stats::na.omit(trimws(gene)))
+
+  if (length(gene) == 0) {
+    stop("gene must contain at least one non-empty gene name")
+  }
+
+  expr <- SummarizedExperiment::assay(se, assay_name)
+  expr <- as.matrix(expr)
+
+  gene_ids <- rownames(expr)
+  if (is.null(gene_ids)) {
+    stop("rownames of assay matrix are required")
+  }
+
+  target_idx <- which(gene_ids %in% gene)
+  if (length(target_idx) == 0) {
+    stop("None of the input genes were found in rownames(se)")
+  }
+
+  missing_genes <- setdiff(gene, gene_ids)
+  if (length(missing_genes) > 0) {
+    warning(
+      "These genes were not found in rownames(se): ",
+      paste(missing_genes, collapse = ", ")
+    )
+  }
+
+  target_expr <- expr[target_idx, , drop = FALSE]
+  if (nrow(target_expr) == 1) {
+    target_profile <- as.numeric(target_expr[1, ])
+  } else {
+    target_profile <- apply(target_expr, 2, stats::median, na.rm = TRUE)
+  }
+
+  correlation <- apply(expr, 1, function(x) {
+    stats::cor(x, target_profile, use = "pairwise.complete.obs", method = method)
+  })
+
+  tibble(
+    gene = gene_ids,
+    correlation = as.numeric(correlation)
+  ) %>% arrange(desc(correlation))
+}
+
+
 #' Impute missing values in raw intensity using low-percentile sampling or geometric mean
 #'
 #' @description

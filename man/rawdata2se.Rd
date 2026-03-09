@@ -7,7 +7,7 @@
 rawdata2se(
   exp_file,
   obs_col = "Genes",
-  raw_prefix = "raw",
+  raw_prefix = "auto",
   enable_detect_outlier_gene = FALSE,
   fc_threshold = 5,
   min_valid_groups = 0,
@@ -26,8 +26,9 @@ feature identifiers. Only the substring before the first semicolon
 (\code{;}) will be used as the feature name.}
 
 \item{raw_prefix}{Character string used to identify raw expression
-columns. All columns whose names contain this prefix will be treated
-as raw intensity measurements.}
+columns. If \'auto\' (default), raw intensity columns will be detected
+automatically from common raw file suffixes such as \'raw\', \'mzML\',
+\'mzXML\', and similar filename-style endings.}
 
 \item{enable_detect_outlier_gene}{Logical flag indicating whether to
 mask extreme outlier measurements within each condition based on

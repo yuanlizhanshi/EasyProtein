@@ -9,7 +9,9 @@ plot_deg_trends(
   assay_name = "conc",
   group_by = "condition",
   scale_by_gene = TRUE,
-  show_all_genes = TRUE
+  show_all_genes = TRUE,
+  show_ci = FALSE,
+  ci_level = 0.95
 )
 }
 \arguments{
@@ -32,6 +34,12 @@ dynamic pattern visualization. Default is \code{TRUE}.}
 
 \item{show_all_genes}{Logical. If \code{TRUE}, individual gene trajectories
 are shown as semi-transparent grey lines. Default is \code{TRUE}.}
+
+\item{show_ci}{Logical. If \code{TRUE}, add 95\% confidence intervals for
+the cluster-level mean trend at each condition. Default is \code{FALSE}.}
+
+\item{ci_level}{Numeric. Confidence level used when \code{show_ci = TRUE}.
+Default is \code{0.95}.}
 }
 \value{
 A \code{ggplot2} object showing dynamic expression trends
@@ -50,7 +58,7 @@ The function performs the following steps:
   \item Filters genes labeled as \code{type == "DEGs"} in \code{rowData(se)}.
   \item Computes mean expression per gene per condition.
   \item Optionally standardizes expression per gene.
-  \item Computes cluster-level mean trends.
+  \item Computes cluster-level mean trends and optional confidence intervals.
   \item Generates a faceted line plot by \code{gene_group}.
 }
 

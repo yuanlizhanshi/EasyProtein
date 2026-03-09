@@ -1123,13 +1123,19 @@ plot_heatmap_withline <- function(mat = NULL,
 #' @param show_all_genes Logical. If \code{TRUE}, individual gene trajectories
 #' are shown as semi-transparent grey lines. Default is \code{TRUE}.
 #'
+#' @param show_ci Logical. If \code{TRUE}, add 95\% confidence intervals for
+#' the cluster-level mean trend at each condition. Default is \code{FALSE}.
+#'
+#' @param ci_level Numeric. Confidence level used when \code{show_ci = TRUE}.
+#' Default is \code{0.95}.
+#'
 #' @details
 #' The function performs the following steps:
 #' \enumerate{
 #'   \item Filters genes labeled as \code{type == "DEGs"} in \code{rowData(se)}.
 #'   \item Computes mean expression per gene per condition.
 #'   \item Optionally standardizes expression per gene.
-#'   \item Computes cluster-level mean trends.
+#'   \item Computes cluster-level mean trends and optional confidence intervals.
 #'   \item Generates a faceted line plot by \code{gene_group}.
 #' }
 #'
@@ -1150,17 +1156,20 @@ plot_heatmap_withline <- function(mat = NULL,
 #' @importFrom dplyr filter pull group_by summarise mutate ungroup left_join
 #' @importFrom tidyr pivot_longer
 #' @importFrom tibble rownames_to_column
-#' @importFrom ggplot2 ggplot aes geom_line geom_point facet_wrap theme_classic
+#' @importFrom ggplot2 ggplot aes geom_line geom_point geom_errorbar facet_wrap theme_classic
 #' @export
 plot_deg_trends <- function(se,
                             assay_name = "conc",
                             group_by = "condition",
                             scale_by_gene = TRUE,
-                            show_all_genes = TRUE) {
+                            show_all_genes = TRUE,
+                            show_ci = FALSE,
+                            ci_level = 0.95) {
 
 
   stopifnot(assay_name %in% assayNames(se))
   stopifnot(group_by %in% colnames(colData(se)))
+  stopifnot(is.numeric(ci_level), length(ci_level) == 1, ci_level > 0, ci_level < 1)
 
   expr <- assay(se, assay_name)
   meta <- as.data.frame(colData(se))
@@ -1213,8 +1222,20 @@ plot_deg_trends <- function(se,
 
   df_cluster_mean <- df_mean %>%
     dplyr::group_by(gene_group, .data[[group_by]]) %>%
-    dplyr::summarise(mean_trend = mean(value, na.rm = TRUE),
-                     .groups = "drop")
+    dplyr::summarise(
+      mean_trend = mean(value, na.rm = TRUE),
+      n_genes = dplyr::n(),
+      sd_trend = stats::sd(value, na.rm = TRUE),
+      se_trend = sd_trend / sqrt(n_genes),
+      t_multiplier = ifelse(
+        n_genes > 1,
+        stats::qt((1 + ci_level) / 2, df = n_genes - 1),
+        NA_real_
+      ),
+      ci_lower = mean_trend - t_multiplier * se_trend,
+      ci_upper = mean_trend + t_multiplier * se_trend,
+      .groups = "drop"
+    )
 
 
   df_mean[[group_by]] <- factor(
@@ -1236,6 +1257,16 @@ plot_deg_trends <- function(se,
                     group = gene),
                 alpha = 0.15,
                 color = "grey60")} +
+
+            {if (show_ci)
+              geom_errorbar(data = df_cluster_mean,
+                    aes(x = .data[[group_by]],
+                      ymin = ci_lower,
+                      ymax = ci_upper),
+                    width = 0.15,
+                    linewidth = 0.5,
+                    alpha = 0.7,
+                    color = "#D55E00")} +
 
     geom_line(data = df_cluster_mean,
               aes(x = .data[[group_by]],

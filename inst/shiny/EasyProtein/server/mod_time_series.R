@@ -23,30 +23,30 @@ mod_time_series_server <- function(input, output, session) {
       default_all = TRUE
     )$server(input, output, session)
   })
-  
-  
+
+
   observeEvent(input$confirm_time_params,{
       req(se_data())
       removeModal()
-      
+
       # print(input[["time_filter-min_expression_threshold"]])
       # print(input[["time_filter-CV_with_time_threshold"]])
       # print(input[["time_filter-CV_with_time_threshold"]])
       # print(input[["time_filter-padj_threshold"]])
-      
-      sel <- input$selected_cols 
-      col_name <- sub("\\|\\|.*$", "", sel[1])  
-      vals <- sub("^.*\\|\\|", "", sel)        
+
+      sel <- input$selected_cols
+      col_name <- sub("\\|\\|.*$", "", sel[1])
+      vals <- sub("^.*\\|\\|", "", sel)
       col_df <- as.data.frame(colData(se_data()))
       matched_samples <- rownames(col_df)[col_df[[col_name]] %in% vals]
-      
+
       if (length(matched_samples) == 0) {
         showNotification("No samples matched your selection", type = "error")
         return()
       }
       se_sub <- se_data()[, matched_samples, drop = FALSE]
-      
-      
+
+
       new_se <- se2gene_group(
         se = se_sub,
         assay_name = 'conc',
@@ -56,7 +56,7 @@ mod_time_series_server <- function(input, output, session) {
         padj_threhold = input[["time_filter-padj_threshold"]],
         k_cluster = input[["time_filter-k_cluster"]]
       )
-      
+
       se_filtered(new_se)
       param_confirmed(TRUE)
       #print(table(rowData(se_data())['gene_group']))
@@ -76,15 +76,15 @@ mod_time_series_server <- function(input, output, session) {
         cat(grp,"gene number:", length(cd$gene_group[cd$gene_group == grp]), "\n")
       }
     })
-    
+
     output$FC_fold_plot <- renderPlot({
       req(se_filtered(), param_confirmed())
       se <- se_filtered()
-      plot_deg_trends(se)
+      plot_deg_trends(se,show_ci = TRUE)
     },
     height = function() input$FC_plot_height,
     width = function() input$FC_plot_width)
-    
+
     output$download_FC_fold_plot_pdf <- make_download_pdf(
       plot_expr   = function() plot_deg_trends(se_filtered()),
       input       = input,
@@ -93,21 +93,21 @@ mod_time_series_server <- function(input, output, session) {
       height      = function() input$FC_plot_height / 100,
       input_field = "time_rds_file"
     )
-    
-    
+
+
     output$download_time_se <- make_download_time_se_zip(
-      se_reactive   = se_filtered,   
+      se_reactive   = se_filtered,
       input         = input,
-      file_input_id = "time_rds_file",     
+      file_input_id = "time_rds_file",
       suffix        = "_timeseries",
       session       = session
     )
-    
+
     output$download_time_se_UI <- renderUI({
       req(se_filtered())
       downloadButton("download_time_se", "Download SE")
     })
-    
+
 
 
 }

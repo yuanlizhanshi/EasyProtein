@@ -280,7 +280,7 @@ ui <- {
                            class = "ep-card",
                            div(class = "ep-card-title", "Parsed object preview"),
                            div(class = "ep-card-subtitle", "Review the imported SE summary before continuing to the next analysis step."),
-                           div(class = "ep-dark-panel", style = "min-height:420px; margin-top:16px; font-size:13px;", verbatimTextOutput("se_summary"))
+                           div(class = "ep-soft-panel", style = "min-height:420px; margin-top:16px; font-size:13px; background:#FFFFFF;", verbatimTextOutput("se_summary"))
                          )
                        )
                      )

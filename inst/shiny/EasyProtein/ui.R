@@ -345,25 +345,29 @@ ui <- {
                                    "Intensity density",
                                    br(),
                                    div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_protein_density_pdf", "Download PDF")),
-                                   plotOutput("intensity_density")
+                                   plotOutput("intensity_density"),
+                                   div(style = "display:flex; justify-content:flex-end; margin-top:10px;", downloadButton("download_protein_density_table", "Export table"))
                                  ),
                                  tabPanel(
                                    "CV density",
                                    br(),
                                    div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_cv_density_pdf", "Download PDF")),
-                                   plotOutput("cv_density")
+                                   plotOutput("cv_density"),
+                                   div(style = "display:flex; justify-content:flex-end; margin-top:10px;", downloadButton("download_cv_density_table", "Export table"))
                                  ),
                                  tabPanel(
                                    "Number of proteins detected",
                                    br(),
                                    div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_protein_num_pdf", "Download PDF")),
-                                   plotOutput("proteins_number")
+                                   plotOutput("proteins_number"),
+                                   div(style = "display:flex; justify-content:flex-end; margin-top:10px;", downloadButton("download_protein_num_table", "Export table"))
                                  ),
                                  tabPanel(
                                    "Miss value statistics",
                                    br(),
                                    div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_na_pdf", "Download PDF")),
-                                   plotOutput("Miss_value_statistics")
+                                   plotOutput("Miss_value_statistics"),
+                                   div(style = "display:flex; justify-content:flex-end; margin-top:10px;", downloadButton("download_na_table", "Export table"))
                                  )
                                ))
                          )

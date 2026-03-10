@@ -326,6 +326,42 @@ mod_QC_server <- function(input, output, session) {
     input_field = "se_file"
   )
 
+  make_download_qc_table <- function(data_expr, suffix) {
+    downloadHandler(
+      filename = function() {
+        base <- tools::file_path_sans_ext(basename(input$se_file$name))
+        paste0(base, "_", suffix, ".xlsx")
+      },
+      content = function(file) {
+        req(qc_plot_se())
+        if (!requireNamespace("writexl", quietly = TRUE)) {
+          stop("Package 'writexl' is required to export tables.")
+        }
+        writexl::write_xlsx(data_expr(), file)
+      }
+    )
+  }
+
+  output$download_protein_density_table <- make_download_qc_table(
+    data_expr = function() plotSE_density(qc_plot_se(), return_table = TRUE),
+    suffix = "intensity_density_table"
+  )
+
+  output$download_cv_density_table <- make_download_qc_table(
+    data_expr = function() plotCV_density(qc_plot_se(), return_table = TRUE),
+    suffix = "CV_density_table"
+  )
+
+  output$download_protein_num_table <- make_download_qc_table(
+    data_expr = function() plotSE_protein_number(qc_plot_se(), return_table = TRUE),
+    suffix = "proteins_number_table"
+  )
+
+  output$download_na_table <- make_download_qc_table(
+    data_expr = function() plotSE_missing_value(qc_plot_se(), return_table = TRUE),
+    suffix = "miss_value_statistics_table"
+  )
+
   output$download_se2 <- make_download_se_zip(
     se_reactive   = se_filtered,   # pass reactiveExpr (do not add ())
     input         = input,

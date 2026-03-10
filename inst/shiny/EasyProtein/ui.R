@@ -346,39 +346,27 @@ ui <- {
                                  ),
                                  tabPanel(
                                    "Intensity density",
-                                   conditionalPanel(
-                                     condition = "input.se_file != null",
-                                     br(),
-                                     div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_protein_density_pdf", "Download PDF")),
-                                     plotOutput("intensity_density")
-                                   )
+                                   br(),
+                                   div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_protein_density_pdf", "Download PDF")),
+                                   plotOutput("intensity_density")
                                  ),
                                  tabPanel(
                                    "CV density",
-                                   conditionalPanel(
-                                     condition = "input.se_file != null",
-                                     br(),
-                                     div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_cv_density_pdf", "Download PDF")),
-                                     plotOutput("cv_density")
-                                   )
+                                   br(),
+                                   div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_cv_density_pdf", "Download PDF")),
+                                   plotOutput("cv_density")
                                  ),
                                  tabPanel(
                                    "Number of proteins detected",
-                                   conditionalPanel(
-                                     condition = "input.se_file != null",
-                                     br(),
-                                     div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_protein_num_pdf", "Download PDF")),
-                                     plotOutput("proteins_number")
-                                   )
+                                   br(),
+                                   div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_protein_num_pdf", "Download PDF")),
+                                   plotOutput("proteins_number")
                                  ),
                                  tabPanel(
                                    "Miss value statistics",
-                                   conditionalPanel(
-                                     condition = "input.se_file != null",
-                                     br(),
-                                     div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_na_pdf", "Download PDF")),
-                                     plotOutput("Miss_value_statistics")
-                                   )
+                                   br(),
+                                   div(style = "display:flex; justify-content:flex-end; margin-bottom:10px;", downloadButton("download_na_pdf", "Download PDF")),
+                                   plotOutput("Miss_value_statistics")
                                  )
                                ))
                          )

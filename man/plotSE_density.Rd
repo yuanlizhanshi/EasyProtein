@@ -4,13 +4,17 @@
 \alias{plotSE_density}
 \title{Plot intensity distribution for each sample}
 \usage{
-plotSE_density(se)
+plotSE_density(se, return_table = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
+
+\item{return_table}{Logical. If \code{TRUE}, return the plotting data.frame
+instead of a ggplot object. Default is \code{FALSE}.}
 }
 \value{
-A ggplot violin plot.
+A ggplot violin plot, or a data.frame when
+  \code{return_table = TRUE}.
 }
 \description{
 This function draws violin + boxplot of log2 intensity for each sample

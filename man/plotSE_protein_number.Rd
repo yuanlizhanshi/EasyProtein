@@ -4,13 +4,16 @@
 \alias{plotSE_protein_number}
 \title{Plot number of detected proteins per sample}
 \usage{
-plotSE_protein_number(se)
+plotSE_protein_number(se, return_table = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
+
+\item{return_table}{Logical. If \code{TRUE}, return the plotting data.frame
+instead of a ggplot object. Default is \code{FALSE}.}
 }
 \value{
-A ggplot object.
+A ggplot object, or a data.frame when \code{return_table = TRUE}.
 }
 \description{
 Plot number of detected proteins per sample

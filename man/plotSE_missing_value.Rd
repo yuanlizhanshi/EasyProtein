@@ -4,13 +4,17 @@
 \alias{plotSE_missing_value}
 \title{Plot missing values per sample}
 \usage{
-plotSE_missing_value(se)
+plotSE_missing_value(se, return_table = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
+
+\item{return_table}{Logical. If \code{TRUE}, return the plotting data.frame
+instead of a ggplot object. Default is \code{FALSE}.}
 }
 \value{
-A ggplot object summarizing missing count per sample.
+A ggplot object summarizing missing count per sample,
+  or a data.frame when \code{return_table = TRUE}.
 }
 \description{
 Plot missing values per sample

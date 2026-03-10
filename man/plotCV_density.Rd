@@ -4,13 +4,17 @@
 \alias{plotCV_density}
 \title{Plot CV distribution across conditions}
 \usage{
-plotCV_density(se)
+plotCV_density(se, return_table = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}
+
+\item{return_table}{Logical. If \code{TRUE}, return the plotting data.frame
+instead of a ggplot object. Default is \code{FALSE}.}
 }
 \value{
-A ggplot object or NULL if no replicates.
+A ggplot object, a data.frame when \code{return_table = TRUE},
+  or \code{NULL} if no replicates.
 }
 \description{
 Plot CV distribution across conditions

@@ -236,15 +236,18 @@ plot_pca <- function(pca.df, pca.res, colorby, label) {
 #' from a SummarizedExperiment object.
 #'
 #' @param se A SummarizedExperiment object.
+#' @param return_table Logical. If \code{TRUE}, return the plotting data.frame
+#'   instead of a ggplot object. Default is \code{FALSE}.
 #'
-#' @return A ggplot violin plot.
+#' @return A ggplot violin plot, or a data.frame when
+#'   \code{return_table = TRUE}.
 #'
 #' @importFrom ggplot2 ggplot aes geom_violin geom_boxplot scale_x_log10 labs theme
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr filter mutate
 #'
 #' @export
-plotSE_density <- function(se){
+plotSE_density <- function(se, return_table = FALSE){
   rawdata <- se2raw(se)
   rawdata_df <- rawdata %>%
     pivot_longer(cols = 3:ncol(rawdata),
@@ -255,6 +258,9 @@ plotSE_density <- function(se){
 
   rawdata_df$Sample <- factor(rawdata_df$Sample, levels = rev(unique(colnames(se))))
 
+  if (isTRUE(return_table)) {
+    return(rawdata_df)
+  }else{
   ggplot(rawdata_df, aes(x = log2intersity, y = Sample, fill = Sample)) +
     geom_violin() +
     geom_boxplot(width = 0.2, outlier.size = 0.5) +
@@ -267,21 +273,25 @@ plotSE_density <- function(se){
       axis.title.x = element_text(size = 14, face = "bold"),
       axis.title.y = element_text(size = 14, face = "bold")
     )
+    }
 }
 
 
 #' Plot missing values per sample
 #'
 #' @param se A SummarizedExperiment object.
+#' @param return_table Logical. If \code{TRUE}, return the plotting data.frame
+#'   instead of a ggplot object. Default is \code{FALSE}.
 #'
-#' @return A ggplot object summarizing missing count per sample.
+#' @return A ggplot object summarizing missing count per sample,
+#'   or a data.frame when \code{return_table = TRUE}.
 #'
 #' @importFrom ggplot2 ggplot aes geom_point geom_segment geom_text labs theme
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr filter group_by mutate select distinct
 #'
 #' @export
-plotSE_missing_value <- function(se){
+plotSE_missing_value <- function(se, return_table = FALSE){
   rawdata <- se2raw(se)
 
   missing_df <- rawdata %>%
@@ -296,6 +306,9 @@ plotSE_missing_value <- function(se){
 
   missing_df$Sample <- factor(missing_df$Sample, levels = rev(unique(colnames(se))))
 
+  if (isTRUE(return_table)) {
+    return(missing_df)
+  }else{  
   ggplot(missing_df, aes(x = missing_number, y = Sample)) +
     geom_segment(aes(x = 0, xend = missing_number), color = "grey60") +
     geom_point(size = 4) +
@@ -309,20 +322,23 @@ plotSE_missing_value <- function(se){
       axis.title.x = element_text(size = 14, face = "bold"),
       axis.title.y = element_text(size = 14, face = "bold")
     )
+    }
 }
 
 
 #' Plot number of detected proteins per sample
 #'
 #' @param se A SummarizedExperiment object.
+#' @param return_table Logical. If \code{TRUE}, return the plotting data.frame
+#'   instead of a ggplot object. Default is \code{FALSE}.
 #'
-#' @return A ggplot object.
+#' @return A ggplot object, or a data.frame when \code{return_table = TRUE}.
 #'
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr filter group_by mutate select distinct
 #'
 #' @export
-plotSE_protein_number <- function(se){
+plotSE_protein_number <- function(se, return_table = FALSE){
   rawdata <- se2raw(se)
 
   df <- rawdata %>%
@@ -337,6 +353,9 @@ plotSE_protein_number <- function(se){
 
   df$Sample <- factor(df$Sample, levels = rev(unique(colnames(se))))
 
+  if (isTRUE(return_table)) {
+    return(df)
+  }else{  
   ggplot(df, aes(x = protein_number, y = Sample)) +
     geom_segment(aes(x = 0, xend = protein_number), color = "grey60") +
     geom_point(size = 4) +
@@ -344,20 +363,24 @@ plotSE_protein_number <- function(se){
     scale_x_continuous(expand = ggplot2::expansion(mult = c(0, 0.2))) +
     labs(x = "Number of detected proteins", y = NULL) +
     theme_test()
+    }
 }
 
 
 #' Plot CV distribution across conditions
 #'
 #' @param se A SummarizedExperiment object.
+#' @param return_table Logical. If \code{TRUE}, return the plotting data.frame
+#'   instead of a ggplot object. Default is \code{FALSE}.
 #'
-#' @return A ggplot object or NULL if no replicates.
+#' @return A ggplot object, a data.frame when \code{return_table = TRUE},
+#'   or \code{NULL} if no replicates.
 #'
 #' @importFrom ggplot2 ggplot aes geom_violin geom_boxplot scale_x_log10 labs theme
 #' @importFrom dplyr filter mutate
 #'
 #' @export
-plotCV_density <- function(se){
+plotCV_density <- function(se, return_table = FALSE){
   cv_df <- calc_gene_CV_by_condition(se)
 
   if (is.null(cv_df)) {
@@ -367,12 +390,18 @@ plotCV_density <- function(se){
 
   cv_df$condition <- factor(cv_df$condition, levels = rev(unique(cv_df$condition)))
 
-  ggplot(cv_df, aes(CV, condition, fill = condition)) +
+  if (isTRUE(return_table)) {
+    return(cv_df)
+  }{
+    ggplot(cv_df, aes(CV, condition, fill = condition)) +
     geom_violin() +
     geom_boxplot(width = 0.2, outlier.size = 0.5) +
     scale_x_log10(labels = function(x) format(x, scientific = FALSE, trim = TRUE)) +
     labs(x = "CV", y = NULL) +
     theme_test()
+  }
+
+
 }
 
 

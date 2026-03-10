@@ -301,6 +301,7 @@ plotSE_missing_value <- function(se){
     geom_point(size = 4) +
     geom_text(aes(label = missing_number, hjust = -0.5)) +
     labs(x = "Number of missing values", y = NULL) +
+    scale_x_continuous(expand = ggplot2::expansion(mult = c(0, 0.2))) +
     theme_test() +
     theme(
       axis.text.x = element_text(size = 12, face = "bold"),
@@ -340,6 +341,7 @@ plotSE_protein_number <- function(se){
     geom_segment(aes(x = 0, xend = protein_number), color = "grey60") +
     geom_point(size = 4) +
     geom_text(aes(label = protein_number, hjust = -0.5)) +
+    scale_x_continuous(expand = ggplot2::expansion(mult = c(0, 0.2))) +
     labs(x = "Number of detected proteins", y = NULL) +
     theme_test()
 }
@@ -368,7 +370,7 @@ plotCV_density <- function(se){
   ggplot(cv_df, aes(CV, condition, fill = condition)) +
     geom_violin() +
     geom_boxplot(width = 0.2, outlier.size = 0.5) +
-    scale_x_log10() +
+    scale_x_log10(labels = function(x) format(x, scientific = FALSE, trim = TRUE)) +
     labs(x = "CV", y = NULL) +
     theme_test()
 }

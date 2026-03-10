@@ -254,18 +254,22 @@ mod_QC_server <- function(input, output, session) {
   })
 
   output$intensity_density <- renderPlot({
+    validate(need(!is.null(se_data()), "Please upload a SummarizedExperiment object first."))
     plotSE_density(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$proteins_number <- renderPlot({
+    validate(need(!is.null(se_data()), "Please upload a SummarizedExperiment object first."))
     plotSE_protein_number(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$cv_density <- renderPlot({
+    validate(need(!is.null(se_data()), "Please upload a SummarizedExperiment object first."))
     plotCV_density(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 
   output$Miss_value_statistics <- renderPlot({
+    validate(need(!is.null(se_data()), "Please upload a SummarizedExperiment object first."))
     plotSE_missing_value(qc_plot_se())
   }, height = function() input$plot_height, width = function() input$plot_width)
 

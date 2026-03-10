@@ -308,7 +308,7 @@ plotSE_missing_value <- function(se, return_table = FALSE){
 
   if (isTRUE(return_table)) {
     return(missing_df)
-  }else{  
+  }else{
   ggplot(missing_df, aes(x = missing_number, y = Sample)) +
     geom_segment(aes(x = 0, xend = missing_number), color = "grey60") +
     geom_point(size = 4) +
@@ -355,7 +355,7 @@ plotSE_protein_number <- function(se, return_table = FALSE){
 
   if (isTRUE(return_table)) {
     return(df)
-  }else{  
+  }else{
   ggplot(df, aes(x = protein_number, y = Sample)) +
     geom_segment(aes(x = 0, xend = protein_number), color = "grey60") +
     geom_point(size = 4) +
@@ -392,7 +392,7 @@ plotCV_density <- function(se, return_table = FALSE){
 
   if (isTRUE(return_table)) {
     return(cv_df)
-  }{
+  }else{
     ggplot(cv_df, aes(CV, condition, fill = condition)) +
     geom_violin() +
     geom_boxplot(width = 0.2, outlier.size = 0.5) +

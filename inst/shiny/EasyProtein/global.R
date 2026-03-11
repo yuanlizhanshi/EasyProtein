@@ -627,6 +627,10 @@ show_heatmap_param_modal <- function(se_data = NULL) {
               choices = c("NONE", "AUTO", 2:10),
               selected = "AUTO"
             ),
+            conditionalPanel(
+              condition = "input.row_k == 'NONE'",
+              uiOutput("coldata_row_selector")
+            ),
 
             radioButtons(
               "col_cluster_mode",

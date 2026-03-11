@@ -91,11 +91,12 @@ mod_pattern_server <- function(input, output, session) {
     req(rv$se)
     all_rows <- as.data.frame(rowData(rv$se))
   # Actual rowData grouping selector shown in UI
+    selected_row_group <- "None"
     selectInput(
       "coldata_row_selector",
       "Select grouping column from rowData",
-      choices  = colnames(rowData(rv$se)),
-      selected = colnames(rowData(rv$se))[1]
+      choices  = c("None", colnames(rowData(rv$se))),
+      selected = selected_row_group
     )
   })
 
@@ -199,25 +200,34 @@ mod_pattern_server <- function(input, output, session) {
   # Returns data.frame: gene + km_cluster
 
     if (identical(input$row_k, "NONE")) {
-      if (!is.null(row_name)) {
-        if (!row_name %in% colnames(rowData(se_sub))) {
-          showNotification(paste("Row annotation not found:", row_name), type = "error")
+      row_group_col <- input$coldata_row_selector
+
+      if (!is.null(row_group_col) && nzchar(row_group_col) && !identical(row_group_col, "None")) {
+        if (!row_group_col %in% colnames(rowData(se_sub))) {
+          showNotification(paste("Row annotation not found:", row_group_col), type = "error")
           return()
         }
-        row_cluster_vec <- as.character(rowData(se_sub)[[row_name]])
-        new_col_name <- row_name
+        row_cluster_vec <- as.character(rowData(se_sub)[[row_group_col]])
+        new_col_name <- if (identical(row_group_col, "gene")) {
+          "row_group"
+        } else {
+          row_group_col
+        }
+
+        row_cluster_df <- tibble::tibble(
+          gene = rownames(se_sub),
+          !!new_col_name := row_cluster_vec
+        )
+
+        if (!new_col_name %in% colnames(rowData(se_sub))) {
+          rowData(se_sub)[[new_col_name]] <- as.character(row_cluster_vec)
+        }
       } else {
-        row_cluster_vec <- rep("All", nrow(se_sub))
-        new_col_name <- "row_group"
-      }
-
-      row_cluster_df <- tibble::tibble(
-        gene = rownames(se_sub),
-        !!new_col_name := row_cluster_vec
-      )
-
-      if (!new_col_name %in% colnames(rowData(se_sub))) {
-        rowData(se_sub)[[new_col_name]] <- as.character(row_cluster_vec)
+        row_cluster_vec <- NULL
+        new_col_name <- NULL
+        row_cluster_df <- tibble::tibble(
+          gene = rownames(se_sub)
+        )
       }
     } else {
       if (identical(input$row_k, "AUTO")) {
@@ -331,10 +341,12 @@ mod_pattern_server <- function(input, output, session) {
     }
 
   # Row/column split vectors (strictly aligned)
-  row_split_vec <- rowData(se_sub)[[new_col_name]]
+    row_split_vec <- if (!is.null(new_col_name)) rowData(se_sub)[[new_col_name]] else NULL
     col_split_vec <- factor(colData(se_sub)$col_cluster,levels = unique(colData(se_sub)$col_cluster))
 
-    stopifnot(length(row_split_vec) == nrow(intersity_scale))
+    if (!is.null(row_split_vec)) {
+      stopifnot(length(row_split_vec) == nrow(intersity_scale))
+    }
     stopifnot(length(col_split_vec) == ncol(intersity_scale))
 
     if (input$col_cluster_mode == "kmeans") {

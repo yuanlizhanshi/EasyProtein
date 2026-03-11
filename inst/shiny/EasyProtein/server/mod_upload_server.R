@@ -45,23 +45,50 @@ mod_upload_server <- function(input, output, session, rv) {
           choices = obs_choices,
           selected = default_obs
         ),
-  helpText("Gene is preferred by default; otherwise the first column is used."),
+  helpText("Gene is preferred by default; otherwise the selected column is used."),
         sliderInput(
           inputId = "valid_group_cutoff_threhold",
-          label   = "Remove genes with ≤ N valid groups ( < 0.5 missing)",
+          label   = div(
+            style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+            span("Remove genes with ≤ N valid groups ( < 0.5 missing)"),
+            help_qmark(tagList(
+              tags$b("Meaning:"), " a gene is kept only if it has enough condition groups with acceptable missingness.", tags$br(),
+              "A condition is counted as valid when the missing-value fraction is ", tags$b("< 0.5"), ".", tags$br(),
+              "Genes with valid groups fewer than this threshold will be removed."
+            ))
+          ),
           min     = -1,
           max     = length(number_of_group),
           value   = -1,
           step    = 1
         ),
-        checkboxInput("enable_detect_outlier", "Enable detect outlier in replicates", value = FALSE),
         sliderInput(
           inputId = "valid_cv_cutoff_threhold",
-          label   = "Remove genes with ≤ N stable groups (CV < 0.5)",
+          label   = div(
+            style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+            span("Remove genes with ≤ N stable groups (CV < 0.5)"),
+            help_qmark(tagList(
+              tags$b("Meaning:"), " a gene is kept only if it is sufficiently stable across condition groups.", tags$br(),
+              "A condition is counted as stable when ", tags$b("CV < 0.5"), ".", tags$br(),
+              "Genes with stable groups fewer than this threshold will be removed as unstable."
+            ))
+          ),
           min     = -1,
           max     = length(number_of_group),
           value   = -1,
           step    = 1
+        ),
+        checkboxInput(
+          "enable_detect_outlier",
+          label = div(
+            style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+            span("Enable detect outlier in replicates"),
+            help_qmark(tagList(
+              tags$b("Meaning:"), " detect extreme replicate-level values within each condition (>5 fold change) and mask them as missing before downstream filtering/imputation.", tags$br(),
+              "This is useful when a single replicate is obviously inconsistent with the rest of the group."
+            ))
+          ),
+          value = FALSE
         )
       ))
 

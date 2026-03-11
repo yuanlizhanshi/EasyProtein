@@ -46,6 +46,121 @@ CALLER_ID   <- "EasyProtein"
 `%||%` <- function(a, b) if (is.null(a)) b else a
 js_escape  <- function(x) gsub("'", "\\\\'", x, fixed = TRUE)
 
+help_popover_init <- function() {
+  tagList(
+    tags$style(HTML(" 
+      .ep-help-qmark {
+        cursor: pointer;
+        color: #6c757d;
+        display: inline-flex;
+        align-items: center;
+      }
+      .ep-help-popover {
+        position: absolute;
+        z-index: 20000;
+        background: #ffffff;
+        color: #1f2937;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+    ")),
+    tags$script(HTML(" 
+      (function () {
+        function removePopovers() {
+          document.querySelectorAll('.ep-help-popover').forEach(function (el) { el.remove(); });
+          document.querySelectorAll('[data-help-popover=\"true\"]').forEach(function (el) {
+            el.setAttribute('aria-expanded', 'false');
+          });
+        }
+
+        function positionPopover(trigger, popover, placement) {
+          var rect = trigger.getBoundingClientRect();
+          var popRect = popover.getBoundingClientRect();
+          var top = window.scrollY + rect.top + (rect.height - popRect.height) / 2;
+          var left = window.scrollX + rect.right + 10;
+
+          if (placement === 'left') {
+            left = window.scrollX + rect.left - popRect.width - 10;
+          } else if (placement === 'top') {
+            top = window.scrollY + rect.top - popRect.height - 10;
+            left = window.scrollX + rect.left + (rect.width - popRect.width) / 2;
+          } else if (placement === 'bottom') {
+            top = window.scrollY + rect.bottom + 10;
+            left = window.scrollX + rect.left + (rect.width - popRect.width) / 2;
+          }
+
+          popover.style.top = Math.max(8, top) + 'px';
+          popover.style.left = Math.max(8, left) + 'px';
+        }
+
+        function showPopover(trigger) {
+          var isOpen = trigger.getAttribute('aria-expanded') === 'true';
+          removePopovers();
+          if (isOpen) return;
+
+          var popover = document.createElement('div');
+          popover.className = 'ep-help-popover';
+          popover.innerHTML = trigger.getAttribute('data-help-content') || '';
+          document.body.appendChild(popover);
+
+          positionPopover(trigger, popover, trigger.getAttribute('data-help-placement') || 'right');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+
+        document.addEventListener('click', function (event) {
+          var trigger = event.target.closest('[data-help-popover=\"true\"]');
+          if (trigger) {
+            event.preventDefault();
+            event.stopPropagation();
+            showPopover(trigger);
+            return;
+          }
+
+          if (!event.target.closest('.ep-help-popover')) {
+            removePopovers();
+          }
+        });
+
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') removePopovers();
+        });
+
+        window.addEventListener('resize', removePopovers);
+        document.addEventListener('shown.bs.tab', removePopovers);
+        document.addEventListener('shown.bs.modal', removePopovers);
+      })();
+    "))
+  )
+}
+
+help_qmark <- function(content,
+                       placement = "right",
+                       icon_name = "question-circle",
+                       size_px = 16,
+                       max_width_px = 280) {
+  content_html <- as.character(tagList(
+    tags$div(
+      style = sprintf("max-width:%dpx; line-height:1.45;", max_width_px),
+      content
+    )
+  ))
+
+  tags$span(
+    shiny::icon(icon_name),
+    class = "ep-help-qmark",
+    style = sprintf("font-size:%dpx;", size_px),
+    `data-help-popover` = "true",
+    `data-help-placement` = placement,
+    `data-help-content` = content_html,
+    `aria-expanded` = "false",
+    tabindex = "0",
+    role = "button"
+  )
+}
+
 
 # make_download_pdf <- function(plot_expr, input, suffix = NULL,
 #                               width = 7, height = 5,

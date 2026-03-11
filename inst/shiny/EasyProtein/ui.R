@@ -12,6 +12,7 @@ ui <- {
       tags$link(rel = "stylesheet", type = "text/css", href = "style_1.css"),
       #tags$script(src = "scripts.js"),
       tags$link(rel = "stylesheet", href = "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"),
+      help_popover_init(),
       tags$style(HTML("
         #download_loading_overlay {
           display: none;

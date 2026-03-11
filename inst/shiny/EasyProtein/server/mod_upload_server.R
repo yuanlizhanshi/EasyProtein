@@ -54,7 +54,8 @@ mod_upload_server <- function(input, output, session, rv) {
             help_qmark(tagList(
               tags$b("Meaning:"), " a gene is kept only if it has enough condition groups with acceptable missingness.", tags$br(),
               "A condition is counted as valid when the missing-value fraction is ", tags$b("< 0.5"), ".", tags$br(),
-              "Genes with valid groups fewer than this threshold will be removed."
+              "Genes with valid groups fewer than this threshold will be removed.", tags$br(),
+              tags$b("Default -1:"), " do not filter out any gene by this rule."
             ))
           ),
           min     = -1,
@@ -70,7 +71,8 @@ mod_upload_server <- function(input, output, session, rv) {
             help_qmark(tagList(
               tags$b("Meaning:"), " a gene is kept only if it is sufficiently stable across condition groups.", tags$br(),
               "A condition is counted as stable when ", tags$b("CV < 0.5"), ".", tags$br(),
-              "Genes with stable groups fewer than this threshold will be removed as unstable."
+              "Genes with stable groups fewer than this threshold will be removed as unstable.", tags$br(),
+              tags$b("Default -1:"), " do not filter out any gene by this rule."
             ))
           ),
           min     = -1,

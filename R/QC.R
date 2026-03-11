@@ -87,10 +87,11 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 #'     \item \code{se}: A \code{SummarizedExperiment} object storing raw
 #'       intensities, imputed intensities, CPM-normalized values, and
 #'       z-scored expression.
-#'     \item \code{un_stable_gene}: A data frame of features removed due to
-#'       high variability across conditions.
-#'     \item \code{missing_gene_df}: A data frame of features removed due
-#'       to excessive missing values.
+#'     \item \code{un_stable_gene}: A data frame containing the original
+#'       input rows of features removed due to high variability across
+#'       conditions.
+#'     \item \code{missing_gene_df}: A data frame containing the original
+#'       input rows of features removed due to excessive missing values.
 #'   }
 #'
 #' @export
@@ -286,9 +287,8 @@ rawdata2se <- function(
     ) %>%
     dplyr::filter(n_stable_groups < min_stable_groups)
 
-  un_stable_gene_df <- as.data.frame(
-    rowData(se)[un_stable_cv_df$feature, , drop = FALSE]
-  )
+  un_stable_gene_df <- rawdata %>%
+    dplyr::filter(feature %in% un_stable_cv_df$feature)
 
   se <- se[!rownames(se) %in% un_stable_cv_df$feature, ]
 

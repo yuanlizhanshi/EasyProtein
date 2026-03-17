@@ -18,6 +18,7 @@ BiocManager::install(c(
   "edgeR",
   "limma",
   "S4Vectors",
+  "Mfuzz",
   "SummarizedExperiment"
 ))
 ```

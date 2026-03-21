@@ -1,165 +1,25 @@
 # Quick Start with EasyProtein
 
 ``` r
-library(EasyProtein)
-library(tidyverse)
+suppressPackageStartupMessages({
+  library(EasyProtein)
+  library(tidyverse)
+  library(SummarizedExperiment)
+})
 #> Warning: package 'ggplot2' was built under R version 4.5.2
 #> Warning: package 'tibble' was built under R version 4.5.2
 #> Warning: package 'tidyr' was built under R version 4.5.2
 #> Warning: package 'readr' was built under R version 4.5.2
 #> Warning: package 'purrr' was built under R version 4.5.2
 #> Warning: package 'stringr' was built under R version 4.5.2
-#> ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-#> ✔ dplyr     1.1.4     ✔ readr     2.1.6
-#> ✔ forcats   1.0.1     ✔ stringr   1.6.0
-#> ✔ ggplot2   4.0.1     ✔ tibble    3.3.1
-#> ✔ lubridate 1.9.4     ✔ tidyr     1.3.2
-#> ✔ purrr     1.2.1     
-#> ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-#> ✖ dplyr::filter() masks stats::filter()
-#> ✖ dplyr::lag()    masks stats::lag()
-#> ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
-library(SummarizedExperiment)
 #> Warning: package 'SummarizedExperiment' was built under R version 4.5.2
-#> Loading required package: MatrixGenerics
 #> Warning: package 'MatrixGenerics' was built under R version 4.5.2
-#> Loading required package: matrixStats
-#> 
-#> Attaching package: 'matrixStats'
-#> 
-#> The following object is masked from 'package:dplyr':
-#> 
-#>     count
-#> 
-#> 
-#> Attaching package: 'MatrixGenerics'
-#> 
-#> The following objects are masked from 'package:matrixStats':
-#> 
-#>     colAlls, colAnyNAs, colAnys, colAvgsPerRowSet, colCollapse,
-#>     colCounts, colCummaxs, colCummins, colCumprods, colCumsums,
-#>     colDiffs, colIQRDiffs, colIQRs, colLogSumExps, colMadDiffs,
-#>     colMads, colMaxs, colMeans2, colMedians, colMins, colOrderStats,
-#>     colProds, colQuantiles, colRanges, colRanks, colSdDiffs, colSds,
-#>     colSums2, colTabulates, colVarDiffs, colVars, colWeightedMads,
-#>     colWeightedMeans, colWeightedMedians, colWeightedSds,
-#>     colWeightedVars, rowAlls, rowAnyNAs, rowAnys, rowAvgsPerColSet,
-#>     rowCollapse, rowCounts, rowCummaxs, rowCummins, rowCumprods,
-#>     rowCumsums, rowDiffs, rowIQRDiffs, rowIQRs, rowLogSumExps,
-#>     rowMadDiffs, rowMads, rowMaxs, rowMeans2, rowMedians, rowMins,
-#>     rowOrderStats, rowProds, rowQuantiles, rowRanges, rowRanks,
-#>     rowSdDiffs, rowSds, rowSums2, rowTabulates, rowVarDiffs, rowVars,
-#>     rowWeightedMads, rowWeightedMeans, rowWeightedMedians,
-#>     rowWeightedSds, rowWeightedVars
-#> 
-#> Loading required package: GenomicRanges
 #> Warning: package 'GenomicRanges' was built under R version 4.5.2
-#> Loading required package: stats4
-#> Loading required package: BiocGenerics
 #> Warning: package 'BiocGenerics' was built under R version 4.5.2
-#> Loading required package: generics
-#> 
-#> Attaching package: 'generics'
-#> 
-#> The following object is masked from 'package:lubridate':
-#> 
-#>     as.difftime
-#> 
-#> The following object is masked from 'package:dplyr':
-#> 
-#>     explain
-#> 
-#> The following objects are masked from 'package:base':
-#> 
-#>     as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,
-#>     setequal, union
-#> 
-#> 
-#> Attaching package: 'BiocGenerics'
-#> 
-#> The following object is masked from 'package:dplyr':
-#> 
-#>     combine
-#> 
-#> The following objects are masked from 'package:stats':
-#> 
-#>     IQR, mad, sd, var, xtabs
-#> 
-#> The following objects are masked from 'package:base':
-#> 
-#>     anyDuplicated, aperm, append, as.data.frame, basename, cbind,
-#>     colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
-#>     get, grep, grepl, is.unsorted, lapply, Map, mapply, match, mget,
-#>     order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
-#>     rbind, Reduce, rownames, sapply, saveRDS, table, tapply, unique,
-#>     unsplit, which.max, which.min
-#> 
-#> Loading required package: S4Vectors
 #> Warning: package 'S4Vectors' was built under R version 4.5.2
-#> 
-#> Attaching package: 'S4Vectors'
-#> 
-#> The following objects are masked from 'package:lubridate':
-#> 
-#>     second, second<-
-#> 
-#> The following objects are masked from 'package:dplyr':
-#> 
-#>     first, rename
-#> 
-#> The following object is masked from 'package:tidyr':
-#> 
-#>     expand
-#> 
-#> The following object is masked from 'package:utils':
-#> 
-#>     findMatches
-#> 
-#> The following objects are masked from 'package:base':
-#> 
-#>     expand.grid, I, unname
-#> 
-#> Loading required package: IRanges
 #> Warning: package 'IRanges' was built under R version 4.5.2
-#> 
-#> Attaching package: 'IRanges'
-#> 
-#> The following object is masked from 'package:lubridate':
-#> 
-#>     %within%
-#> 
-#> The following objects are masked from 'package:dplyr':
-#> 
-#>     collapse, desc, slice
-#> 
-#> The following object is masked from 'package:purrr':
-#> 
-#>     reduce
-#> 
-#> The following object is masked from 'package:grDevices':
-#> 
-#>     windows
-#> 
-#> Loading required package: Seqinfo
 #> Warning: package 'Seqinfo' was built under R version 4.5.2
-#> Loading required package: Biobase
 #> Warning: package 'Biobase' was built under R version 4.5.2
-#> Welcome to Bioconductor
-#> 
-#>     Vignettes contain introductory material; view with
-#>     'browseVignettes()'. To cite Bioconductor, see
-#>     'citation("Biobase")', and for packages 'citation("pkgname")'.
-#> 
-#> 
-#> Attaching package: 'Biobase'
-#> 
-#> The following object is masked from 'package:MatrixGenerics':
-#> 
-#>     rowMedians
-#> 
-#> The following objects are masked from 'package:matrixStats':
-#> 
-#>     anyMissing, rowMedians
 ```
 
 ## Quick Start with EasyProtein

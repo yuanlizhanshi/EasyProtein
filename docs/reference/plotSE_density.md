@@ -6,7 +6,7 @@ from a SummarizedExperiment object.
 ## Usage
 
 ``` r
-plotSE_density(se)
+plotSE_density(se, return_table = FALSE)
 ```
 
 ## Arguments
@@ -15,6 +15,11 @@ plotSE_density(se)
 
   A SummarizedExperiment object.
 
+- return_table:
+
+  Logical. If `TRUE`, return the plotting data.frame instead of a ggplot
+  object. Default is `FALSE`.
+
 ## Value
 
-A ggplot violin plot.
+A ggplot violin plot, or a data.frame when `return_table = TRUE`.

@@ -5,7 +5,7 @@ Plot CV distribution across conditions
 ## Usage
 
 ``` r
-plotCV_density(se)
+plotCV_density(se, return_table = FALSE)
 ```
 
 ## Arguments
@@ -14,6 +14,12 @@ plotCV_density(se)
 
   A SummarizedExperiment object.
 
+- return_table:
+
+  Logical. If `TRUE`, return the plotting data.frame instead of a ggplot
+  object. Default is `FALSE`.
+
 ## Value
 
-A ggplot object or NULL if no replicates.
+A ggplot object, a data.frame when `return_table = TRUE`, or `NULL` if
+no replicates.

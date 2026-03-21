@@ -11,12 +11,12 @@ Source:
 
 Yunhui Kong (2026). *EasyProtein: An Interactive and Reproducible
 Platform for Comprehensive Proteomics Data Analysis*. R package version
-0.7.0, <https://github.com/yuanlizhanshi/EasyProtein>.
+0.7.2, <https://github.com/yuanlizhanshi/EasyProtein>.
 
     @Manual{,
       title = {EasyProtein: An Interactive and Reproducible Platform for Comprehensive Proteomics Data Analysis},
       author = {{Yunhui Kong}},
       year = {2026},
-      note = {R package version 0.7.0},
+      note = {R package version 0.7.2},
       url = {https://github.com/yuanlizhanshi/EasyProtein},
     }

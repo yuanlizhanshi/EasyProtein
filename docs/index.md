@@ -14,6 +14,26 @@ visualization.
 
 ## Get started
 
-Install EasyProtein from GitHub:
+EasyProtein requires a recent version of R (≥ 4.1) and several CRAN and
+Bioconductor packages.
 
-\`\`\`r remotes::install_github(“yuanlizhanshi/EasyProtein”)
+Please install the required package managers first:
+
+``` r
+install.packages(c("devtools", "BiocManager"))
+
+BiocManager::install(c(
+  "ComplexHeatmap",
+  "edgeR",
+  "limma",
+  "S4Vectors",
+  "Mfuzz",
+  "SummarizedExperiment"
+))
+```
+
+Then you can install the development version of EasyProtein:
+
+``` r
+devtools::install_github("yuanlizhanshi/EasyProtein")
+```

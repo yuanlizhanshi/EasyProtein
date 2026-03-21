@@ -60,10 +60,11 @@ A list with class \code{"RawDataSE"} containing:
     \item \code{se}: A \code{SummarizedExperiment} object storing raw
       intensities, imputed intensities, CPM-normalized values, and
       z-scored expression.
-    \item \code{un_stable_gene}: A data frame of features removed due to
-      high variability across conditions.
-    \item \code{missing_gene_df}: A data frame of features removed due
-      to excessive missing values.
+    \item \code{un_stable_gene}: A data frame containing the original
+      input rows of features removed due to high variability across
+      conditions.
+    \item \code{missing_gene_df}: A data frame containing the original
+      input rows of features removed due to excessive missing values.
   }
 }
 \description{

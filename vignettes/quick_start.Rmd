@@ -16,4 +16,155 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(EasyProtein)
+library(tidyverse)
+library(SummarizedExperiment)
+```
+
+# Quick Start with EasyProtein
+
+## 1. Tutorial metadata
+
+- **Tutorial name**: Quick Start with EasyProtein  
+- **Tutorial type**: Minimal end-to-end workflow  
+- **Target audience**: First-time users of EasyProtein  
+- **Primary goal**: Show how to complete a basic proteomics analysis workflow with minimal input and minimal parameter tuning  
+- **Expected outcome**: You will learn how to:
+  1. load example data
+  2. create a standard EasyProtein analysis object
+  3. inspect data quality
+  4. visualize sample structure
+  5. perform a simple two-group comparison (**Liver, 1w vs 8w, male only**)
+  6. interpret core outputs
+
+## 2. Load example data and build `SummarizedExperiment`
+
+This tutorial uses the file `inst/extdata/mouse_multi-organ_DIA_report.pg_matrix.tsv.gz`.
+
+```{r load-data}
+exp_file <- system.file(
+  "extdata",
+  "mouse_multi-organ_DIA_report.pg_matrix.tsv.gz",
+  package = "EasyProtein"
+)
+
+stopifnot(file.exists(exp_file))
+
+se_obj <- rawdata2se(exp_file)
+se <- se_obj$se
+se
+```
+
+## 3. Add sample metadata
+
+`rawdata2se()` already creates basic `condition` and `rep`. Here we derive `tissue`, `age`, and `sex` from `condition` as requested.
+
+```{r add-metadata}
+se$tissue <- str_extract(se$condition,'[A-Za-z]+')
+se$age <- str_extract(se$condition,'\\dw')
+se$sex <- str_extract(se$condition,'\\w$')
+
+as.data.frame(SummarizedExperiment::colData(se)) %>%
+  dplyr::select(sample, condition, rep, tissue, age, sex) %>%
+  head()
+```
+
+## 4. Quick QC
+
+We inspect three basic QC aspects:
+
+1. sample intensity distribution
+2. missing values per sample
+3. detected protein number per sample
+
+```{r qc-plots, fig.width=10, fig.height=8}
+keep <- se$tissue == "live" &
+  se$sex == "M" &
+  se$age %in% c("1w", "8w")
+
+se_sub <- se[, keep]
+
+
+p_density <- plotSE_density(se_sub)
+p_missing <- plotSE_missing_value(se_sub)
+p_detected <- plotSE_protein_number(se_sub)
+
+p_density
+p_missing
+p_detected
+```
+
+## 5. Visualize sample structure with PCA
+
+Use concentration matrix (`assay = "conc"`) and color by tissue.
+
+```{r pca, fig.width=7, fig.height=5}
+conc_mtx <- SummarizedExperiment::assay(se_sub, "conc")
+
+pca.res <- FactoMineR::PCA(t(conc_mtx), graph = FALSE)
+pca.df <- as.data.frame(pca.res$ind$coord)
+pca.df$sample <- rownames(pca.df)
+
+meta_df <- as.data.frame(SummarizedExperiment::colData(se_sub)) 
+
+pca.df <- dplyr::left_join(pca.df, meta_df, by = "sample")
+
+plot_pca(
+  pca.df = pca.df,
+  pca.res = pca.res,
+  colorby = "age",
+  label = "sample"
+)
+```
+
+## 6. Two-group comparison: Liver, 1w vs 8w, male only
+
+We subset samples to:
+
+- `tissue == "Liver"`
+- `sex == "m"`
+- `age %in% c("1w", "8w")`
+
+Then run unpaired limma-based DEG analysis via `se2DEGs()`.
+
+```{r deg-run}
+deg_res <- se2DEGs(
+  se = se_sub,
+  compare_col = "age",
+  ref = "1w",
+  cmp = "8w",
+  logFC_cutoff = 1,
+  adj_p_cutoff = 0.05
+)
+
+head(deg_res)
+table(deg_res$DEGs_types)
+```
+
+## 7. Interpret core outputs
+
+The DEG result table contains:
+
+- **effect size**: `logFC` (positive means higher in `8w` vs `1w`)
+- **statistical significance**: `P.Value`, `adj.P.Val`
+- **classification**: `DEGs_types` (`UP`, `DOWN`, `NS`)
+- **group summaries**: `median_1w`, `median_8w`
+
+Minimal interpretation workflow:
+
+1. prioritize proteins with `adj.P.Val <= 0.05`
+2. use `|logFC| >= 1` to focus on stronger changes
+3. read `median_1w` and `median_8w` together with `logFC`
+
+```{r top-hits}
+top_hits <- deg_res %>%
+  dplyr::arrange(adj.P.Val, dplyr::desc(abs(logFC))) %>%
+  dplyr::select(gene, logFC, adj.P.Val, DEGs_types, starts_with("median_"))
+
+head(top_hits, 20)
+```
+
+## 8. Save results (optional)
+
+```{r save-results, eval=FALSE}
+write.csv(deg_res, "Liver_male_1w_vs_8w_DEGs.csv", row.names = FALSE)
 ```

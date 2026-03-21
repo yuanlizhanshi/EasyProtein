@@ -82,8 +82,8 @@ A list with class `"RawDataSE"` containing:
 - `se`: A `SummarizedExperiment` object storing raw intensities, imputed
   intensities, CPM-normalized values, and z-scored expression.
 
-- `un_stable_gene`: A data frame of features removed due to high
-  variability across conditions.
+- `un_stable_gene`: A data frame containing the original input rows of
+  features removed due to high variability across conditions.
 
-- `missing_gene_df`: A data frame of features removed due to excessive
-  missing values.
+- `missing_gene_df`: A data frame containing the original input rows of
+  features removed due to excessive missing values.

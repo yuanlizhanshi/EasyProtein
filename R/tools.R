@@ -487,11 +487,23 @@ limma_protein_DE <- function(expr,
   group <- droplevels(group)
 
   design <- model.matrix(~0 + group)
-  colnames(design) <- levels(group)
+  lv <- levels(group)
+  lv_safe <- make.names(lv)
+  colnames(design) <- lv_safe
+  level_map <- stats::setNames(lv_safe, lv)
 
   if (is.null(contrast_str)) {
-    lv <- levels(group)
-    contrast_str <- paste0(lv[2], "-", lv[1])
+    contrast_str <- paste0(lv_safe[2], "-", lv_safe[1])
+  } else {
+    contrast_str <- as.character(contrast_str)
+    for (orig in names(level_map)) {
+      contrast_str <- gsub(
+        paste0("(?<![A-Za-z0-9_.])", orig, "(?![A-Za-z0-9_.])"),
+        level_map[[orig]],
+        contrast_str,
+        perl = TRUE
+      )
+    }
   }
 
   contrast.mat <- limma::makeContrasts(contrasts = contrast_str, levels = design)
@@ -501,7 +513,6 @@ limma_protein_DE <- function(expr,
   fit2 <- limma::eBayes(fit2, trend = trend, robust = robust)
   tt <- limma::topTable(fit2, number = Inf, sort.by = "P")
 
-  lv <- levels(group)
   grp_means <- sapply(lv, function(g) rowMeans(expr_log[, group == g, drop = FALSE], na.rm = TRUE))
 
   if (is.vector(grp_means)) grp_means <- cbind(grp_means)
@@ -513,9 +524,16 @@ limma_protein_DE <- function(expr,
   )
 
   parts <- strsplit(contrast_str, "-")[[1]]
-  if (length(parts) == 2 && all(parts %in% lv)) {
-    res$delta_mean_log2 <- res[[paste0("mean_log2_", parts[1])]] -
-      res[[paste0("mean_log2_", parts[2])]]
+  if (length(parts) == 2) {
+    inv_level_map <- stats::setNames(names(level_map), level_map)
+    parts_orig <- unname(inv_level_map[parts])
+  } else {
+    parts_orig <- character(0)
+  }
+
+  if (length(parts_orig) == 2 && all(parts_orig %in% lv)) {
+    res$delta_mean_log2 <- res[[paste0("mean_log2_", parts_orig[1])]] -
+      res[[paste0("mean_log2_", parts_orig[2])]]
   } else {
     res$delta_mean_log2 <- NA_real_
   }
@@ -556,6 +574,8 @@ limma_protein_DE_pair <- function(expr,
   group <- droplevels(group)
   stopifnot(length(group) == ncol(expr), nlevels(group) == 2)
   lv <- levels(group)
+  lv_safe <- make.names(lv)
+  level_map <- stats::setNames(lv_safe, lv)
 
   if (is.null(offset)) {
     pos_min <- suppressWarnings(min(expr[expr > 0], na.rm = TRUE))
@@ -571,6 +591,7 @@ limma_protein_DE_pair <- function(expr,
     design <- model.matrix(~ donor + group)
   } else {
     design <- model.matrix(~0 + group)
+    colnames(design) <- lv_safe
   }
 
   if (is.null(contrast_str)) {
@@ -579,7 +600,19 @@ limma_protein_DE_pair <- function(expr,
       if (length(group_col) != 1) stop("Cannot determine unique group column.")
       contrast_str <- group_col
     } else {
-      contrast_str <- paste0(lv[2], "-", lv[1])
+      contrast_str <- paste0(lv_safe[2], "-", lv_safe[1])
+    }
+  } else {
+    contrast_str <- as.character(contrast_str)
+    if (is.null(donor)) {
+      for (orig in names(level_map)) {
+        contrast_str <- gsub(
+          paste0("(?<![A-Za-z0-9_.])", orig, "(?![A-Za-z0-9_.])"),
+          level_map[[orig]],
+          contrast_str,
+          perl = TRUE
+        )
+      }
     }
   }
 
@@ -597,9 +630,16 @@ limma_protein_DE_pair <- function(expr,
 
   parts <- strsplit(contrast_str, "-")[[1]]
 
-  if (length(parts) == 2 && all(parts %in% lv)) {
-    delta <- grp_means[, paste0("mean_log2_", parts[2])] -
-      grp_means[, paste0("mean_log2_", parts[1])]
+  if (length(parts) == 2) {
+    inv_level_map <- stats::setNames(names(level_map), level_map)
+    parts_orig <- unname(inv_level_map[parts])
+  } else {
+    parts_orig <- character(0)
+  }
+
+  if (length(parts_orig) == 2 && all(parts_orig %in% lv)) {
+    delta <- grp_means[, paste0("mean_log2_", parts_orig[2])] -
+      grp_means[, paste0("mean_log2_", parts_orig[1])]
   } else if (length(parts) == 1 && grepl("^group", parts)) {
     delta <- grp_means[, paste0("mean_log2_", lv[2])] -
       grp_means[, paste0("mean_log2_", lv[1])]

@@ -13,7 +13,7 @@ together with diagnostic gene lists."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">EasyProtein</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -126,10 +126,11 @@ used to define feature stability within each condition.</p></dd>
     <p>A list with class <code>"RawDataSE"</code> containing:</p><ul><li><p><code>se</code>: A <code>SummarizedExperiment</code> object storing raw
       intensities, imputed intensities, CPM-normalized values, and
       z-scored expression.</p></li>
-<li><p><code>un_stable_gene</code>: A data frame of features removed due to
-      high variability across conditions.</p></li>
-<li><p><code>missing_gene_df</code>: A data frame of features removed due
-      to excessive missing values.</p></li>
+<li><p><code>un_stable_gene</code>: A data frame containing the original
+      input rows of features removed due to high variability across
+      conditions.</p></li>
+<li><p><code>missing_gene_df</code>: A data frame containing the original
+      input rows of features removed due to excessive missing values.</p></li>
 </ul></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

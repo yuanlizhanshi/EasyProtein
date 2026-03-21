@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EasyProtein</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,8 +62,435 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/yuanlizhanshi/EasyProtein" class="external-link">EasyProtein</a></span><span class="op">)</span></span></code></pre></div>
-  </main>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/yuanlizhanshi/EasyProtein" class="external-link">EasyProtein</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'ggplot2' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Warning: package 'tibble' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Warning: package 'tidyr' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Warning: package 'readr' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Warning: package 'purrr' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Warning: package 'stringr' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching core tidyverse packages</span> ──────────────────────── tidyverse 2.0.0 ──</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr    </span> 1.1.4     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">readr    </span> 2.1.6</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">forcats  </span> 1.0.1     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">stringr  </span> 1.6.0</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">ggplot2  </span> 4.0.1     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble   </span> 3.3.1</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">lubridate</span> 1.9.4     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tidyr    </span> 1.3.2</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr    </span> 1.2.1     </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Conflicts</span> ────────────────────────────────────────── tidyverse_conflicts() ──</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">dplyr</span>::<span style="color: #00BB00;">filter()</span> masks <span style="color: #0000BB;">stats</span>::filter()</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">dplyr</span>::<span style="color: #00BB00;">lag()</span>    masks <span style="color: #0000BB;">stats</span>::lag()</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use the conflicted package (<span style="color: #0000BB; font-style: italic;">&lt;http://conflicted.r-lib.org/&gt;</span>) to force all conflicts to become errors</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bioconductor.org/packages/SummarizedExperiment" class="external-link">SummarizedExperiment</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'SummarizedExperiment' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Loading required package: MatrixGenerics</span></span>
+<span><span class="co">#&gt; Warning: package 'MatrixGenerics' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Loading required package: matrixStats</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'matrixStats'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:dplyr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     count</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'MatrixGenerics'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:matrixStats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     colAlls, colAnyNAs, colAnys, colAvgsPerRowSet, colCollapse,</span></span>
+<span><span class="co">#&gt;     colCounts, colCummaxs, colCummins, colCumprods, colCumsums,</span></span>
+<span><span class="co">#&gt;     colDiffs, colIQRDiffs, colIQRs, colLogSumExps, colMadDiffs,</span></span>
+<span><span class="co">#&gt;     colMads, colMaxs, colMeans2, colMedians, colMins, colOrderStats,</span></span>
+<span><span class="co">#&gt;     colProds, colQuantiles, colRanges, colRanks, colSdDiffs, colSds,</span></span>
+<span><span class="co">#&gt;     colSums2, colTabulates, colVarDiffs, colVars, colWeightedMads,</span></span>
+<span><span class="co">#&gt;     colWeightedMeans, colWeightedMedians, colWeightedSds,</span></span>
+<span><span class="co">#&gt;     colWeightedVars, rowAlls, rowAnyNAs, rowAnys, rowAvgsPerColSet,</span></span>
+<span><span class="co">#&gt;     rowCollapse, rowCounts, rowCummaxs, rowCummins, rowCumprods,</span></span>
+<span><span class="co">#&gt;     rowCumsums, rowDiffs, rowIQRDiffs, rowIQRs, rowLogSumExps,</span></span>
+<span><span class="co">#&gt;     rowMadDiffs, rowMads, rowMaxs, rowMeans2, rowMedians, rowMins,</span></span>
+<span><span class="co">#&gt;     rowOrderStats, rowProds, rowQuantiles, rowRanges, rowRanks,</span></span>
+<span><span class="co">#&gt;     rowSdDiffs, rowSds, rowSums2, rowTabulates, rowVarDiffs, rowVars,</span></span>
+<span><span class="co">#&gt;     rowWeightedMads, rowWeightedMeans, rowWeightedMedians,</span></span>
+<span><span class="co">#&gt;     rowWeightedSds, rowWeightedVars</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Loading required package: GenomicRanges</span></span>
+<span><span class="co">#&gt; Warning: package 'GenomicRanges' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Loading required package: stats4</span></span>
+<span><span class="co">#&gt; Loading required package: BiocGenerics</span></span>
+<span><span class="co">#&gt; Warning: package 'BiocGenerics' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Loading required package: generics</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'generics'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:lubridate':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     as.difftime</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:dplyr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     explain</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,</span></span>
+<span><span class="co">#&gt;     setequal, union</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'BiocGenerics'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:dplyr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     combine</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     IQR, mad, sd, var, xtabs</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     anyDuplicated, aperm, append, as.data.frame, basename, cbind,</span></span>
+<span><span class="co">#&gt;     colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,</span></span>
+<span><span class="co">#&gt;     get, grep, grepl, is.unsorted, lapply, Map, mapply, match, mget,</span></span>
+<span><span class="co">#&gt;     order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,</span></span>
+<span><span class="co">#&gt;     rbind, Reduce, rownames, sapply, saveRDS, table, tapply, unique,</span></span>
+<span><span class="co">#&gt;     unsplit, which.max, which.min</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Loading required package: S4Vectors</span></span>
+<span><span class="co">#&gt; Warning: package 'S4Vectors' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'S4Vectors'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:lubridate':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     second, second&lt;-</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:dplyr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     first, rename</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:tidyr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     expand</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:utils':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     findMatches</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     expand.grid, I, unname</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Loading required package: IRanges</span></span>
+<span><span class="co">#&gt; Warning: package 'IRanges' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'IRanges'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:lubridate':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     %within%</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:dplyr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     collapse, desc, slice</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:purrr':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     reduce</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:grDevices':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     windows</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Loading required package: Seqinfo</span></span>
+<span><span class="co">#&gt; Warning: package 'Seqinfo' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Loading required package: Biobase</span></span>
+<span><span class="co">#&gt; Warning: package 'Biobase' was built under R version 4.5.2</span></span>
+<span><span class="co">#&gt; Welcome to Bioconductor</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     Vignettes contain introductory material; view with</span></span>
+<span><span class="co">#&gt;     'browseVignettes()'. To cite Bioconductor, see</span></span>
+<span><span class="co">#&gt;     'citation("Biobase")', and for packages 'citation("pkgname")'.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'Biobase'</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:MatrixGenerics':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     rowMedians</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:matrixStats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     anyMissing, rowMedians</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="quick-start-with-easyprotein">Quick Start with EasyProtein<a class="anchor" aria-label="anchor" href="#quick-start-with-easyprotein"></a>
+</h2>
+<div class="section level3">
+<h3 id="tutorial-metadata">1. Tutorial metadata<a class="anchor" aria-label="anchor" href="#tutorial-metadata"></a>
+</h3>
+<ul>
+<li>
+<strong>Tutorial name</strong>: Quick Start with EasyProtein<br>
+</li>
+<li>
+<strong>Tutorial type</strong>: Minimal end-to-end workflow<br>
+</li>
+<li>
+<strong>Target audience</strong>: First-time users of
+EasyProtein<br>
+</li>
+<li>
+<strong>Primary goal</strong>: Show how to complete a basic
+proteomics analysis workflow with minimal input and minimal parameter
+tuning<br>
+</li>
+<li>
+<strong>Expected outcome</strong>: You will learn how to:
+<ol style="list-style-type: decimal">
+<li>load example data</li>
+<li>create a standard EasyProtein analysis object</li>
+<li>inspect data quality</li>
+<li>visualize sample structure</li>
+<li>perform a simple two-group comparison (<strong>Liver, 1w vs 8w, male
+only</strong>)</li>
+<li>interpret core outputs</li>
+</ol>
+</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="load-example-data-and-build-summarizedexperiment">2. Load example data and build
+<code>SummarizedExperiment</code><a class="anchor" aria-label="anchor" href="#load-example-data-and-build-summarizedexperiment"></a>
+</h3>
+<p>This tutorial uses the file
+<code>inst/extdata/mouse_multi-organ_DIA_report.pg_matrix.tsv.gz</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">exp_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>  <span class="st">"extdata"</span>,</span>
+<span>  <span class="st">"mouse_multi-organ_DIA_report.pg_matrix.tsv.gz"</span>,</span>
+<span>  package <span class="op">=</span> <span class="st">"EasyProtein"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">se_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rawdata2se.html">rawdata2se</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span></span>
+<span><span class="va">se</span> <span class="op">&lt;-</span> <span class="va">se_obj</span><span class="op">$</span><span class="va">se</span></span>
+<span><span class="va">se</span></span>
+<span><span class="co">#&gt; class: SummarizedExperiment </span></span>
+<span><span class="co">#&gt; dim: 11497 299 </span></span>
+<span><span class="co">#&gt; metadata(0):</span></span>
+<span><span class="co">#&gt; assays(4): raw_intensity intensity conc zscale</span></span>
+<span><span class="co">#&gt; rownames(11497): 0610012G03Rik 1700010I14Rik ... mt-Nd3 rp9</span></span>
+<span><span class="co">#&gt; rowData names(1): gene</span></span>
+<span><span class="co">#&gt; colnames(299): brain_1w_F_5 brain_1w_F_7 ... Muscle8w_M_4 Muscle8w_M_5</span></span>
+<span><span class="co">#&gt; colData names(4): sample condition rep group</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="add-sample-metadata">3. Add sample metadata<a class="anchor" aria-label="anchor" href="#add-sample-metadata"></a>
+</h3>
+<p><code><a href="../reference/rawdata2se.html">rawdata2se()</a></code> already creates basic
+<code>condition</code> and <code>rep</code>. Here we derive
+<code>tissue</code>, <code>age</code>, and <code>sex</code> from
+<code>condition</code> as requested.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">se</span><span class="op">$</span><span class="va">tissue</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://stringr.tidyverse.org/reference/str_extract.html" class="external-link">str_extract</a></span><span class="op">(</span><span class="va">se</span><span class="op">$</span><span class="va">condition</span>,<span class="st">'[A-Za-z]+'</span><span class="op">)</span></span>
+<span><span class="va">se</span><span class="op">$</span><span class="va">age</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://stringr.tidyverse.org/reference/str_extract.html" class="external-link">str_extract</a></span><span class="op">(</span><span class="va">se</span><span class="op">$</span><span class="va">condition</span>,<span class="st">'\\dw'</span><span class="op">)</span></span>
+<span><span class="va">se</span><span class="op">$</span><span class="va">sex</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://stringr.tidyverse.org/reference/str_extract.html" class="external-link">str_extract</a></span><span class="op">(</span><span class="va">se</span><span class="op">$</span><span class="va">condition</span>,<span class="st">'\\w$'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">colData</a></span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample</span>, <span class="va">condition</span>, <span class="va">rep</span>, <span class="va">tissue</span>, <span class="va">age</span>, <span class="va">sex</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                      sample  condition rep tissue age sex</span></span>
+<span><span class="co">#&gt; brain_1w_F_5   brain_1w_F_5 brain_1w_F   5  brain  1w   F</span></span>
+<span><span class="co">#&gt; brain_1w_F_7   brain_1w_F_7 brain_1w_F   7  brain  1w   F</span></span>
+<span><span class="co">#&gt; brain_1w_F_8   brain_1w_F_8 brain_1w_F   8  brain  1w   F</span></span>
+<span><span class="co">#&gt; brain_1w_F_10 brain_1w_F_10 brain_1w_F  10  brain  1w   F</span></span>
+<span><span class="co">#&gt; brain_1w_M_1   brain_1w_M_1 brain_1w_M   1  brain  1w   M</span></span>
+<span><span class="co">#&gt; brain_1w_M_3   brain_1w_M_3 brain_1w_M   3  brain  1w   M</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="quick-qc">4. Quick QC<a class="anchor" aria-label="anchor" href="#quick-qc"></a>
+</h3>
+<p>We inspect three basic QC aspects:</p>
+<ol style="list-style-type: decimal">
+<li>sample intensity distribution</li>
+<li>missing values per sample</li>
+<li>detected protein number per sample</li>
+</ol>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="va">se</span><span class="op">$</span><span class="va">tissue</span> <span class="op">==</span> <span class="st">"live"</span> <span class="op">&amp;</span></span>
+<span>  <span class="va">se</span><span class="op">$</span><span class="va">sex</span> <span class="op">==</span> <span class="st">"M"</span> <span class="op">&amp;</span></span>
+<span>  <span class="va">se</span><span class="op">$</span><span class="va">age</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1w"</span>, <span class="st">"8w"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">se_sub</span> <span class="op">&lt;-</span> <span class="va">se</span><span class="op">[</span>, <span class="va">keep</span><span class="op">]</span></span>
+<span></span>
+<span></span>
+<span><span class="va">p_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plotSE_density.html">plotSE_density</a></span><span class="op">(</span><span class="va">se_sub</span><span class="op">)</span></span>
+<span><span class="va">p_missing</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plotSE_missing_value.html">plotSE_missing_value</a></span><span class="op">(</span><span class="va">se_sub</span><span class="op">)</span></span>
+<span><span class="va">p_detected</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plotSE_protein_number.html">plotSE_protein_number</a></span><span class="op">(</span><span class="va">se_sub</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">p_density</span></span></code></pre></div>
+<p><img src="quick_start_files/figure-html/qc-plots-1.png" class="r-plt" alt="" width="960"></p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p_missing</span></span></code></pre></div>
+<p><img src="quick_start_files/figure-html/qc-plots-2.png" class="r-plt" alt="" width="960"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p_detected</span></span></code></pre></div>
+<p><img src="quick_start_files/figure-html/qc-plots-3.png" class="r-plt" alt="" width="960"></p>
+</div>
+<div class="section level3">
+<h3 id="visualize-sample-structure-with-pca">5. Visualize sample structure with PCA<a class="anchor" aria-label="anchor" href="#visualize-sample-structure-with-pca"></a>
+</h3>
+<p>Use concentration matrix (<code>assay = "conc"</code>) and color by
+tissue.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">conc_mtx</span> <span class="op">&lt;-</span> <span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">assay</a></span><span class="op">(</span><span class="va">se_sub</span>, <span class="st">"conc"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">pca.res</span> <span class="op">&lt;-</span> <span class="fu">FactoMineR</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/FactoMineR/man/PCA.html" class="external-link">PCA</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">conc_mtx</span><span class="op">)</span>, graph <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">pca.df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">pca.res</span><span class="op">$</span><span class="va">ind</span><span class="op">$</span><span class="va">coord</span><span class="op">)</span></span>
+<span><span class="va">pca.df</span><span class="op">$</span><span class="va">sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">pca.df</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">meta_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">colData</a></span><span class="op">(</span><span class="va">se_sub</span><span class="op">)</span><span class="op">)</span> </span>
+<span></span>
+<span><span class="va">pca.df</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span><span class="va">pca.df</span>, <span class="va">meta_df</span>, by <span class="op">=</span> <span class="st">"sample"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/plot_pca.html">plot_pca</a></span><span class="op">(</span></span>
+<span>  pca.df <span class="op">=</span> <span class="va">pca.df</span>,</span>
+<span>  pca.res <span class="op">=</span> <span class="va">pca.res</span>,</span>
+<span>  colorby <span class="op">=</span> <span class="st">"age"</span>,</span>
+<span>  label <span class="op">=</span> <span class="st">"sample"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: `aes_string()` was deprecated in ggplot2 3.0.0.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use tidy evaluation idioms with `aes()`.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See also `vignette("ggplot2-in-packages")` for more information.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">EasyProtein</span> package.</span></span>
+<span><span class="co">#&gt;   Please report the issue at</span></span>
+<span><span class="co">#&gt;   <span style="color: #0000BB; font-style: italic;">&lt;https://github.com/yuanlizhanshi/EasyProtein/issues&gt;</span>.</span></span>
+<span><span class="co">#&gt; <span style="color: #555555;">This warning is displayed once per session.</span></span></span>
+<span><span class="co">#&gt; <span style="color: #555555;">Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span></span>
+<span><span class="co">#&gt; <span style="color: #555555;">generated.</span></span></span></code></pre></div>
+<p><img src="quick_start_files/figure-html/pca-1.png" class="r-plt" alt="" width="672"></p>
+</div>
+<div class="section level3">
+<h3 id="two-group-comparison-liver-1w-vs-8w-male-only">6. Two-group comparison: Liver, 1w vs 8w, male only<a class="anchor" aria-label="anchor" href="#two-group-comparison-liver-1w-vs-8w-male-only"></a>
+</h3>
+<p>We subset samples to:</p>
+<ul>
+<li><code>tissue == "Liver"</code></li>
+<li><code>sex == "m"</code></li>
+<li><code>age %in% c("1w", "8w")</code></li>
+</ul>
+<p>Then run unpaired limma-based DEG analysis via
+<code><a href="../reference/se2DEGs.html">se2DEGs()</a></code>.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">deg_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/se2DEGs.html">se2DEGs</a></span><span class="op">(</span></span>
+<span>  se <span class="op">=</span> <span class="va">se_sub</span>,</span>
+<span>  compare_col <span class="op">=</span> <span class="st">"age"</span>,</span>
+<span>  ref <span class="op">=</span> <span class="st">"1w"</span>,</span>
+<span>  cmp <span class="op">=</span> <span class="st">"8w"</span>,</span>
+<span>  logFC_cutoff <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  adj_p_cutoff <span class="op">=</span> <span class="fl">0.05</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">deg_res</span><span class="op">)</span></span>
+<span><span class="co">#&gt;            gene live1w_M_1   live1w_M_3   live1w_M_4 live1w_M_7 live1w_M_12</span></span>
+<span><span class="co">#&gt; 1 0610012G03Rik  3.4170122    2.7307321    3.5057499  4.4052290    3.345071</span></span>
+<span><span class="co">#&gt; 2 1700010I14Rik  0.9392232    0.9654005    0.9636142  0.9366667    0.919449</span></span>
+<span><span class="co">#&gt; 3 1810009J06Rik  0.4087430 3551.7545240 1793.9272352 38.1159646 3649.433156</span></span>
+<span><span class="co">#&gt; 4 1810024B03Rik  0.9392232    0.9654005    0.9636142  0.9366667    0.919449</span></span>
+<span><span class="co">#&gt; 5 1810065E05Rik 41.1277752   42.2740584   42.1958388 41.0158293   40.261882</span></span>
+<span><span class="co">#&gt; 6 2010106E10Rik  0.9392232    0.9654005    0.9636142  0.9366667    0.919449</span></span>
+<span><span class="co">#&gt;     live8w_M_1   live8w_M_2  live8w_M_3   live8w_M_4   live8w_M_5 mean_log2_1w</span></span>
+<span><span class="co">#&gt; 1    1.8695419    1.9201328    1.929792    1.9712530    1.9541805   1.80002963</span></span>
+<span><span class="co">#&gt; 2    0.9446468    0.9702095    0.975090    0.9960396    0.9874132  -0.02024861</span></span>
+<span><span class="co">#&gt; 3 3016.5522357 3098.1819292 3113.766947 3180.6656198 3153.1188707   7.70778304</span></span>
+<span><span class="co">#&gt; 4    0.9446468    0.9702095    0.975090    0.9960396    0.9874132  -0.02024861</span></span>
+<span><span class="co">#&gt; 5    0.9446468    0.9702095    0.975090    0.9960396    0.9874132   5.37188591</span></span>
+<span><span class="co">#&gt; 6    0.9446468    0.9702095    0.975090    0.9960396    0.9874132  -0.02024861</span></span>
+<span><span class="co">#&gt;   mean_log2_8w       logFC      P.Value    adj.P.Val    median_1w   median_8w</span></span>
+<span><span class="co">#&gt; 1   0.97820863 -0.82182099 4.856343e-05 2.118110e-04    3.4170122    1.929792</span></span>
+<span><span class="co">#&gt; 2   0.02272051  0.04296912 3.520132e-02 4.948155e-02    0.9392232    0.975090</span></span>
+<span><span class="co">#&gt; 3  11.60362179  3.89583875 1.374975e-01 1.724268e-01 1793.9272352 3113.766947</span></span>
+<span><span class="co">#&gt; 4   0.02272051  0.04296912 3.520132e-02 4.948155e-02    0.9392232    0.975090</span></span>
+<span><span class="co">#&gt; 5   0.02272051 -5.34916541 5.591284e-15 5.541638e-13   41.1277752    0.975090</span></span>
+<span><span class="co">#&gt; 6   0.02272051  0.04296912 3.520132e-02 4.948155e-02    0.9392232    0.975090</span></span>
+<span><span class="co">#&gt;   DEGs_types</span></span>
+<span><span class="co">#&gt; 1         NS</span></span>
+<span><span class="co">#&gt; 2         NS</span></span>
+<span><span class="co">#&gt; 3         NS</span></span>
+<span><span class="co">#&gt; 4         NS</span></span>
+<span><span class="co">#&gt; 5       DOWN</span></span>
+<span><span class="co">#&gt; 6         NS</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">deg_res</span><span class="op">$</span><span class="va">DEGs_types</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; DOWN   NS   UP </span></span>
+<span><span class="co">#&gt; 1725 8983  789</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="interpret-core-outputs">7. Interpret core outputs<a class="anchor" aria-label="anchor" href="#interpret-core-outputs"></a>
+</h3>
+<p>The DEG result table contains:</p>
+<ul>
+<li>
+<strong>effect size</strong>: <code>logFC</code> (positive means
+higher in <code>8w</code> vs <code>1w</code>)</li>
+<li>
+<strong>statistical significance</strong>: <code>P.Value</code>,
+<code>adj.P.Val</code>
+</li>
+<li>
+<strong>classification</strong>: <code>DEGs_types</code>
+(<code>UP</code>, <code>DOWN</code>, <code>NS</code>)</li>
+<li>
+<strong>group summaries</strong>: <code>median_1w</code>,
+<code>median_8w</code>
+</li>
+</ul>
+<p>Minimal interpretation workflow:</p>
+<ol style="list-style-type: decimal">
+<li>prioritize proteins with <code>adj.P.Val &lt;= 0.05</code>
+</li>
+<li>use <code>|logFC| &gt;= 1</code> to focus on stronger changes</li>
+<li>read <code>median_1w</code> and <code>median_8w</code> together with
+<code>logFC</code>
+</li>
+</ol>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">top_hits</span> <span class="op">&lt;-</span> <span class="va">deg_res</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">adj.P.Val</span>, <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/desc.html" class="external-link">desc</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">logFC</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">gene</span>, <span class="va">logFC</span>, <span class="va">adj.P.Val</span>, <span class="va">DEGs_types</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"median_"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">top_hits</span>, <span class="fl">20</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        gene     logFC    adj.P.Val DEGs_types   median_1w  median_8w</span></span>
+<span><span class="co">#&gt; 1    Csn1s1 10.182433 8.013961e-16         UP   0.9392232 1146.46359</span></span>
+<span><span class="co">#&gt; 2     Cdca3 10.040292 8.013961e-16         UP   0.9392232 1038.89116</span></span>
+<span><span class="co">#&gt; 3  Naaladl1  9.982767 8.013961e-16         UP   0.9392232  998.27682</span></span>
+<span><span class="co">#&gt; 4     Stx1b  9.618075 9.323407e-16         UP   0.9392232  775.29011</span></span>
+<span><span class="co">#&gt; 5    Mybpc1 -9.576063 9.323407e-16       DOWN 770.8484387    0.97509</span></span>
+<span><span class="co">#&gt; 6       Cck  9.184286 1.558556e-15         UP   0.9392232  573.94779</span></span>
+<span><span class="co">#&gt; 7    Defa21 -8.684485 3.045286e-15       DOWN 415.4870265    0.97509</span></span>
+<span><span class="co">#&gt; 8      Eml6  8.494027 5.434018e-15         UP   0.9392232  353.90296</span></span>
+<span><span class="co">#&gt; 9    Metrnl -8.253243 5.434018e-15       DOWN 308.1239990    0.97509</span></span>
+<span><span class="co">#&gt; 10    Sytl1  8.107017 5.973509e-15         UP   0.9392232  271.98647</span></span>
+<span><span class="co">#&gt; 11    Myom1  8.104425 5.973509e-15         UP   0.9392232  271.49834</span></span>
+<span><span class="co">#&gt; 12     Nefh -8.101866 5.973509e-15       DOWN 277.4279338    0.97509</span></span>
+<span><span class="co">#&gt; 13   Atp1b4  7.939756 7.849712e-15         UP   0.9392232  242.20809</span></span>
+<span><span class="co">#&gt; 14   Eef1a2 -7.715343 1.091110e-14       DOWN 212.2146391    0.97509</span></span>
+<span><span class="co">#&gt; 15     Nefl  7.687151 1.189352e-14         UP   0.9392232  203.29790</span></span>
+<span><span class="co">#&gt; 16    Krt85  7.607042 1.190601e-14         UP   0.9392232  192.31482</span></span>
+<span><span class="co">#&gt; 17   Pmfbp1  7.587927 1.190601e-14         UP   0.9392232  189.78299</span></span>
+<span><span class="co">#&gt; 18    Krt17  7.560404 1.190601e-14         UP   0.9392232  186.19589</span></span>
+<span><span class="co">#&gt; 19   Trim54  7.531913 1.190601e-14         UP   0.9392232  182.55411</span></span>
+<span><span class="co">#&gt; 20     Has1 -7.481887 1.190601e-14       DOWN 180.5026100    0.97509</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="save-results-optional">8. Save results (optional)<a class="anchor" aria-label="anchor" href="#save-results-optional"></a>
+</h3>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="va">deg_res</span>, <span class="st">"Liver_male_1w_vs_8w_DEGs.csv"</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

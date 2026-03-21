@@ -1,0 +1,68 @@
+template:
+  bootstrap: 5
+
+home:
+  title: "EasyProtein"
+  description: "An R package for proteomics data analysis and visualization"
+
+navbar:
+  structure:
+    left: [home, reference, articles]
+    right: [github]
+
+reference:
+- title: Data import and preprocessing
+  contents:
+  - fix_duplicate_protein_ids
+  - rawdata2se
+  - impute_low1pct_or_median_raw
+  - calculate_cv
+  - calc_gene_CV_by_condition
+  - calc_gene_mean_by_condition
+  - summarize_se_by_coldata
+  - se2raw
+  - se2internstiy
+  - se2conc
+  - se2DEGs
+  - se2gene_group
+  - se2scale
+  - scale_mtx
+
+- title: Analysis
+  contents:
+  - limma_protein_DE
+  - limma_protein_DE_pair
+  - enrichment_analysis
+  - run_gsea
+  - run_mfuzz_clustering
+  - get_batch_DEGs
+  - correlate_genes_to_target
+  - classify_timecourse_by_round
+  - get_turning_point
+  - get_pc_contributors
+
+- title: Visualization
+  contents:
+  - ivolcano
+  - saveplot
+  - plot_pca
+  - plotSE_density
+  - plotCV_density
+  - plotSE_missing_value
+  - plotSE_protein_number
+  - plot_gene_expression
+  - plot_GO_dot1
+  - plot_GO_dot2
+  - plot_GO_dot3
+  - plot_FC_trend
+  - plot_deg_trends
+  - plot_heatmap_withline
+  - catable
+  - geom_mean
+  - auto_cluster_matrix_pca_one
+
+- title: App and package utilities
+  contents:
+  - EasyProtein
+  - launch_EasyProtein
+  - detect_species_from_symbol

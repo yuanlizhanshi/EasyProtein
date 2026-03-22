@@ -55,6 +55,14 @@ exp_file <- system.file(
 stopifnot(file.exists(exp_file))
 
 se_obj <- rawdata2se(exp_file)
+#> [rawdata2se] Reading input took 1.42 seconds
+#> [rawdata2se] Detecting raw columns took 0.01 seconds
+#> [rawdata2se] Preprocessing took 1.47 seconds
+#> [rawdata2se] Missing-value filtering took 117.19 seconds
+#> [rawdata2se] Imputation took 7.97 seconds
+#> [rawdata2se] Building SummarizedExperiment took 2.16 seconds
+#> [rawdata2se] Stability filtering took 24.79 seconds
+#> [rawdata2se] Done took 0.00 seconds
 se <- se_obj$se
 se
 #> class: SummarizedExperiment 

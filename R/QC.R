@@ -107,6 +107,13 @@ rawdata2se <- function(
     cv_threshold = 0.5
 ) {
 
+  stage_start <- proc.time()[["elapsed"]]
+  progress <- function(step) {
+    elapsed <- proc.time()[["elapsed"]] - stage_start
+    message(sprintf("[rawdata2se] %s took %.2f seconds", step, elapsed))
+    stage_start <<- proc.time()[["elapsed"]]
+  }
+
   rawdata <- data.table::fread(exp_file) %>% as.data.frame()
   colnames(rawdata) <- gsub("\\\\", "/", colnames(rawdata))
 
@@ -120,6 +127,8 @@ rawdata2se <- function(
 
   var <- data.frame(gene = rawdata$feature)
   rownames(var) <- var$gene
+
+  progress("Reading input")
 
   detect_raw_cols <- function(nms, raw_prefix = "auto") {
     nms_lower <- tolower(nms)
@@ -149,6 +158,8 @@ rawdata2se <- function(
   raw_cols <- detect_raw_cols(colnames(rawdata), raw_prefix = raw_prefix)
   stopifnot(any(raw_cols))
 
+  progress("Detecting raw columns")
+
   rawdata_mtx <- rawdata[, raw_cols, drop = FALSE]
   rownames(rawdata_mtx) <- rawdata$feature
   colnames(rawdata_mtx) <- tools::file_path_sans_ext(
@@ -176,6 +187,8 @@ rawdata2se <- function(
     ) %>%
     dplyr::left_join(obs, by = "sample")
 
+  progress("Preprocessing")
+
   if (single_rep) {
 
     rawdata_impute_df <- impute_low1pct_or_median_raw(
@@ -197,6 +210,8 @@ rawdata2se <- function(
     cpm_mtx <- edgeR::cpm(mat)
     cpm_mtx[!is.finite(cpm_mtx)] <- NA
 
+    progress("Imputation")
+
     se <- SummarizedExperiment::SummarizedExperiment(
       assays = list(
         raw_intensity = rawdata_mtx[rownames(mat), colnames(mat)],
@@ -208,6 +223,9 @@ rawdata2se <- function(
       colData = S4Vectors::DataFrame(obs[colnames(mat), ])
     )
 
+    progress("Building SummarizedExperiment")
+
+    progress("Done")
     return(structure(
       list(se = se, un_stable_gene = NULL, missing_gene_df = NULL),
       class = "RawDataSE"
@@ -247,6 +265,8 @@ rawdata2se <- function(
   missing_gene_df <- rawdata %>%
     dplyr::filter(feature %in% missing_feature$feature)
 
+  progress("Missing-value filtering")
+
   rawdata_impute_df <- impute_low1pct_or_median_raw(
     rawdata_df,
     id_col = "feature"
@@ -266,6 +286,8 @@ rawdata2se <- function(
   cpm_mtx <- edgeR::cpm(mat)
   cpm_mtx[!is.finite(cpm_mtx)] <- NA
 
+  progress("Imputation")
+
   se <- SummarizedExperiment::SummarizedExperiment(
     assays = list(
       raw_intensity = rawdata_mtx[rownames(mat), colnames(mat)],
@@ -276,6 +298,8 @@ rawdata2se <- function(
     rowData = S4Vectors::DataFrame(var[rownames(mat), , drop = FALSE]),
     colData = S4Vectors::DataFrame(obs[colnames(mat), ])
   )
+
+  progress("Building SummarizedExperiment")
 
   cv_df <- calc_gene_CV_by_condition(se)
 
@@ -292,6 +316,9 @@ rawdata2se <- function(
 
   se <- se[!rownames(se) %in% un_stable_cv_df$feature, ]
 
+  progress("Stability filtering")
+
+  progress("Done")
   list(
     se = se,
     un_stable_gene = un_stable_gene_df,

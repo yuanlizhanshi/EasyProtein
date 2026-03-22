@@ -336,7 +336,7 @@ make_download_se_qc_zip <- function(
 
   # ---- Write files
       saveRDS(se_obj, rds_path)
-      writexl::write_xlsx(se2internstiy(se_obj), path = excel1_path)
+      writexl::write_xlsx(se2intensity(se_obj), path = excel1_path)
       writexl::write_xlsx(se2conc(se_obj), path = excel2_path)
       writexl::write_xlsx(se2scale(se_obj), path = excel3_path)
       if (!is.null(miss_gene_df)) writexl::write_xlsx(miss_gene_df, path = excel4_path)
@@ -397,7 +397,7 @@ make_download_se_zip <- function(
 
   # Write files
       saveRDS(se_obj, rds_path)
-      writexl::write_xlsx(se2internstiy(se_obj), path = excel1_path)
+      writexl::write_xlsx(se2intensity(se_obj), path = excel1_path)
       writexl::write_xlsx(se2conc(se_obj),       path = excel2_path)
       writexl::write_xlsx(se2scale(se_obj),      path = excel3_path)
 

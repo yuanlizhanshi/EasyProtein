@@ -38,6 +38,13 @@ After installing EasyProtein and its dependencies, load the package and launch t
 library(EasyProtein)
 launch_EasyProtein()
 ```
+### R package workflow
+
+EasyProtein also provides a script-friendly R package workflow for users who prefer reproducible command-line analysis instead of the interactive Shiny application.
+
+The Quick Start tutorial is available at:  
+https://yuanlizhanshi.github.io/EasyProtein/
+
 
 ## Citation
 

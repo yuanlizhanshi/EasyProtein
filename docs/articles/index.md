@@ -2,4 +2,5 @@
 
 ### All vignettes
 
-- [Quick Start with EasyProtein](quick_start.md):
+- [Quick Start with
+  EasyProtein](https://yuanlizhanshi.github.io/EasyProtein/articles/quick_start.md):

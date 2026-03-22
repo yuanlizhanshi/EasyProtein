@@ -43,7 +43,7 @@ launch_EasyProtein()
 EasyProtein also provides a script-friendly R package workflow for users who prefer reproducible command-line analysis instead of the interactive Shiny application.
 
 The Quick Start tutorial is available at:  
-https://yuanlizhanshi.github.io/EasyProtein/
+https://yuanlizhanshi.github.io/EasyProtein/articles/quick_start.html
 
 
 ## Citation

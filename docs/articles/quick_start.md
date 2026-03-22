@@ -55,14 +55,6 @@ exp_file <- system.file(
 stopifnot(file.exists(exp_file))
 
 se_obj <- rawdata2se(exp_file)
-#> [rawdata2se] Reading input took 1.42 seconds
-#> [rawdata2se] Detecting raw columns took 0.01 seconds
-#> [rawdata2se] Preprocessing took 1.47 seconds
-#> [rawdata2se] Missing-value filtering took 117.19 seconds
-#> [rawdata2se] Imputation took 7.97 seconds
-#> [rawdata2se] Building SummarizedExperiment took 2.16 seconds
-#> [rawdata2se] Stability filtering took 24.79 seconds
-#> [rawdata2se] Done took 0.00 seconds
 se <- se_obj$se
 se
 #> class: SummarizedExperiment 
@@ -77,9 +69,9 @@ se
 
 ### 3. Add sample metadata
 
-[`rawdata2se()`](../reference/rawdata2se.md) already creates basic
-`condition` and `rep`. Here we derive `tissue`, `age`, and `sex` from
-`condition` as requested.
+[`rawdata2se()`](https://yuanlizhanshi.github.io/EasyProtein/reference/rawdata2se.md)
+already creates basic `condition` and `rep`. Here we derive `tissue`,
+`age`, and `sex` from `condition` as requested.
 
 ``` r
 se$tissue <- str_extract(se$condition,'[A-Za-z]+')
@@ -178,7 +170,7 @@ We subset samples to:
 - `age %in% c("1w", "8w")`
 
 Then run unpaired limma-based DEG analysis via
-[`se2DEGs()`](../reference/se2DEGs.md).
+[`se2DEGs()`](https://yuanlizhanshi.github.io/EasyProtein/reference/se2DEGs.md).
 
 ``` r
 deg_res <- se2DEGs(

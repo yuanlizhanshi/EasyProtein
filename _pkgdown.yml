@@ -22,7 +22,7 @@ reference:
   - calc_gene_mean_by_condition
   - summarize_se_by_coldata
   - se2raw
-  - se2internstiy
+  - se2intensity
   - se2conc
   - se2DEGs
   - se2gene_group

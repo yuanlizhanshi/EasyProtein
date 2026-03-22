@@ -38,7 +38,8 @@ groups within each round.
 The function performs the following steps:
 
 1.  Convert the `SummarizedExperiment` object to a gene-level data frame
-    using [`se2conc()`](se2conc.md).
+    using
+    [`se2conc()`](https://yuanlizhanshi.github.io/EasyProtein/reference/se2conc.md).
 
 2.  Retain only genes classified as `Up` or `Down`.
 
@@ -54,8 +55,8 @@ Facet labels include the number of genes (`n`) in each group.
 
 ## See also
 
-[`classify_timecourse_by_round`](classify_timecourse_by_round.md),
-[`se2conc`](se2conc.md),
+[`classify_timecourse_by_round`](https://yuanlizhanshi.github.io/EasyProtein/reference/classify_timecourse_by_round.md),
+[`se2conc`](https://yuanlizhanshi.github.io/EasyProtein/reference/se2conc.md),
 [`ggplot`](https://ggplot2.tidyverse.org/reference/ggplot.html)
 
 ## Examples

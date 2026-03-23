@@ -131,7 +131,7 @@ se2raw <- function(se) {
 #' @param se A SummarizedExperiment object.
 #' @return A data.frame containing rowData and intensity assay.
 #' @export
-se2internstiy <- function(se) {
+se2intensity <- function(se) {
   df <- cbind(as.data.frame(rowData(se)),
               as.data.frame(assay(se, "intensity")))
   return(df)

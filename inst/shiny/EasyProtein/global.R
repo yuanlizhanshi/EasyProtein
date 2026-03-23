@@ -596,6 +596,9 @@ make_grouped_select <- function(id,
 }
 
 show_heatmap_param_modal <- function(se_data = NULL) {
+  modal_width <- "92vw"
+  modal_max_width <- "1500px"
+  modal_margin_top <- "0vh"
 
   all_cols <- if (!is.null(se_data)) as.data.frame(colData(se_data)) else character(0)
   all_rows <- if (!is.null(se_data)) as.data.frame(rowData(se_data)) else character(0)
@@ -604,160 +607,185 @@ show_heatmap_param_modal <- function(se_data = NULL) {
       title = "Please set Heatmap parameters",
       size = 'xl',
       tags$div(
-
+        class = "ep-pattern-modal",
+        style = "background:transparent; min-height:auto; padding:0;",
+        tags$script(HTML(sprintf("(function () {
+          setTimeout(function () {
+            var modalBody = document.querySelector('.ep-pattern-modal');
+            if (!modalBody) return;
+            var dialog = modalBody.closest('.modal-dialog');
+            if (!dialog) return;
+            dialog.style.width = '%s';
+            dialog.style.maxWidth = '%s';
+            dialog.style.marginTop = '%s';
+            dialog.style.marginBottom = '%s';
+            var content = dialog.querySelector('.modal-content');
+            if (content) {
+              content.style.marginBottom = '0';
+            }
+          }, 0);
+        })();", modal_width, modal_max_width, modal_margin_top, modal_margin_top))),
         fluidRow(
-
-          ## ===============================
-          ## Left column: column / sample selection
-          ## ===============================
           column(
             width = 6,
-
-            h4("Column selection"),
-
-            make_grouped_select(
-              id = "selected_cols",
-              df = all_cols,
-              label = 'Select coldata columns',
-              default_all = TRUE
-            )$ui,
-            selectInput(
-              "row_k",
-              "Row k-means clusters",
-              choices = c("NONE", "AUTO", 2:10),
-              selected = "AUTO"
-            ),
-            conditionalPanel(
-              condition = "input.row_k == 'NONE'",
-              uiOutput("coldata_row_selector")
-            ),
-
-            radioButtons(
-              "col_cluster_mode",
-              "Column clustering mode",
-              choices = c(
-                "K-means" = "kmeans",
-                "Use colData group" = "coldata"
-              ),
-              selected = "kmeans",
-              inline = TRUE
-            ),
-            conditionalPanel(
-              condition = "input.col_cluster_mode == 'kmeans'",
-              selectInput(
-                "col_k",
-                "Column k-means clusters",
-                choices = c("AUTO", 2:10),
-                selected = "AUTO"
+            div(
+              class = "ep-card",
+              div(class = "ep-card-title", "Sample selection"),
+              div(class = "ep-card-subtitle", "Choose which samples from colData will be included in the clustering matrix."),
+              div(
+                class = "ep-soft-panel",
+                style = "margin-top:16px;",
+                make_grouped_select(
+                  id = "selected_cols",
+                  df = all_cols,
+                  label = 'Select coldata columns',
+                  default_all = TRUE
+                )$ui
               )
             ),
-
-            conditionalPanel(
-              condition = "input.col_cluster_mode == 'coldata'",
-              uiOutput("coldata_col_selector")
-            ),
-            selectInput(
-              "top_annotaion_legend",
-              "Top annotation grouping",
-              choices = c("NULL", colnames(all_cols)),
-              selected = "condition"
-            ),
-
-
-            make_grouped_select(
-              id = "selected_rows",
-              df = all_rows,
-              label = 'Select rowdata columns',
-              default_all = TRUE
-            )$ui
-
-
+            div(
+              class = "ep-card",
+              style = "margin-top:18px;",
+              div(class = "ep-card-title", "Gene filtering"),
+              div(class = "ep-card-subtitle", "Limit the heatmap to selected gene groups or keep the full row set before clustering."),
+              div(
+                class = "ep-soft-panel",
+                style = "margin-top:16px;",
+                make_grouped_select(
+                  id = "selected_rows",
+                  df = all_rows,
+                  label = 'Select rowdata columns',
+                  default_all = TRUE
+                )$ui,
+                sliderInput(
+                  "expr_min",
+                  "Filter low-expression genes",
+                  min = 0, max = 20, value = 0, step = 1
+                ),
+                sliderInput(
+                  "cv_min",
+                  "Filter low-CV genes",
+                  min = 0, max = 1, value = 0.1, step = 0.05
+                )
+              )
+            )
           ),
-
-          ## ===============================
-          ## Right column: heatmap parameters
-          ## ===============================
           column(
             width = 6,
-
-            h4("Heatmap parameters"),
-
-
-            fluidRow(
-              column(
-                  6,
-                  checkboxInput(
-                    "enable_col_cluster",
-                    "Enable column clustering",
-                    value = TRUE
+            div(
+              class = "ep-card",
+              div(class = "ep-card-title", "Clustering strategy"),
+              div(class = "ep-card-subtitle", "Set how rows and columns are grouped, split, and annotated in the final heatmap."),
+              div(
+                class = "ep-soft-panel",
+                style = "margin-top:16px;",
+                selectInput(
+                  "row_k",
+                  "Row k-means clusters",
+                  choices = c("NONE", "AUTO", 2:10),
+                  selected = "AUTO"
+                ),
+                conditionalPanel(
+                  condition = "input.row_k == 'NONE'",
+                  uiOutput("coldata_row_selector")
+                ),
+                radioButtons(
+                  "col_cluster_mode",
+                  "Column clustering mode",
+                  choices = c(
+                    "K-means" = "kmeans",
+                    "Use colData group" = "coldata"
+                  ),
+                  selected = "kmeans",
+                  inline = TRUE
+                ),
+                conditionalPanel(
+                  condition = "input.col_cluster_mode == 'kmeans'",
+                  selectInput(
+                    "col_k",
+                    "Column k-means clusters",
+                    choices = c("AUTO", 2:10),
+                    selected = "AUTO"
                   )
-              ),
-              column(
-                6,
-                checkboxInput(
-                  "enable_row_cluster",
-                  "Enable row clustering",
-                  value = TRUE
+                ),
+                conditionalPanel(
+                  condition = "input.col_cluster_mode == 'coldata'",
+                  uiOutput("coldata_col_selector")
+                ),
+                selectInput(
+                  "top_annotaion_legend",
+                  "Top annotation grouping",
+                  choices = c("NULL", colnames(all_cols)),
+                  selected = "condition"
                 )
               )
             ),
-
-            fluidRow(
-              column(
-                6,
-                checkboxInput(
-                  "show_col_names",
-                  "Display column names",
-                  value = FALSE
+            div(
+              class = "ep-card",
+              style = "margin-top:18px;",
+              div(class = "ep-card-title", "Display & export"),
+              div(class = "ep-card-subtitle", "Tune labels, clustering display, and output PDF size before rendering the heatmap."),
+              div(
+                class = "ep-soft-panel",
+                style = "margin-top:16px;",
+                fluidRow(
+                  column(
+                    6,
+                    checkboxInput(
+                      "enable_col_cluster",
+                      "Enable column clustering",
+                      value = TRUE
+                    )
+                  ),
+                  column(
+                    6,
+                    checkboxInput(
+                      "enable_row_cluster",
+                      "Enable row clustering",
+                      value = TRUE
+                    )
+                  )
                 ),
-              ),
-              column(
-                6,
-                checkboxInput(
-                  "show_row_names",
-                  "Display row names",
-                  value = FALSE
+                fluidRow(
+                  column(
+                    6,
+                    checkboxInput(
+                      "show_col_names",
+                      "Display column names",
+                      value = FALSE
+                    )
+                  ),
+                  column(
+                    6,
+                    checkboxInput(
+                      "show_row_names",
+                      "Display row names",
+                      value = FALSE
+                    )
+                  )
                 ),
-              )
-            ),
-
-
-
-
-
-            sliderInput(
-              "expr_min",
-              "Filter low-expression genes",
-              min = 0, max = 20, value = 0, step = 1
-            ),
-
-            sliderInput(
-              "cv_min",
-              "Filter low-CV genes",
-              min = 0, max = 1, value = 0.1, step = 0.05
-            ),
-
-            sliderInput(
-              "column_title_size",
-              "Font size of column title",
-              min = 0, max = 20, value = 8, step = 1
-            ),
-
-            fluidRow(
-              column(
-                6,
-                numericInput(
-                  "pdf_width",
-                  "PDF width (inch)",
-                  value = 7, min = 3, step = 1
-                )
-              ),
-              column(
-                6,
-                numericInput(
-                  "pdf_height",
-                  "PDF height (inch)",
-                  value = 7, min = 3, step = 1
+                sliderInput(
+                  "column_title_size",
+                  "Font size of column title",
+                  min = 0, max = 20, value = 8, step = 1
+                ),
+                fluidRow(
+                  column(
+                    6,
+                    numericInput(
+                      "pdf_width",
+                      "PDF width (inch)",
+                      value = 7, min = 3, step = 1
+                    )
+                  ),
+                  column(
+                    6,
+                    numericInput(
+                      "pdf_height",
+                      "PDF height (inch)",
+                      value = 7, min = 3, step = 1
+                    )
+                  )
                 )
               )
             )

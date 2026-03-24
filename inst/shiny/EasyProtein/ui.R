@@ -1190,7 +1190,7 @@ ui <- {
           )
         ),
         nav_spacer(),
-        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.7)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
+        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
       )
 
     #

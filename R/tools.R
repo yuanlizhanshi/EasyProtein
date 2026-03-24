@@ -754,7 +754,7 @@ enrichment_analysis <- function(
     species       = c("human", "mouse"),
     keyType       = "SYMBOL",
     qvalue_cutoff = 0.05,
-    use_internal_data = FALSE
+  use_internal_data = TRUE
 ){
   ## -------------------------------
   ## Argument processing
@@ -806,6 +806,29 @@ enrichment_analysis <- function(
     )
 
   } else {  # KEGG
+    if (isTRUE(use_internal_data) && !requireNamespace("KEGG.db", quietly = TRUE)) {
+      kegg_pkg <- system.file(
+        "shiny", "EasyProtein", "www", "KEGG.db_1.0.tar.gz",
+        package = "EasyProtein"
+      )
+      if (identical(kegg_pkg, "")) {
+        kegg_pkg <- file.path("inst", "shiny", "EasyProtein", "www", "KEGG.db_1.0.tar.gz")
+      }
+
+      if (!file.exists(kegg_pkg)) {
+        stop(
+          "use_internal_data=TRUE requires KEGG.db, but package file not found: ",
+          kegg_pkg
+        )
+      }
+
+      utils::install.packages(kegg_pkg, repos = NULL, type = "source")
+
+      if (!requireNamespace("KEGG.db", quietly = TRUE)) {
+        stop("Failed to install/load package 'KEGG.db'.")
+      }
+    }
+
     gene_df <- clusterProfiler::bitr(
       gene,
       fromType = keyType,

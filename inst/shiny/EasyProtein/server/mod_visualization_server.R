@@ -52,7 +52,7 @@ mod_visualization_server <- function(input, output, session) {
   # =====================================================
   # 2️⃣ GO enrichment dotplot section
   # =====================================================
-  go_df <- reactive({
+  go_table_info <- reactive({
     req(input$go_file)
     ext <- tools::file_ext(input$go_file$name)
     df <- switch(tolower(ext),
@@ -67,20 +67,77 @@ mod_visualization_server <- function(input, output, session) {
            paste("Missing columns in file:", paste(setdiff(need_cols, names(df)), collapse = ", "))
       )
     )
+
+    if ("ONTOLOGY" %in% names(df)) {
+      table_type <- "GO"
+      entry_col <- "ONTOLOGY"
+    } else if ("category" %in% names(df)) {
+      table_type <- "KEGG"
+      entry_col <- "category"
+    } else {
+      validate(
+        need(FALSE, "Cannot detect enrichment type. GO requires column 'ONTOLOGY'; KEGG requires column 'category'.")
+      )
+    }
+
+    entry_vals <- unique(as.character(df[[entry_col]]))
+    entry_vals <- entry_vals[!is.na(entry_vals) & trimws(entry_vals) != ""]
+    entry_vals <- sort(entry_vals)
+
+    list(
+      df = df,
+      table_type = table_type,
+      entry_col = entry_col,
+      entry_choices = c("All", entry_vals)
+    )
+  })
+
+  output$go_entry_selector_ui <- renderUI({
+    req(go_table_info())
+    info <- go_table_info()
+    selectInput(
+      inputId = "go_entry_choice",
+      label = paste0("Select ", info$table_type, " entry"),
+      choices = info$entry_choices,
+      selected = "All"
+    )
+  })
+
+  go_df <- reactive({
+    req(go_table_info())
+    info <- go_table_info()
+    df <- info$df
+
+    if (!is.null(input$go_entry_choice) && input$go_entry_choice != "All") {
+      df <- df[df[[info$entry_col]] %in% input$go_entry_choice, , drop = FALSE]
+    }
+
+    validate(need(nrow(df) > 0, "No enrichment terms left after filtering."))
     df
   })
 
 
   output$GO_enrich_plot1 <- renderPlot({
     req(go_df())
-    plot_GO_dot1(go_df(), topn = input$go_topn, label_format = input$go_label_width)
+    plot_GO_dot1(
+      go_df(),
+      topn = input$go_topn,
+      label_format = input$go_label_width,
+      group_by = input$go_group_by
+    )
   },
   height = function() input$go_plot_height,
   width = function() input$go_plot_width)
 
   output$GO_enrich_plot2 <- renderPlot({
     req(go_df())
-    plot_GO_dot2(go_df(), topn = input$go_topn, label_format = input$go_label_width)
+    plot_GO_dot2(
+      go_df(),
+      topn = input$go_topn,
+      label_format = input$go_label_width,
+      group_by = input$go_group_by,
+      x_axis = input$go_x_axis
+    )
   },
   height = function() input$go_plot_height,
   width = function() input$go_plot_width)
@@ -98,7 +155,12 @@ mod_visualization_server <- function(input, output, session) {
 
 
   output$dl_go_style1 <- make_download_pdf(
-    plot_expr   = function() plot_GO_dot1(go_df(), topn = input$go_topn, label_format = input$go_label_width),
+    plot_expr   = function() plot_GO_dot1(
+      go_df(),
+      topn = input$go_topn,
+      label_format = input$go_label_width,
+      group_by = input$go_group_by
+    ),
     input       = input,
     suffix      = "GO_style1",
     width       = function() input$go_plot_width  / 100,
@@ -107,7 +169,13 @@ mod_visualization_server <- function(input, output, session) {
   )
 
   output$dl_go_style2 <- make_download_pdf(
-    plot_expr   = function() plot_GO_dot2(go_df(), topn = input$go_topn, label_format = input$go_label_width),
+    plot_expr   = function() plot_GO_dot2(
+      go_df(),
+      topn = input$go_topn,
+      label_format = input$go_label_width,
+      group_by = input$go_group_by,
+      x_axis = input$go_x_axis
+    ),
     input       = input,
     suffix      = "GO_style2",
     width       = function() input$go_plot_width  / 100,

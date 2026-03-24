@@ -974,6 +974,19 @@ ui <- {
                                      div(class = "ep-card-title", "GO plot controls"),
                                      div(class = "ep-card-subtitle", "Upload GO results and adjust label wrapping, top term count, and export dimensions."),
                                      fileInput("go_file", "Upload GO results (Excel)", accept = c(".xlsx", ".xls")),
+                                     uiOutput("go_entry_selector_ui"),
+                                     selectInput(
+                                       "go_group_by",
+                                       "TopN ranking metric",
+                                       choices = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count"),
+                                       selected = "-log10(p.adjust)"
+                                     ),
+                                     selectInput(
+                                       "go_x_axis",
+                                       "Dotplot X axis",
+                                       choices = c("gene_ratio", "RichFactor"),
+                                       selected = "gene_ratio"
+                                     ),
                                      sliderInput("go_topn", "Top N terms", min = 5, max = 50, value = 10, step = 1),
                                      sliderInput("go_label_width", "Label wrap width", min = 20, max = 80, value = 30, step = 2),
                                      sliderInput("go_plot_width", "Plot width (px)", min = 400, max = 1200, value = 600, step = 50),

@@ -13,7 +13,7 @@ library(shinydashboard)
 library(shinythemes)
 library(shinyWidgets)
 library(ggiraph)
-
+library(ggpubr)
 
 # Limit user file uploads to 2GB
 options(shiny.maxRequestSize=1024*1024^2)
@@ -48,7 +48,7 @@ js_escape  <- function(x) gsub("'", "\\\\'", x, fixed = TRUE)
 
 help_popover_init <- function() {
   tagList(
-    tags$style(HTML(" 
+    tags$style(HTML("
       .ep-help-qmark {
         cursor: pointer;
         color: #6c757d;
@@ -67,7 +67,7 @@ help_popover_init <- function() {
         font-size: 13px;
       }
     ")),
-    tags$script(HTML(" 
+    tags$script(HTML("
       (function () {
         function removePopovers() {
           document.querySelectorAll('.ep-help-popover').forEach(function (el) { el.remove(); });

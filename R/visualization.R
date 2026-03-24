@@ -731,11 +731,15 @@ ivolcano <- function(
 #' Dot plot for GO enrichment (style 1)
 #'
 #' This function takes a GO enrichment result (e.g. clusterProfiler output)
-#' and visualizes the top enriched categories using -log10(p.adjust).
+#' and visualizes the top enriched categories. Top terms can be selected
+#' by different metrics.
 #'
 #' @param GO_df A GO enrichment result data frame.
 #' @param topn Number of categories to show.
 #' @param label_format Width for wrapped text labels.
+#' @param group_by Metric used to choose topN terms. One of
+#'   \code{"-log10(p.adjust)"}, \code{"GeneRatio"}, \code{"RichFactor"},
+#'   \code{"Count"}. Default is \code{"-log10(p.adjust)"}.
 #'
 #' @return A ggplot object.
 #'
@@ -745,11 +749,59 @@ ivolcano <- function(
 #' @importFrom ggpubr ggdotchart
 #'
 #' @export
-plot_GO_dot1 <- function(GO_df, topn = 10, label_format = 30){
-  go_res <- GO_df %>%
-    arrange(p.adjust) %>%
-    slice_head(n = topn) %>%
-    mutate(neg10_p = -log10(p.adjust))
+.parse_ratio_to_numeric <- function(x) {
+  x <- as.character(x)
+  out <- suppressWarnings(as.numeric(x))
+  need_parse <- is.na(out) & grepl("/", x, fixed = TRUE)
+  if (any(need_parse)) {
+    num <- suppressWarnings(as.numeric(sub("/.*$", "", x[need_parse])))
+    den <- suppressWarnings(as.numeric(sub("^.*/", "", x[need_parse])))
+    out[need_parse] <- ifelse(is.na(num) | is.na(den) | den == 0, NA_real_, num / den)
+  }
+  out
+}
+
+.select_top_enrich <- function(GO_df, topn = 10,
+                               group_by = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count")) {
+  group_by <- match.arg(group_by)
+
+  if (!"p.adjust" %in% names(GO_df)) {
+    stop("GO_df must contain column 'p.adjust'.")
+  }
+
+  gene_ratio_raw <- if ("GeneRatio" %in% names(GO_df)) GO_df$GeneRatio else NA
+  rich_factor_raw <- if ("RichFactor" %in% names(GO_df)) GO_df$RichFactor else NA
+  count_raw <- if ("Count" %in% names(GO_df)) GO_df$Count else NA
+
+  df <- GO_df
+  df$neg10_p <- -log10(df$p.adjust)
+  df$gene_ratio_num <- .parse_ratio_to_numeric(gene_ratio_raw)
+  df$rich_factor_num <- .parse_ratio_to_numeric(rich_factor_raw)
+  df$count_num <- suppressWarnings(as.numeric(count_raw))
+
+  score_col <- switch(
+    group_by,
+    "-log10(p.adjust)" = "neg10_p",
+    "GeneRatio" = "gene_ratio_num",
+    "RichFactor" = "rich_factor_num",
+    "Count" = "count_num"
+  )
+
+  df <- df[is.finite(df[[score_col]]), , drop = FALSE]
+  if (!nrow(df)) stop("No valid rows available for topN selection by: ", group_by)
+
+  df %>%
+    dplyr::arrange(dplyr::desc(.data[[score_col]])) %>%
+    dplyr::slice_head(n = topn)
+}
+
+plot_GO_dot1 <- function(
+    GO_df,
+    topn = 10,
+    label_format = 30,
+    group_by = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count")
+){
+  go_res <- .select_top_enrich(GO_df = GO_df, topn = topn, group_by = group_by)
 
   ggdotchart(
     go_res,
@@ -783,6 +835,11 @@ plot_GO_dot1 <- function(GO_df, topn = 10, label_format = 30){
 #' @param GO_df A GO enrichment result data frame.
 #' @param topn Number of GO terms.
 #' @param label_format Width for wrapped labels.
+#' @param group_by Metric used to choose topN terms. One of
+#'   \code{"-log10(p.adjust)"}, \code{"GeneRatio"}, \code{"RichFactor"},
+#'   \code{"Count"}. Default is \code{"-log10(p.adjust)"}.
+#' @param x_axis X-axis metric for dotplot. One of \code{"gene_ratio"}
+#'   or \code{"RichFactor"}. Default is \code{"gene_ratio"}.
 #'
 #' @return A ggplot object.
 #'
@@ -791,27 +848,36 @@ plot_GO_dot1 <- function(GO_df, topn = 10, label_format = 30){
 #' @importFrom dplyr arrange slice_head mutate
 #'
 #' @export
-plot_GO_dot2 <- function(GO_df, topn = 10, label_format = 30){
-  go_res2 <- GO_df %>%
-    arrange(p.adjust) %>%
-    slice_head(n = topn) %>%
-    mutate(
-      neg10_p = -log10(p.adjust),
-      gene_ratio =
-        as.numeric(stringr::str_extract(GeneRatio, "\\d+")) /
-        as.numeric(stringr::str_extract(GeneRatio, "\\d+$"))
-    )
+plot_GO_dot2 <- function(
+    GO_df,
+    topn = 10,
+    label_format = 30,
+    group_by = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count"),
+    x_axis = c("gene_ratio", "RichFactor")
+){
+  x_axis <- match.arg(x_axis)
+
+  go_res2 <- .select_top_enrich(GO_df = GO_df, topn = topn, group_by = group_by) %>%
+    mutate(gene_ratio = gene_ratio_num)
+
+  x_col <- if (identical(x_axis, "RichFactor")) "rich_factor_num" else "gene_ratio"
+  x_lab <- if (identical(x_axis, "RichFactor")) "RichFactor" else "GeneRatio"
+
+  go_res2 <- go_res2[is.finite(go_res2[[x_col]]), , drop = FALSE]
+  if (!nrow(go_res2)) {
+    stop("No valid rows available for selected x_axis: ", x_axis)
+  }
 
   ggplot(
     go_res2,
     aes(
-      x = gene_ratio,
-      y = reorder(Description, gene_ratio),
-      color = p.adjust, size = Count
+      x = .data[[x_col]],
+      y = reorder(Description, .data[[x_col]]),
+      color = p.adjust, size = count_num
     )
   ) +
     geom_point() +
-    labs(x = "GeneRatio", y = NULL) +
+    labs(x = x_lab, y = NULL) +
     scale_color_gradient(low = "blue", high = "red", name = "p.adjust") +
     theme_test() +
     guides(size = guide_legend(order = 2),

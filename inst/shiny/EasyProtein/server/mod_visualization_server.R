@@ -116,6 +116,17 @@ mod_visualization_server <- function(input, output, session) {
     df
   })
 
+  go_entry_suffix_tag <- reactive({
+    choice <- if (is.null(input$go_entry_choice)) "All" else input$go_entry_choice
+    if (!nzchar(choice)) choice <- "All"
+
+    tag <- toupper(trimws(as.character(choice)))
+    tag <- gsub("[^A-Z0-9]+", "_", tag)
+    tag <- gsub("^_+|_+$", "", tag)
+    if (!nzchar(tag)) tag <- "ALL"
+    paste0(".", tag)
+  })
+
 
   output$GO_enrich_plot1 <- renderPlot({
     req(go_df())
@@ -162,7 +173,7 @@ mod_visualization_server <- function(input, output, session) {
       group_by = input$go_group_by
     ),
     input       = input,
-    suffix      = "GO_style1",
+    suffix      = function() paste0("GO_style1", go_entry_suffix_tag()),
     width       = function() input$go_plot_width  / 100,
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"
@@ -177,7 +188,7 @@ mod_visualization_server <- function(input, output, session) {
       x_axis = input$go_x_axis
     ),
     input       = input,
-    suffix      = "GO_style2",
+    suffix      = function() paste0("GO_style2", go_entry_suffix_tag()),
     width       = function() input$go_plot_width  / 100,
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"

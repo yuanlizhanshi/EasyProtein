@@ -27,7 +27,6 @@ mod_pattern_server <- function(input, output, session) {
     }
     se_obj <- readRDS(input$matrix_file$datapath)
     rv$se <- se_obj
-    show_heatmap_param_modal(rv$se)
     make_grouped_select(
       id = "selected_cols",
       df = as.data.frame(colData(rv$se)),
@@ -42,23 +41,9 @@ mod_pattern_server <- function(input, output, session) {
     )$server(input, output, session)
   })
 
-  # Reset parameters (reopen modal)
-  observeEvent(input$reset_params, {
+  output$pattern_params_ui <- renderUI({
     req(rv$se)
-    removeModal()
-    show_heatmap_param_modal(rv$se)
-    make_grouped_select(
-      id = "selected_cols",
-      df = as.data.frame(colData(rv$se)),
-      label = "Select coldata columns",
-      default_all = TRUE
-    )$server(input, output, session)
-    make_grouped_select(
-      id = "selected_rows",
-      df = as.data.frame(rowData(rv$se)),
-      label = "Select rowdata columns",
-      default_all = TRUE
-    )$server(input, output, session)
+    pattern_heatmap_param_panel(rv$se)
   })
 
   # =============================
@@ -106,7 +91,6 @@ mod_pattern_server <- function(input, output, session) {
   # =============================
   observeEvent(input$confirm_params, {
     req(rv$se)
-    removeModal()
 
     se <- rv$se
     ##col select
@@ -413,15 +397,6 @@ mod_pattern_server <- function(input, output, session) {
       plotOutput("heatmap_plot", height = "700px")
     })
 
-
-    ##
-
-    output$reset_params_ui <- renderUI({
-      req(row_info())
-      actionButton("reset_params", "Reset parameters", class = "btn-info")
-    })
-
-
   })
 
   # =============================
@@ -470,12 +445,39 @@ mod_pattern_server <- function(input, output, session) {
   # =============================
   # 5. Download SE with clustering info
   # =============================
+  pattern_params_for_export <- reactive({
+    list(
+      generated_at = as.character(Sys.time()),
+      module = "Pattern clustering",
+      input_file = if (!is.null(input$matrix_file$name)) input$matrix_file$name else NULL,
+      selected_cols = input$selected_cols,
+      selected_rows = input$selected_rows,
+      expr_min = input$expr_min,
+      cv_min = input$cv_min,
+      row_k = input$row_k,
+      col_cluster_mode = input$col_cluster_mode,
+      col_k = input$col_k,
+      coldata_col_selector = input$coldata_col_selector,
+      coldata_row_selector = input$coldata_row_selector,
+      top_annotaion_legend = input$top_annotaion_legend,
+      enable_col_cluster = input$enable_col_cluster,
+      enable_row_cluster = input$enable_row_cluster,
+      show_col_names = input$show_col_names,
+      show_row_names = input$show_row_names,
+      column_title_size = input$column_title_size,
+      pdf_width = input$pdf_width,
+      pdf_height = input$pdf_height
+    )
+  })
+
   output$download_pattern_se <- make_download_time_se_zip(
     se_reactive   = reactive(rv$se_sub),
     input         = input,
     file_input_id = "matrix_file",
     suffix        = "_clustering",
-    session       = session
+    session       = session,
+    extra_json_reactive = pattern_params_for_export,
+    extra_json_name = "pattern_heatmap_params.json"
   )
 
   output$download_pattern_se_UI <- renderUI({

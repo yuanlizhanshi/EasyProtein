@@ -186,7 +186,10 @@ make_download_pdf <- function(plot_expr, input, suffix = NULL,
   downloadHandler(
     filename = function() {
       base <- tools::file_path_sans_ext(basename(input[[input_field]]$name))
-      paste0(base, if (!is.null(suffix)) paste0("_", suffix) else "", ".pdf")
+      suffix_val <- if (is.function(suffix)) suffix() else suffix
+      suffix_val <- as.character(suffix_val)[1]
+      has_suffix <- !is.null(suffix_val) && nzchar(suffix_val)
+      paste0(base, if (has_suffix) paste0("_", suffix_val) else "", ".pdf")
     },
     content = function(file) {
       w <- if (is.function(width))  width()  else width

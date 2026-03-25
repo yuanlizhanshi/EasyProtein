@@ -987,7 +987,7 @@ show_se_selector_modal <- function(se_data) {
         id = "se_row_selector",
         df = row_df,
         label = "Select rowdata columns",
-        default_all = TRUE
+        default_all = FALSE
       )$ui,
 
 

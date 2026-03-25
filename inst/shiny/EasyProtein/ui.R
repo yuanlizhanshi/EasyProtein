@@ -619,12 +619,9 @@ ui <- {
                              style = "font-size:16px; font-weight:700; color:#1F2937; margin-bottom:10px;",
                              "Subset summary"
                            ),
-                           conditionalPanel(
-                             condition = "input.upload_subset_se != null",
-                             div(
-                               style = "background:#0F172A; color:#E2E8F0; border-radius:12px; padding:16px; min-height:260px; overflow:auto; font-size:13px;",
-                               verbatimTextOutput("subset_info")
-                             )
+                           div(
+                             style = "background:#FFFFFF; color:#1F2937; border:1px solid #E5E7EB; border-radius:12px; padding:16px; min-height:260px; overflow:auto; font-size:13px;",
+                             verbatimTextOutput("subset_info", placeholder = TRUE)
                            )
                          )
                        ),
@@ -1190,7 +1187,7 @@ ui <- {
           )
         ),
         nav_spacer(),
-        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
+        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8.1)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
       )
 
     #

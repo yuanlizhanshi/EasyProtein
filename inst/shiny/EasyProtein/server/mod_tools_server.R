@@ -49,7 +49,7 @@ mod_tools_server <- function(input, output, session) {
     req(rv$se)
     show_se_selector_modal(rv$se)
     make_grouped_select(id = "se_col_selector", df = as.data.frame(colData(rv$se)),label = 'Select coldata columns',default_all= TRUE)$server(input, output, session)
-    make_grouped_select(id = "se_row_selector", df = as.data.frame(rowData(rv$se)),label = 'Select coldata columns',default_all= TRUE)$server(input, output, session)
+    make_grouped_select(id = "se_row_selector", df = as.data.frame(rowData(rv$se)),label = 'Select coldata columns',default_all= FALSE)$server(input, output, session)
   })
 
 
@@ -66,7 +66,8 @@ mod_tools_server <- function(input, output, session) {
     } else {
       col_group  <- unique(sub("\\|\\|.*$", "", col_vals))
       if (length(col_group) > 1) {
-        stop("Only one colData column should be used in se_col_selector.")
+        showNotification("Only one colData column should be used in sample selector.", type = "error")
+        return(invisible(NULL))
       }
       col_values <- sub("^.*\\|\\|", "", col_vals)
       col_idx <- which(colData(rv$se)[[col_group]] %in% col_values)
@@ -79,7 +80,8 @@ mod_tools_server <- function(input, output, session) {
     } else {
       row_group  <- unique(sub("\\|\\|.*$", "", row_vals))
       if (length(row_group) > 1) {
-        stop("Only one rowData column should be used in se_row_selector.")
+        showNotification("Only one rowData column should be used in gene selector.", type = "error")
+        return(invisible(NULL))
       }
       row_values <- sub("^.*\\|\\|", "", row_vals)
       row_idx <- which(rowData(rv$se)[[row_group]] %in% row_values)
@@ -91,23 +93,43 @@ mod_tools_server <- function(input, output, session) {
       if (!load_module_packages("readxl")) {
         return()
       }
-      ext <- tools::file_ext(input$se_excel_upload$name)
+      ext <- tolower(tools::file_ext(input$se_excel_upload$name))
       if (ext %in% c("xls", "xlsx")) {
         excel_path <- input$se_excel_upload$datapath
-        df_excel   <- readxl::read_excel(excel_path, col_names = TRUE)
+        # Always use the first column as gene list, regardless of header existence
+        df_excel <- readxl::read_excel(excel_path, col_names = FALSE)
 
         if (ncol(df_excel) >= 1) {
           excel_vec <- as.character(df_excel[[1]])
+          excel_vec <- unique(trimws(excel_vec))
+          excel_vec <- excel_vec[!is.na(excel_vec) & nzchar(excel_vec)]
 
           excel_row_idx <- which(rownames(rv$se) %in% excel_vec)
+
+          if (length(excel_row_idx) == 0) {
+            showNotification(
+              "No genes from uploaded Excel first column matched rownames(se).",
+              type = "warning"
+            )
+          }
         }
       }
     }
 
 
+    has_row_selector <- !is.null(row_vals) && length(row_vals) > 0
+    has_excel_upload <- !is.null(input$se_excel_upload)
+
     final_row_idx <- sort(unique(c(row_idx, excel_row_idx)))
-    if (length(final_row_idx) == 0) {
+
+    if (!has_row_selector && !has_excel_upload) {
       final_row_idx <- seq_len(nrow(rv$se))
+    } else if (length(final_row_idx) == 0) {
+      showNotification(
+        "No genes matched your subset criteria. Please check selected values or Excel first column.",
+        type = "warning"
+      )
+      return(invisible(NULL))
     }
 
     if (length(col_idx) == 0) {
@@ -123,19 +145,51 @@ mod_tools_server <- function(input, output, session) {
 
 
   output$subset_info <- renderPrint({
-    req(rv$se_sub)
-
-    se <- rv$se_sub
-    cat("SummarizedExperiment :\n")
-    print(se)
-    if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
-      cat("\nassays:", paste0(names(SummarizedExperiment::assays(se)), collapse = ", "), "\n")
+    if (is.null(rv$se)) {
+      cat("Please upload an SE file first.\n")
+      return(invisible(NULL))
     }
-    cd <- as.data.frame(rowData(se))
-    for (grp in unique(cd$gene_group)) {
-      cat(grp,"gene number:", length(cd$gene_group[cd$gene_group == grp]), "\n")
+
+    if (is.null(rv$se_sub)) {
+      cat("No subset result yet. Click 'Subset SE by samples and genes' and then 'Confirm'.\n")
+      return(invisible(NULL))
+    }
+
+    se_before <- rv$se
+    se_after  <- rv$se_sub
+
+    n_gene_before <- nrow(se_before)
+    n_sample_before <- ncol(se_before)
+    n_gene_after <- nrow(se_after)
+    n_sample_after <- ncol(se_after)
+
+    cat("Subset summary:\n")
+    cat("- Before filter: ", n_gene_before, " genes, ", n_sample_before, " samples\n", sep = "")
+    cat("- After filter : ", n_gene_after, " genes, ", n_sample_after, " samples\n", sep = "")
+
+    if (n_gene_before > 0) {
+      cat("- Gene retention: ", round(100 * n_gene_after / n_gene_before, 2), "%\n", sep = "")
+    }
+    if (n_sample_before > 0) {
+      cat("- Sample retention: ", round(100 * n_sample_after / n_sample_before, 2), "%\n", sep = "")
+    }
+
+    if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+      cat("\nAssays in subset: ",
+          paste0(names(SummarizedExperiment::assays(se_after)), collapse = ", "),
+          "\n", sep = "")
+    }
+
+    rd <- as.data.frame(rowData(se_after))
+    if ("gene_group" %in% colnames(rd)) {
+      cat("\nGene group counts (subset):\n")
+      grp_tab <- sort(table(rd$gene_group), decreasing = TRUE)
+      for (grp in names(grp_tab)) {
+        cat("- ", grp, ": ", as.integer(grp_tab[[grp]]), "\n", sep = "")
+      }
     }
   })
+  outputOptions(output, "subset_info", suspendWhenHidden = FALSE)
 
 
 

@@ -387,7 +387,7 @@ ui <- {
                      class = "ep-page",
                      fluidRow(
                        column(
-                         width = 10, offset = 1,
+                         width = 12,
                          div(
                            class = "ep-hero",
                            div(class = "ep-title", "Pattern clustering"),
@@ -399,14 +399,14 @@ ui <- {
                      ),
                      fluidRow(
                        column(
-                         width = 3, offset = 1,
+                         width = 5,
                          div(
                            class = "ep-card",
                            div(class = "ep-card-title", "Clustering controls"),
                            div(class = "ep-card-subtitle", "Upload an SE object, adjust clustering parameters, and export intermediate results."),
                            fileInput("matrix_file", tags$span("Upload SummarizedExperiment object", style = "white-space: nowrap;"), accept = ".Rds"),
+                           uiOutput("pattern_params_ui"),
                            div(style = "display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;",
-                               uiOutput("reset_params_ui"),
                                uiOutput("download_ui"),
                                uiOutput('download_pattern_se_UI'))
                          )
@@ -1187,7 +1187,7 @@ ui <- {
           )
         ),
         nav_spacer(),
-        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8.1)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
+        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8.2)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
       )
 
     #

@@ -416,7 +416,9 @@ make_download_time_se_zip <- function(
     input,
     file_input_id,
     suffix = "_time_series",
-    session = NULL
+  session = NULL,
+  extra_json_reactive = NULL,
+  extra_json_name = "plot_params.json"
 ) {
   downloadHandler(
     filename = function() {
@@ -444,6 +446,7 @@ make_download_time_se_zip <- function(
       rds_path    <- file.path(tmpdir, paste0(base_full, "_se.Rds"))
       excel2_path <- file.path(tmpdir, paste0(base_full, "_normalized_expression.xlsx"))
       excel3_path <- file.path(tmpdir, paste0(base_full, "_Zscaled_expression.xlsx"))
+      json_path   <- file.path(tmpdir, extra_json_name)
 
       saveRDS(se_obj, rds_path)
 
@@ -459,6 +462,58 @@ make_download_time_se_zip <- function(
       if ("zscale" %in% SummarizedExperiment::assayNames(se_obj)) {
         writexl::write_xlsx(se2scale(se_obj), path = excel3_path)
         files_to_zip <- c(files_to_zip, excel3_path)
+      }
+
+      if (!is.null(extra_json_reactive) && is.function(extra_json_reactive)) {
+        json_obj <- extra_json_reactive()
+        if (!is.null(json_obj)) {
+          format_param_lines <- function(x, indent = 0) {
+            pad <- paste(rep("  ", indent), collapse = "")
+
+            if (is.list(x)) {
+              nms <- names(x)
+              if (is.null(nms) || all(!nzchar(nms))) {
+                out <- character(0)
+                for (i in seq_along(x)) {
+                  out <- c(out, paste0(pad, "- item ", i, ":"))
+                  out <- c(out, format_param_lines(x[[i]], indent + 1))
+                }
+                return(out)
+              }
+
+              out <- character(0)
+              for (nm in nms) {
+                val <- x[[nm]]
+                if (is.list(val)) {
+                  out <- c(out, paste0(pad, nm, ":"))
+                  out <- c(out, format_param_lines(val, indent + 1))
+                } else if (length(val) == 0 || is.null(val)) {
+                  out <- c(out, paste0(pad, nm, ": NULL"))
+                } else if (length(val) == 1) {
+                  out <- c(out, paste0(pad, nm, ": ", as.character(val)))
+                } else {
+                  out <- c(out, paste0(pad, nm, ": [", paste(as.character(val), collapse = ", "), "]"))
+                }
+              }
+              return(out)
+            }
+
+            if (length(x) == 0 || is.null(x)) {
+              return(paste0(pad, "NULL"))
+            }
+            if (length(x) == 1) {
+              return(paste0(pad, as.character(x)))
+            }
+            paste0(pad, "[", paste(as.character(x), collapse = ", "), "]")
+          }
+
+          writeLines(
+            format_param_lines(json_obj),
+            con = json_path,
+            useBytes = TRUE
+          )
+          files_to_zip <- c(files_to_zip, json_path)
+        }
       }
 
   # Package ZIP
@@ -659,7 +714,7 @@ show_heatmap_param_modal <- function(se_data = NULL) {
                 )$ui,
                 sliderInput(
                   "expr_min",
-                  "Filter low-expression genes",
+                  "Filter low-exp genes",
                   min = 0, max = 20, value = 0, step = 1
                 ),
                 sliderInput(
@@ -799,6 +854,208 @@ show_heatmap_param_modal <- function(se_data = NULL) {
       ),
 
       easyClose = TRUE
+    )
+  )
+}
+
+pattern_heatmap_param_panel <- function(se_data = NULL) {
+  all_cols <- if (!is.null(se_data)) as.data.frame(colData(se_data)) else character(0)
+  all_rows <- if (!is.null(se_data)) as.data.frame(rowData(se_data)) else character(0)
+
+  tagList(
+    fluidRow(
+      column(
+        width = 6,
+        div(
+          class = "ep-card",
+          style = "margin-top:12px;",
+          div(class = "ep-card-title", "Sample selection"),
+          div(class = "ep-card-subtitle", "Choose which samples from colData will be included in the clustering matrix."),
+          div(
+            class = "ep-soft-panel",
+            style = "margin-top:10px;",
+            make_grouped_select(
+              id = "selected_cols",
+              df = all_cols,
+              label = 'Select coldata columns',
+              default_all = TRUE
+            )$ui
+          )
+        )
+      ),
+      column(
+        width = 6,
+        div(
+          class = "ep-card",
+          style = "margin-top:12px;",
+          div(class = "ep-card-title", "Gene filtering"),
+          div(class = "ep-card-subtitle", "Limit the heatmap to selected gene groups or keep the full row set before clustering."),
+          div(
+            class = "ep-soft-panel",
+            style = "margin-top:10px;",
+            make_grouped_select(
+              id = "selected_rows",
+              df = all_rows,
+              label = 'Select rowdata columns',
+              default_all = TRUE
+            )$ui,
+            fluidRow(
+              column(
+                6,
+                div(
+                  style = "font-size:12px;",
+                  sliderInput(
+                    "expr_min",
+                    "Filter low-expression genes",
+                    min = 0, max = 20, value = 0, step = 1
+                  )
+                )
+              ),
+              column(
+                6,
+                div(
+                  style = "font-size:12px;",
+                  sliderInput(
+                    "cv_min",
+                    "Filter low-CV genes",
+                    min = 0, max = 1, value = 0.1, step = 0.05
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+    fluidRow(
+      column(
+        width = 6,
+        div(
+          class = "ep-card",
+          style = "margin-top:12px;",
+          div(class = "ep-card-title", "Clustering strategy"),
+          div(class = "ep-card-subtitle", "Set how rows and columns are grouped, split, and annotated in the final heatmap."),
+          div(
+            class = "ep-soft-panel",
+            style = "margin-top:10px;",
+            selectInput(
+              "row_k",
+              "Row k-means clusters",
+              choices = c("NONE", "AUTO", 2:10),
+              selected = "AUTO"
+            ),
+            conditionalPanel(
+              condition = "input.row_k == 'NONE'",
+              uiOutput("coldata_row_selector")
+            ),
+            radioButtons(
+              "col_cluster_mode",
+              "Column clustering mode",
+              choices = c(
+                "K-means" = "kmeans",
+                "Use colData group" = "coldata"
+              ),
+              selected = "kmeans",
+              inline = TRUE
+            ),
+            conditionalPanel(
+              condition = "input.col_cluster_mode == 'kmeans'",
+              selectInput(
+                "col_k",
+                "Column k-means clusters",
+                choices = c("AUTO", 2:10),
+                selected = "AUTO"
+              )
+            ),
+            conditionalPanel(
+              condition = "input.col_cluster_mode == 'coldata'",
+              uiOutput("coldata_col_selector")
+            ),
+            selectInput(
+              "top_annotaion_legend",
+              "Top annotation grouping",
+              choices = c("NULL", colnames(all_cols)),
+              selected = "condition"
+            )
+          )
+        )
+      ),
+      column(
+        width = 6,
+        div(
+          class = "ep-card",
+          style = "margin-top:12px;",
+          div(class = "ep-card-title", "Display & export"),
+          div(class = "ep-card-subtitle", "Tune labels, clustering display, and output PDF size before rendering the heatmap."),
+          div(
+            class = "ep-soft-panel",
+            style = "margin-top:10px;",
+            fluidRow(
+              column(
+                6,
+                checkboxInput(
+                  "enable_col_cluster",
+                  tags$span(style = "white-space:nowrap; font-size:12px;", "Enable column clustering"),
+                  value = TRUE
+                )
+              ),
+              column(
+                6,
+                checkboxInput(
+                  "enable_row_cluster",
+                  tags$span(style = "white-space:nowrap; font-size:12px;", "Enable row clustering"),
+                  value = TRUE
+                )
+              )
+            ),
+            fluidRow(
+              column(
+                6,
+                checkboxInput(
+                  "show_col_names",
+                  tags$span(style = "white-space:nowrap; font-size:12px;", "Display column names"),
+                  value = FALSE
+                )
+              ),
+              column(
+                6,
+                checkboxInput(
+                  "show_row_names",
+                  tags$span(style = "white-space:nowrap; font-size:12px;", "Display row names"),
+                  value = FALSE
+                )
+              )
+            ),
+            sliderInput(
+              "column_title_size",
+              "Font size of column title",
+              min = 0, max = 20, value = 8, step = 1
+            ),
+            fluidRow(
+              column(
+                6,
+                numericInput(
+                  "pdf_width",
+                  "PDF width (inch)",
+                  value = 7, min = 3, step = 1
+                )
+              ),
+              column(
+                6,
+                numericInput(
+                  "pdf_height",
+                  "PDF height (inch)",
+                  value = 7, min = 3, step = 1
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+    div(
+      style = "margin-top:10px; text-align:right;",
+      actionButton("confirm_params", "Plot heatmap", class = "btn-primary")
     )
   )
 }

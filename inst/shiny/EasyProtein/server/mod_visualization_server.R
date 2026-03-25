@@ -127,6 +127,11 @@ mod_visualization_server <- function(input, output, session) {
     paste0(".", tag)
   })
 
+  enrich_type_tag <- reactive({
+    req(go_table_info())
+    toupper(go_table_info()$table_type)
+  })
+
 
   output$GO_enrich_plot1 <- renderPlot({
     req(go_df())
@@ -155,13 +160,13 @@ mod_visualization_server <- function(input, output, session) {
 
 
   output$down_GO_pdf_style1 <- renderUI({
-    req(go_df())
-    downloadButton("dl_go_style1", "Download PDF")
+    req(go_table_info())
+    downloadButton("dl_go_style1", paste0("Download ", enrich_type_tag(), " PDF"))
   })
 
   output$down_GO_pdf_style2 <- renderUI({
-    req(go_df())
-    downloadButton("dl_go_style2", "Download PDF")
+    req(go_table_info())
+    downloadButton("dl_go_style2", paste0("Download ", enrich_type_tag(), " PDF"))
   })
 
 
@@ -173,7 +178,7 @@ mod_visualization_server <- function(input, output, session) {
       group_by = input$go_group_by
     ),
     input       = input,
-    suffix      = function() paste0("GO_style1", go_entry_suffix_tag()),
+    suffix      = function() paste0(enrich_type_tag(), "_style1", go_entry_suffix_tag()),
     width       = function() input$go_plot_width  / 100,
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"
@@ -188,7 +193,7 @@ mod_visualization_server <- function(input, output, session) {
       x_axis = input$go_x_axis
     ),
     input       = input,
-    suffix      = function() paste0("GO_style2", go_entry_suffix_tag()),
+    suffix      = function() paste0(enrich_type_tag(), "_style2", go_entry_suffix_tag()),
     width       = function() input$go_plot_width  / 100,
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"

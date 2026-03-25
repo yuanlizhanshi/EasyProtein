@@ -968,9 +968,9 @@ ui <- {
                                    width = 4,
                                    div(
                                      class = "ep-card",
-                                     div(class = "ep-card-title", "GO plot controls"),
-                                     div(class = "ep-card-subtitle", "Upload GO results and adjust label wrapping, top term count, and export dimensions."),
-                                     fileInput("go_file", "Upload GO results (Excel)", accept = c(".xlsx", ".xls")),
+                                     div(class = "ep-card-title", "GO & KEGG plot controls"),
+                                     div(class = "ep-card-subtitle", "Upload GO/KEGG results and adjust label wrapping, top term count, and export dimensions."),
+                                     fileInput("go_file", "Upload GO/KEGG results (Excel)", accept = c(".xlsx", ".xls")),
                                      uiOutput("go_entry_selector_ui"),
                                      selectInput(
                                        "go_group_by",

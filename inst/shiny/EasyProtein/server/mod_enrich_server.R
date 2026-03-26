@@ -11,6 +11,56 @@ mod_enrich_server <- function(input, output, session) {
   # ----------------------------------------
   enriched_data <- reactiveVal(NULL)
   rv <- reactiveValues(latest_url = NULL)
+
+  sanitize_filename_part <- function(x) {
+    x <- as.character(x)[1]
+    x <- trimws(x)
+    if (!nzchar(x)) return(NA_character_)
+    x <- gsub("[\\\\/:*?\"<>|]", "_", x)
+    x <- gsub("\\s+", "_", x)
+    x <- gsub("_+", "_", x)
+    x <- gsub("^_+|_+$", "", x)
+    if (!nzchar(x)) return(NA_character_)
+    x
+  }
+
+  build_enrich_filename <- function(upload_input,
+                                    analysis_label,
+                                    include_group = TRUE,
+                                    extra_parts = NULL) {
+    base <- tools::file_path_sans_ext(basename(upload_input$name))
+    base <- sanitize_filename_part(base)
+    if (is.na(base)) base <- "enrichment_input"
+
+    parts <- c(base)
+
+    if (isTRUE(include_group) && !is.null(input$group_col) && !identical(input$group_col, "None")) {
+      grp_col <- sanitize_filename_part(input$group_col)
+      if (!is.na(grp_col)) parts <- c(parts, paste0("groupCol-", grp_col))
+
+      grp_val <- input$group_value
+      grp_val <- sanitize_filename_part(grp_val)
+      if (!is.na(grp_val)) parts <- c(parts, paste0("group-", grp_val))
+    }
+
+    if (isTRUE(include_group) && !is.null(input$gene_col)) {
+      gene_col_tag <- sanitize_filename_part(input$gene_col)
+      if (!is.na(gene_col_tag)) parts <- c(parts, paste0("geneCol-", gene_col_tag))
+    }
+
+    if (!is.null(extra_parts) && length(extra_parts) > 0) {
+      extra_parts <- as.character(extra_parts)
+      extra_parts <- vapply(extra_parts, sanitize_filename_part, character(1))
+      extra_parts <- extra_parts[!is.na(extra_parts) & nzchar(extra_parts)]
+      parts <- c(parts, extra_parts)
+    }
+
+    label <- sanitize_filename_part(analysis_label)
+    if (!is.na(label)) parts <- c(parts, label)
+
+    parts <- c(parts, format(Sys.Date(), "%Y%m%d"))
+    paste0(paste(parts, collapse = "_"), ".xlsx")
+  }
   
   # =====================================================
   #                GO enrichment
@@ -64,7 +114,14 @@ mod_enrich_server <- function(input, output, session) {
   })
   
   output$download_enrich_data <- downloadHandler(
-    filename = function() paste0("GO_enriched_results_", Sys.Date(), ".xlsx"),
+    filename = function() {
+      req(input$enrich_upload_GO)
+      build_enrich_filename(
+        input$enrich_upload_GO,
+        "GO_enrichment_analysis",
+        include_group = TRUE
+      )
+    },
     content = function(file) writexl::write_xlsx(go_enrich_res(), file)
   )
   
@@ -117,7 +174,14 @@ mod_enrich_server <- function(input, output, session) {
   })
   
   output$download_kegg_enrich_data <- downloadHandler(
-    filename = function() paste0("KEGG_enriched_results_", Sys.Date(), ".xlsx"),
+    filename = function() {
+      req(input$enrich_upload_KEGG)
+      build_enrich_filename(
+        input$enrich_upload_KEGG,
+        "KEGG_enrichment_analysis",
+        include_group = TRUE
+      )
+    },
     content = function(file) writexl::write_xlsx(kegg_enrich_res(), file)
   )
   
@@ -173,7 +237,18 @@ mod_enrich_server <- function(input, output, session) {
   })
   
   output$download_gse_go_enrich_data <- downloadHandler(
-    filename = function() paste0("GSEA_GO_enriched_results_", Sys.Date(), ".xlsx"),
+    filename = function() {
+      req(input$enrich_upload_gse_GO)
+      build_enrich_filename(
+        input$enrich_upload_gse_GO,
+        "GSEA_GO_enrichment_analysis",
+        include_group = FALSE,
+        extra_parts = c(
+          paste0("geneCol-", input$gse_GO_gene_col),
+          paste0("statCol-", input$logFC_col)
+        )
+      )
+    },
     content = function(file) writexl::write_xlsx(gse_GO_enrich_res(), file)
   )
   
@@ -229,7 +304,18 @@ mod_enrich_server <- function(input, output, session) {
   })
   
   output$download_gse_KEGG_enrich_data <- downloadHandler(
-    filename = function() paste0("GSEA_KEGG_enriched_results_", Sys.Date(), ".xlsx"),
+    filename = function() {
+      req(input$enrich_upload_gse_kegg)
+      build_enrich_filename(
+        input$enrich_upload_gse_kegg,
+        "GSEA_KEGG_enrichment_analysis",
+        include_group = FALSE,
+        extra_parts = c(
+          paste0("geneCol-", input$gse_GO_gene_col),
+          paste0("statCol-", input$logFC_col)
+        )
+      )
+    },
     content = function(file) writexl::write_xlsx(gse_KEGG_enrich_res(), file)
   )
   

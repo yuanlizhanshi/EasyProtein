@@ -2,20 +2,55 @@
 % Please edit documentation in R/utils.R
 \name{calc_gene_CV_by_condition}
 \alias{calc_gene_CV_by_condition}
-\title{Calculate coefficient of variation (CV) for each gene per condition}
+\title{Calculate coefficient of variation (CV) for each feature within each condition}
 \usage{
-calc_gene_CV_by_condition(se, assay_name = "conc", condition_col = "condition")
+calc_gene_CV_by_condition(
+  se,
+  assay_name = "conc",
+  condition_col = "condition",
+  na_rm = TRUE
+)
 }
 \arguments{
-\item{se}{SummarizedExperiment object.}
+\item{se}{A \code{SummarizedExperiment} object.}
 
-\item{assay_name}{Assay used for CV calculation (default "conc").}
+\item{assay_name}{A character scalar specifying which assay in \code{se}
+should be used for CV calculation. Default is \code{"conc"}.}
 
-\item{condition_col}{Column in colData(se) defining conditions.}
+\item{condition_col}{A character scalar specifying the column name in
+\code{colData(se)} that defines sample conditions.}
+
+\item{na_rm}{Logical, whether missing values should be removed when
+calculating means and standard deviations. Default is \code{TRUE}.}
 }
 \value{
-A data.frame containing CV values for each gene per condition.
+A \code{data.frame} with one row per feature-condition pair and
+  the following columns:
+  \describe{
+    \item{feature}{Feature name, taken from \code{rownames(se)}.}
+    \item{condition}{Condition label from \code{colData(se)}. The actual
+    column name in the returned data frame will match \code{condition_col}.}
+    \item{mean_val}{Mean value of the feature within the condition.}
+    \item{sd_val}{Standard deviation of the feature within the condition.}
+    \item{CV}{Coefficient of variation, calculated as
+    \code{sd_val / mean_val}.}
+    \item{n}{Number of non-missing observations used in the calculation.}
+  }
+
+If every sample belongs to a unique condition, the function returns
+\code{NULL}, because CV is not meaningful without replication.
 }
 \description{
-Calculate coefficient of variation (CV) for each gene per condition
+Computes the mean, standard deviation, coefficient of variation (CV),
+and number of non-missing observations for each feature (for example,
+gene or protein) within each condition defined in \code{colData(se)}.
+}
+\details{
+This implementation works directly on the assay matrix and is typically
+much faster and more memory-efficient than reshaping the assay into a
+long-format data frame before summarisation.
+}
+\examples{
+# cv_df <- calc_gene_CV_by_condition_V2(se_obj$se)
+
 }

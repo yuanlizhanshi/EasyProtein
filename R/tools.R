@@ -754,7 +754,7 @@ enrichment_analysis <- function(
     species       = c("human", "mouse"),
     keyType       = "SYMBOL",
     qvalue_cutoff = 0.05,
-  use_internal_data = TRUE
+    use_internal_data = TRUE
 ){
   ## -------------------------------
   ## Argument processing

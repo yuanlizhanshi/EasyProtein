@@ -52,7 +52,7 @@ reference:
   - plotSE_missing_value
   - plotSE_protein_number
   - plot_gene_expression
-  - plot_GO_dot1
+  - ".parse_ratio_to_numeric"
   - plot_GO_dot2
   - plot_GO_dot3
   - plot_FC_trend

@@ -165,8 +165,51 @@ top_hits <- deg_res %>%
 head(top_hits, 20)
 ```
 
-## 8. Save results (optional)
+## 8. GO and KEGG enrichment (table output only)
+
+Here we use significant DE proteins (`adj.P.Val <= 0.05`) for over-representation
+analysis. We only return result tables (no plotting).
+
+```{r enrich-table}
+deg_sig_genes <- deg_res %>%
+  dplyr::filter(adj.P.Val <= 0.05, DEGs_types %in% c("UP", "DOWN")) %>%
+  dplyr::pull(gene) %>%
+  unique()
+
+length(deg_sig_genes)
+
+if (!requireNamespace("clusterProfiler", quietly = TRUE) ||
+           !requireNamespace("org.Mm.eg.db", quietly = TRUE)) {
+  message("Please install 'clusterProfiler' and 'org.Mm.eg.db' to run enrichment.")
+
+} else {
+  go_res <- enrichment_analysis(
+    gene = deg_sig_genes,
+    db = "GO",
+    species = "mouse",
+    keyType = "SYMBOL",
+    qvalue_cutoff = 0.05
+  )
+
+  kegg_res <- enrichment_analysis(
+    gene = deg_sig_genes,
+    db = "KEGG",
+    species = "mouse",
+    keyType = "SYMBOL",
+    qvalue_cutoff = 0.05,
+    use_internal_data = TRUE #Select false will using online data
+  )
+}
+
+# tables only
+head(go_res, 20)
+head(kegg_res, 20)
+```
+
+## 9. Save results (optional)
 
 ```{r save-results, eval=FALSE}
 write.csv(deg_res, "Liver_male_1w_vs_8w_DEGs.csv", row.names = FALSE)
+write.csv(go_res, "Liver_male_1w_vs_8w_GO.csv", row.names = FALSE)
+write.csv(kegg_res, "Liver_male_1w_vs_8w_KEGG.csv", row.names = FALSE)
 ```

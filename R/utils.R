@@ -536,13 +536,43 @@ get_turning_point <- function(vec, fluctuate = 0.05) {
   return(length(turning_point_index))
 }
 
-#' Calculate coefficient of variation (CV) for each gene per condition
+#' Calculate coefficient of variation (CV) for each feature within each condition
 #'
-#' @param se SummarizedExperiment object.
-#' @param assay_name Assay used for CV calculation (default "conc").
-#' @param condition_col Column in colData(se) defining conditions.
+#' Computes the mean, standard deviation, coefficient of variation (CV),
+#' and number of non-missing observations for each feature (for example,
+#' gene or protein) within each condition defined in \code{colData(se)}.
 #'
-#' @return A data.frame containing CV values for each gene per condition.
+#' This implementation works directly on the assay matrix and is typically
+#' much faster and more memory-efficient than reshaping the assay into a
+#' long-format data frame before summarisation.
+#'
+#' @param se A \code{SummarizedExperiment} object.
+#' @param assay_name A character scalar specifying which assay in \code{se}
+#'   should be used for CV calculation. Default is \code{"conc"}.
+#' @param condition_col A character scalar specifying the column name in
+#'   \code{colData(se)} that defines sample conditions.
+#' @param na_rm Logical, whether missing values should be removed when
+#'   calculating means and standard deviations. Default is \code{TRUE}.
+#'
+#' @return A \code{data.frame} with one row per feature-condition pair and
+#'   the following columns:
+#'   \describe{
+#'     \item{feature}{Feature name, taken from \code{rownames(se)}.}
+#'     \item{condition}{Condition label from \code{colData(se)}. The actual
+#'     column name in the returned data frame will match \code{condition_col}.}
+#'     \item{mean_val}{Mean value of the feature within the condition.}
+#'     \item{sd_val}{Standard deviation of the feature within the condition.}
+#'     \item{CV}{Coefficient of variation, calculated as
+#'     \code{sd_val / mean_val}.}
+#'     \item{n}{Number of non-missing observations used in the calculation.}
+#'   }
+#'
+#' If every sample belongs to a unique condition, the function returns
+#' \code{NULL}, because CV is not meaningful without replication.
+#'
+#' @examples
+#' # cv_df <- calc_gene_CV_by_condition_V2(se_obj$se)
+#'
 #' @export
 
 
@@ -550,49 +580,68 @@ get_turning_point <- function(vec, fluctuate = 0.05) {
 calc_gene_CV_by_condition <- function(
     se,
     assay_name = "conc",
-    condition_col = "condition"
+    condition_col = "condition",
+    na_rm = TRUE
 ) {
+  stopifnot(assay_name %in% SummarizedExperiment::assayNames(se))
+  stopifnot(condition_col %in% colnames(SummarizedExperiment::colData(se)))
 
-  stopifnot(assay_name %in% assayNames(se))
-  stopifnot(condition_col %in% colnames(colData(se)))
+  cond <- SummarizedExperiment::colData(se)[[condition_col]]
 
   ## CV is not meaningful if each sample is its own condition
-  if (length(unique(colData(se)[[condition_col]])) == ncol(se)) {
+  if (length(unique(cond)) == ncol(se)) {
     return(NULL)
   }
 
-  mtx  <- assay(se, assay_name)
-  meta <- as.data.frame(colData(se))
+  mat <- SummarizedExperiment::assay(se, assay_name)
+  feature_names <- rownames(se)
+  if (is.null(feature_names)) {
+    feature_names <- seq_len(nrow(mat))
+  }
 
-  ## Convert assay matrix to long format
-  df_long <- as.data.frame(mtx) %>%
-    tibble::rownames_to_column("feature") %>%
-    tidyr::pivot_longer(
-      cols = -feature,
-      names_to = "sample_name",
-      values_to = "value"
-    ) %>%
-    dplyr::left_join(
-      meta %>% tibble::rownames_to_column("sample_name"),
-      by = "sample_name"
+  cond <- as.character(cond)
+  cond_levels <- unique(cond)
+  idx_list <- split(seq_along(cond), cond)
+
+  ## use matrixStats if available for much better speed
+  has_matrixStats <- requireNamespace("matrixStats", quietly = TRUE)
+
+  res_list <- lapply(cond_levels, function(cc) {
+    idx <- idx_list[[cc]]
+    submat <- mat[, idx, drop = FALSE]
+
+    if (has_matrixStats) {
+      mean_val <- matrixStats::rowMeans2(submat, na.rm = na_rm)
+      sd_val   <- matrixStats::rowSds(submat, na.rm = na_rm)
+      n_val    <- rowSums(!is.na(submat))
+    } else {
+      mean_val <- rowMeans(submat, na.rm = na_rm)
+      sd_val   <- apply(submat, 1, sd, na.rm = na_rm)
+      n_val    <- rowSums(!is.na(submat))
+    }
+
+    cv_val <- sd_val / mean_val
+    cv_val[mean_val == 0] <- NA_real_
+
+    data.frame(
+      feature = feature_names,
+      condition = cc,
+      mean_val = mean_val,
+      sd_val = sd_val,
+      CV = cv_val,
+      n = n_val,
+      stringsAsFactors = FALSE
     )
+  })
 
-  ## Calculate CV per feature per condition
-  cv_df <- df_long %>%
-    dplyr::group_by(
-      feature,
-      !!rlang::sym(condition_col)
-    ) %>%
-    dplyr::summarise(
-      mean_val = mean(value, na.rm = TRUE),
-      sd_val   = sd(value, na.rm = TRUE),
-      CV       = sd_val / mean_val,
-      n        = sum(!is.na(value)),
-      .groups  = "drop"
-    )
+  out <- do.call(rbind, res_list)
 
-  return(cv_df)
+  ## rename condition column back to user-specified name
+  colnames(out)[colnames(out) == "condition"] <- condition_col
+  rownames(out) <- NULL
+  out
 }
+
 
 
 #' Calculate mean expression per gene per condition

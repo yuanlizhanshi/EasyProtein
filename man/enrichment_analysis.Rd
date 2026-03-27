@@ -10,7 +10,7 @@ enrichment_analysis(
   species = c("human", "mouse"),
   keyType = "SYMBOL",
   qvalue_cutoff = 0.05,
-  use_internal_data = FALSE
+  use_internal_data = TRUE
 )
 }
 \arguments{

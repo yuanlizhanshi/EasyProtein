@@ -4,7 +4,13 @@
 \alias{plot_GO_dot3}
 \title{Dot plot for GO/Pathway output (style 3, generic)}
 \usage{
-plot_GO_dot3(GO_df, topn = 10, label_format = 30)
+plot_GO_dot3(
+  GO_df,
+  topn = 10,
+  label_format = 30,
+  x_axis = c("observed_gene_count", "background_gene_count", "strength", "gene_ratio",
+    "genes_mapped", "enrichment_score")
+)
 }
 \arguments{
 \item{GO_df}{A generic enrichment result table.}
@@ -12,11 +18,15 @@ plot_GO_dot3(GO_df, topn = 10, label_format = 30)
 \item{topn}{Number of terms.}
 
 \item{label_format}{Width for wrapping labels.}
+
+\item{x_axis}{X-axis metric. One of
+\code{"observed_gene_count"}, \code{"background_gene_count"},
+\code{"strength"}, \code{"gene_ratio"},
+\code{"genes_mapped"}, \code{"enrichment_score"}.}
 }
 \value{
 A ggplot object.
 }
 \description{
-A flexible dot plot for enrichment tables containing terms such as:
-"term description", "enrichment score", "false discovery rate".
+A flexible dot plot for STRING/Pathway enrichment tables.
 }

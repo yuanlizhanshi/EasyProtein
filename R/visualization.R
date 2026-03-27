@@ -894,12 +894,15 @@ plot_GO_dot2 <- function(
 
 #' Dot plot for GO/Pathway output (style 3, generic)
 #'
-#' A flexible dot plot for enrichment tables containing terms such as:
-#' "term description", "enrichment score", "false discovery rate".
+#' A flexible dot plot for STRING/Pathway enrichment tables.
 #'
 #' @param GO_df A generic enrichment result table.
 #' @param topn Number of terms.
 #' @param label_format Width for wrapping labels.
+#' @param x_axis X-axis metric. One of
+#'   \code{"observed_gene_count"}, \code{"background_gene_count"},
+#'   \code{"strength"}, \code{"gene_ratio"},
+#'   \code{"genes_mapped"}, \code{"enrichment_score"}.
 #'
 #' @return A ggplot object.
 #'
@@ -908,23 +911,87 @@ plot_GO_dot2 <- function(
 #' @importFrom stringr str_wrap
 #'
 #' @export
-plot_GO_dot3 <- function(GO_df, topn = 10, label_format = 30){
-  go_res2 <- GO_df %>%
-    mutate(FDR = -log10(`false discovery rate`)) %>%
+plot_GO_dot3 <- function(
+    GO_df,
+    topn = 10,
+    label_format = 30,
+  x_axis = c("observed_gene_count", "background_gene_count", "strength", "gene_ratio",
+         "genes_mapped", "enrichment_score")
+){
+  x_axis <- match.arg(x_axis)
+
+  norm_name <- function(x) tolower(gsub("[^a-z0-9]", "", x))
+  pick_col <- function(df, aliases) {
+    nms <- names(df)
+    idx <- match(norm_name(aliases), norm_name(nms))
+    idx <- idx[!is.na(idx)]
+    if (!length(idx)) return(NA_character_)
+    nms[idx[1]]
+  }
+
+  col_desc <- pick_col(GO_df, c("term description", "Description", "description"))
+  col_fdr  <- pick_col(GO_df, c("false discovery rate", "p.adjust", "FDR"))
+  col_obs  <- pick_col(GO_df, c("observed gene count", "observed_gene_count", "genes mapped", "Count"))
+  col_bg   <- pick_col(GO_df, c("background gene count", "background_gene_count"))
+  col_strength <- pick_col(GO_df, c("strength", "strength signal", "enrichment score"))
+
+  if (is.na(col_desc) || is.na(col_fdr) || is.na(col_obs)) {
+    stop("GO_df must contain description, false discovery rate and observed gene count columns.")
+  }
+
+  df <- GO_df
+  df$description_txt <- as.character(df[[col_desc]])
+  df$fdr_value <- suppressWarnings(as.numeric(df[[col_fdr]]))
+  df$observed_gene_count <- suppressWarnings(as.numeric(df[[col_obs]]))
+  df$background_gene_count <- if (is.na(col_bg)) NA_real_ else suppressWarnings(as.numeric(df[[col_bg]]))
+  df$strength_value <- if (is.na(col_strength)) NA_real_ else suppressWarnings(as.numeric(df[[col_strength]]))
+  df$gene_ratio <- ifelse(
+    is.na(df$background_gene_count) | df$background_gene_count == 0,
+    NA_real_,
+    df$observed_gene_count / df$background_gene_count
+  )
+  df$FDR <- -log10(df$fdr_value)
+
+  x_col <- switch(
+    x_axis,
+    observed_gene_count = "observed_gene_count",
+    background_gene_count = "background_gene_count",
+    strength = "strength_value",
+    gene_ratio = "gene_ratio",
+    genes_mapped = "observed_gene_count",
+    enrichment_score = "strength_value"
+  )
+
+  df <- df[is.finite(df$FDR) & is.finite(df[[x_col]]) & is.finite(df$observed_gene_count), , drop = FALSE]
+  if (!nrow(df)) {
+    stop("No valid rows available for selected x_axis: ", x_axis)
+  }
+
+  go_res2 <- df %>%
     arrange(desc(FDR)) %>%
-    slice_head(n = topn) %>%
-    mutate(Count = `genes mapped`)
+    slice_head(n = topn)
+
+  x_lab <- switch(
+    x_axis,
+    observed_gene_count = "Observed gene count",
+    background_gene_count = "Background gene count",
+    strength = "Strength",
+    gene_ratio = "Gene ratio",
+    genes_mapped = "Genes mapped",
+    enrichment_score = "Enrichment score"
+  )
 
   ggplot(
     go_res2,
     aes(
-      x = `enrichment score`,
-      y = reorder(`term description`, `enrichment score`),
-      color = FDR, size = Count
+      x = .data[[x_col]],
+      y = reorder(description_txt, .data[[x_col]]),
+      color = FDR,
+      size = observed_gene_count
     )
   ) +
     geom_point() +
-    labs(x = "GeneRatio", y = NULL) +
+    labs(x = x_lab, y = NULL) +
     scale_color_gradient(low = "blue", high = "red", name = "-log10(FDR)") +
     theme_test() +
     guides(size  = guide_legend(order = 2),

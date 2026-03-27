@@ -4,7 +4,13 @@
 \alias{plot_GO_dot2}
 \title{Dot plot for GO enrichment (style 2)}
 \usage{
-plot_GO_dot2(GO_df, topn = 10, label_format = 30)
+plot_GO_dot2(
+  GO_df,
+  topn = 10,
+  label_format = 30,
+  group_by = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count"),
+  x_axis = c("gene_ratio", "RichFactor")
+)
 }
 \arguments{
 \item{GO_df}{A GO enrichment result data frame.}
@@ -12,6 +18,13 @@ plot_GO_dot2(GO_df, topn = 10, label_format = 30)
 \item{topn}{Number of GO terms.}
 
 \item{label_format}{Width for wrapped labels.}
+
+\item{group_by}{Metric used to choose topN terms. One of
+\code{"-log10(p.adjust)"}, \code{"GeneRatio"}, \code{"RichFactor"},
+\code{"Count"}. Default is \code{"-log10(p.adjust)"}.}
+
+\item{x_axis}{X-axis metric for dotplot. One of \code{"gene_ratio"}
+or \code{"RichFactor"}. Default is \code{"gene_ratio"}.}
 }
 \value{
 A ggplot object.

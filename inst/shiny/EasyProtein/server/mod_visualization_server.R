@@ -199,7 +199,7 @@ mod_visualization_server <- function(input, output, session) {
     input_field = "go_file"
   )
   #string
-  string_go_df <- reactive({
+  string_table_info <- reactive({
     req(input$string_go_file)
     ext <- tools::file_ext(input$string_go_file$name)
     df <- switch(tolower(ext),
@@ -209,17 +209,167 @@ mod_visualization_server <- function(input, output, session) {
                  stop("Only .tsv/.xls/.xlsx are supported")
     )
 
-    need_cols <- c("false discovery rate", "genes mapped", "term description", "enrichment score")
-    validate(
-      need(all(need_cols %in% names(df)),
-           paste("Missing columns in file:", paste(setdiff(need_cols, names(df)), collapse = ", "))
-      )
+    norm_name <- function(x) tolower(gsub("[^a-z0-9]", "", x))
+    pick_col <- function(df0, aliases) {
+      nms <- names(df0)
+      idx <- match(norm_name(aliases), norm_name(nms))
+      idx <- idx[!is.na(idx)]
+      if (!length(idx)) return(NA_character_)
+      nms[idx[1]]
+    }
+
+    desc_col <- pick_col(df, c("term description", "Description", "description"))
+    fdr_col  <- pick_col(df, c("false discovery rate", "p.adjust", "FDR"))
+    obs_col  <- pick_col(df, c("observed gene count", "observed_gene_count", "genes mapped", "Count"))
+    validate(need(!is.na(desc_col) && !is.na(fdr_col) && !is.na(obs_col),
+                  "Missing required columns: description / false discovery rate / observed gene count."))
+
+    cat_col <- pick_col(df, c("#category", "category"))
+    direction_col <- pick_col(df, c("direction"))
+    bg_col <- pick_col(df, c("background gene count", "background_gene_count"))
+    strength_col <- pick_col(df, c("strength", "strength signal", "enrichment score"))
+    if (!is.na(cat_col)) {
+      cat_vals <- unique(as.character(df[[cat_col]]))
+      cat_vals <- cat_vals[!is.na(cat_vals) & trimws(cat_vals) != ""]
+      cat_vals <- sort(cat_vals)
+    } else {
+      cat_vals <- character(0)
+    }
+
+    if (!is.na(direction_col)) {
+      has_direction <- TRUE
+    } else {
+      has_direction <- FALSE
+    }
+
+    list(
+      df = df,
+      category_col = cat_col,
+      category_choices = c("All", cat_vals),
+      direction_col = direction_col,
+      has_direction = has_direction,
+      has_background = !is.na(bg_col),
+      has_strength = !is.na(strength_col)
     )
+  })
+
+  output$string_category_selector_ui <- renderUI({
+    req(string_table_info())
+    info <- string_table_info()
+    selectInput(
+      inputId = "string_category_choice",
+      label = "Select category",
+      choices = info$category_choices,
+      selected = "All"
+    )
+  })
+
+  output$string_direction_selector_ui <- renderUI({
+    req(string_table_info())
+    info <- string_table_info()
+    if (!isTRUE(info$has_direction)) return(NULL)
+
+    selectInput(
+      inputId = "string_direction_choice",
+      label = "Select direction",
+      choices = c("Both end", "top", "bottom"),
+      selected = "Both end"
+    )
+  })
+
+  output$string_x_axis_selector_ui <- renderUI({
+    req(string_table_info())
+    info <- string_table_info()
+
+    if (!is.na(info$direction_col)) {
+      choices <- c(
+        "Genes mapped" = "genes_mapped",
+        "Enrichment score" = "enrichment_score"
+      )
+      selected <- "genes_mapped"
+    } else {
+      choices <- c("Observed gene count" = "observed_gene_count")
+      if (isTRUE(info$has_background)) {
+        choices <- c(
+          choices,
+          "Background gene count" = "background_gene_count",
+          "Gene ratio (observed/background)" = "gene_ratio"
+        )
+      }
+      if (isTRUE(info$has_strength)) {
+        choices <- c(choices, "Strength" = "strength")
+      }
+      selected <- if ("gene_ratio" %in% choices) "gene_ratio" else unname(choices[1])
+    }
+
+    selectInput(
+      inputId = "string_go_x_axis",
+      label = "Dotplot X axis",
+      choices = choices,
+      selected = selected
+    )
+  })
+
+  string_go_df <- reactive({
+    req(string_table_info())
+    info <- string_table_info()
+    df <- info$df
+
+    norm_key <- function(x) {
+      x <- as.character(x)
+      x <- trimws(x)
+      tolower(gsub("[^a-z0-9]", "", x))
+    }
+
+    if (!is.na(info$category_col) && !is.null(input$string_category_choice) && input$string_category_choice != "All") {
+      cat_key <- norm_key(input$string_category_choice)
+      df <- df[norm_key(df[[info$category_col]]) == cat_key, , drop = FALSE]
+    }
+
+    if (isTRUE(info$has_direction) && !is.null(input$string_direction_choice) && nzchar(input$string_direction_choice)) {
+      dir_key <- norm_key(input$string_direction_choice)
+      # Both end behaves like ALL (no direction filtering)
+      if (dir_key %in% c("top", "bottom")) {
+        df <- df[norm_key(df[[info$direction_col]]) == dir_key, , drop = FALSE]
+      }
+    }
+
+    validate(need(nrow(df) > 0, "No STRING terms left after category/direction filtering."))
     df
   })
+
+  string_param_suffix_tag <- reactive({
+    clean_tag <- function(x) {
+      x <- as.character(x)[1]
+      x <- toupper(trimws(x))
+      x <- gsub("[^A-Z0-9]+", "_", x)
+      x <- gsub("^_+|_+$", "", x)
+      if (!nzchar(x)) x <- "ALL"
+      x
+    }
+
+    cat_tag <- clean_tag(if (is.null(input$string_category_choice)) "All" else input$string_category_choice)
+
+    if (is.null(input$string_direction_choice) || !nzchar(input$string_direction_choice)) {
+      dir_raw <- "Both end"
+    } else {
+      dir_raw <- input$string_direction_choice
+    }
+    dir_tag <- clean_tag(dir_raw)
+
+    x_tag <- clean_tag(if (is.null(input$string_go_x_axis)) "NA" else input$string_go_x_axis)
+
+    paste0(".", cat_tag, ".", dir_tag, ".", x_tag)
+  })
+
   output$GO_enrich_plot3 <- renderPlot({
     req(string_go_df())
-    plot_GO_dot3(string_go_df(), topn = input$string_go_go_topn, label_format = input$string_go_go_label_width)
+    plot_GO_dot3(
+      string_go_df(),
+      topn = input$string_go_go_topn,
+      label_format = input$string_go_go_label_width,
+      x_axis = input$string_go_x_axis
+    )
   },
   height = function() input$string_go_plot_height,
   width = function() input$string_go_width)
@@ -230,9 +380,14 @@ mod_visualization_server <- function(input, output, session) {
     downloadButton("dl_go_style3", "Download PDF")
   })
   output$dl_go_style3 <- make_download_pdf(
-    plot_expr   = function() plot_GO_dot3(string_go_df(), topn = input$string_go_go_topn, label_format = input$string_go_go_label_width),
+    plot_expr   = function() plot_GO_dot3(
+      string_go_df(),
+      topn = input$string_go_go_topn,
+      label_format = input$string_go_go_label_width,
+      x_axis = input$string_go_x_axis
+    ),
     input       = input,
-    suffix      = "string_enrichment",
+    suffix      = function() paste0("STRING_enrichment", string_param_suffix_tag()),
     width       = function() input$string_go_width  / 100,
     height      = function() input$string_go_plot_height / 100,
     input_field = "string_go_file"

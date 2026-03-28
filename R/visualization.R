@@ -915,9 +915,12 @@ plot_GO_dot3 <- function(
     GO_df,
     topn = 10,
     label_format = 30,
+  group_by = c("fdr", "observed_gene_count", "background_gene_count", "strength", "gene_ratio",
+               "genes_mapped", "enrichment_score"),
   x_axis = c("observed_gene_count", "background_gene_count", "strength", "gene_ratio",
          "genes_mapped", "enrichment_score")
 ){
+  group_by <- match.arg(group_by)
   x_axis <- match.arg(x_axis)
 
   norm_name <- function(x) tolower(gsub("[^a-z0-9]", "", x))
@@ -962,13 +965,31 @@ plot_GO_dot3 <- function(
     enrichment_score = "strength_value"
   )
 
-  df <- df[is.finite(df$FDR) & is.finite(df[[x_col]]) & is.finite(df$observed_gene_count), , drop = FALSE]
+  score_col <- switch(
+    group_by,
+    fdr = "FDR",
+    observed_gene_count = "observed_gene_count",
+    background_gene_count = "background_gene_count",
+    strength = "strength_value",
+    gene_ratio = "gene_ratio",
+    genes_mapped = "observed_gene_count",
+    enrichment_score = "strength_value"
+  )
+
+  df <- df[
+    is.finite(df$FDR) &
+      is.finite(df[[x_col]]) &
+      is.finite(df$observed_gene_count) &
+      is.finite(df[[score_col]]),
+    ,
+    drop = FALSE
+  ]
   if (!nrow(df)) {
     stop("No valid rows available for selected x_axis: ", x_axis)
   }
 
   go_res2 <- df %>%
-    arrange(desc(FDR)) %>%
+    arrange(desc(.data[[score_col]]), desc(FDR)) %>%
     slice_head(n = topn)
 
   x_lab <- switch(

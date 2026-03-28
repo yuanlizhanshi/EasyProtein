@@ -132,6 +132,34 @@ mod_visualization_server <- function(input, output, session) {
     toupper(go_table_info()$table_type)
   })
 
+  sanitize_pdf_filename <- function(x) {
+    x <- as.character(x)[1]
+    if (is.na(x) || !nzchar(x)) x <- "plot"
+    x <- gsub("[\\\\/:*?\"<>|]", "_", x)
+    x <- gsub("\\s+", " ", trimws(x))
+    if (!nzchar(x)) x <- "plot"
+    x
+  }
+
+  go_pdf_filename <- reactive({
+    req(go_table_info())
+    info <- go_table_info()
+    type_label <- if (identical(info$table_type, "KEGG")) "KEGG" else "GO"
+    entry_label <- if (is.null(input$go_entry_choice) || !nzchar(input$go_entry_choice)) {
+      "All"
+    } else {
+      as.character(input$go_entry_choice)
+    }
+
+    raw_name <- paste0(
+      "Top ", input$go_topn,
+      " terms of ", type_label,
+      " function enrichment plot in ", entry_label,
+      " category"
+    )
+    sanitize_pdf_filename(raw_name)
+  })
+
 
   output$GO_enrich_plot1 <- renderPlot({
     req(go_df())
@@ -179,6 +207,7 @@ mod_visualization_server <- function(input, output, session) {
     ),
     input       = input,
     suffix      = function() paste0(enrich_type_tag(), "_style1", go_entry_suffix_tag()),
+    filename    = function() go_pdf_filename(),
     width       = function() input$go_plot_width  / 100,
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"
@@ -194,6 +223,7 @@ mod_visualization_server <- function(input, output, session) {
     ),
     input       = input,
     suffix      = function() paste0(enrich_type_tag(), "_style2", go_entry_suffix_tag()),
+    filename    = function() go_pdf_filename(),
     width       = function() input$go_plot_width  / 100,
     height      = function() input$go_plot_height / 100,
     input_field = "go_file"
@@ -225,7 +255,7 @@ mod_visualization_server <- function(input, output, session) {
                   "Missing required columns: description / false discovery rate / observed gene count."))
 
     cat_col <- pick_col(df, c("#category", "category"))
-    direction_col <- pick_col(df, c("direction"))
+    direction_col <- pick_col(df, c("direction", "#direction", "enrichment direction", "enrichment_direction"))
     bg_col <- pick_col(df, c("background gene count", "background_gene_count"))
     strength_col <- pick_col(df, c("strength", "strength signal", "enrichment score"))
     if (!is.na(cat_col)) {
@@ -244,6 +274,9 @@ mod_visualization_server <- function(input, output, session) {
 
     list(
       df = df,
+      desc_col = desc_col,
+      fdr_col = fdr_col,
+      obs_col = obs_col,
       category_col = cat_col,
       category_choices = c("All", cat_vals),
       direction_col = direction_col,
@@ -277,7 +310,7 @@ mod_visualization_server <- function(input, output, session) {
     )
   })
 
-  output$string_x_axis_selector_ui <- renderUI({
+  string_metric_choices <- reactive({
     req(string_table_info())
     info <- string_table_info()
 
@@ -286,7 +319,6 @@ mod_visualization_server <- function(input, output, session) {
         "Genes mapped" = "genes_mapped",
         "Enrichment score" = "enrichment_score"
       )
-      selected <- "genes_mapped"
     } else {
       choices <- c("Observed gene count" = "observed_gene_count")
       if (isTRUE(info$has_background)) {
@@ -299,14 +331,32 @@ mod_visualization_server <- function(input, output, session) {
       if (isTRUE(info$has_strength)) {
         choices <- c(choices, "Strength" = "strength")
       }
-      selected <- if ("gene_ratio" %in% choices) "gene_ratio" else unname(choices[1])
     }
+    choices
+  })
+
+  output$string_x_axis_selector_ui <- renderUI({
+    req(string_metric_choices())
+    choices <- string_metric_choices()
+    selected <- if ("gene_ratio" %in% choices) "gene_ratio" else unname(choices[1])
 
     selectInput(
       inputId = "string_go_x_axis",
       label = "Dotplot X axis",
       choices = choices,
       selected = selected
+    )
+  })
+
+  output$string_group_by_selector_ui <- renderUI({
+    req(string_metric_choices())
+    choices <- c("-log10(FDR)" = "fdr", string_metric_choices())
+
+    selectInput(
+      inputId = "string_go_group_by",
+      label = "Top N group_by",
+      choices = choices,
+      selected = "fdr"
     )
   })
 
@@ -334,6 +384,34 @@ mod_visualization_server <- function(input, output, session) {
       }
     }
 
+    # Deduplicate same term label after filtering.
+    # In STRING tables, the same description can appear multiple times
+    # (e.g. different direction/source rows). Keep the most significant one.
+    if (!is.null(info$desc_col) && !is.na(info$desc_col) && info$desc_col %in% names(df)) {
+      desc_key <- as.character(df[[info$desc_col]])
+      desc_key <- gsub("\\s+", " ", trimws(desc_key))
+      desc_key_norm <- tolower(desc_key)
+
+      fdr_val <- if (!is.null(info$fdr_col) && !is.na(info$fdr_col) && info$fdr_col %in% names(df)) {
+        suppressWarnings(as.numeric(df[[info$fdr_col]]))
+      } else {
+        rep(Inf, nrow(df))
+      }
+      fdr_val[!is.finite(fdr_val)] <- Inf
+
+      obs_val <- if (!is.null(info$obs_col) && !is.na(info$obs_col) && info$obs_col %in% names(df)) {
+        suppressWarnings(as.numeric(df[[info$obs_col]]))
+      } else {
+        rep(-Inf, nrow(df))
+      }
+      obs_val[!is.finite(obs_val)] <- -Inf
+
+      ord <- order(fdr_val, -obs_val)
+      df <- df[ord, , drop = FALSE]
+      keep <- !duplicated(desc_key_norm[ord])
+      df <- df[keep, , drop = FALSE]
+    }
+
     validate(need(nrow(df) > 0, "No STRING terms left after category/direction filtering."))
     df
   })
@@ -358,8 +436,40 @@ mod_visualization_server <- function(input, output, session) {
     dir_tag <- clean_tag(dir_raw)
 
     x_tag <- clean_tag(if (is.null(input$string_go_x_axis)) "NA" else input$string_go_x_axis)
+    g_tag <- clean_tag(if (is.null(input$string_go_group_by)) "FDR" else input$string_go_group_by)
 
-    paste0(".", cat_tag, ".", dir_tag, ".", x_tag)
+    paste0(".", cat_tag, ".", dir_tag, ".", g_tag, ".", x_tag)
+  })
+
+  string_pdf_filename <- reactive({
+    req(string_table_info())
+    info <- string_table_info()
+
+    category_label <- if (is.null(input$string_category_choice) || !nzchar(input$string_category_choice)) {
+      "All"
+    } else {
+      as.character(input$string_category_choice)
+    }
+
+    direction_label <- if (is.null(input$string_direction_choice) || !nzchar(input$string_direction_choice)) {
+      "Both end"
+    } else {
+      as.character(input$string_direction_choice)
+    }
+
+    category_with_direction <- if (isTRUE(info$has_direction)) {
+      paste0(category_label, " (", direction_label, ")")
+    } else {
+      category_label
+    }
+
+    raw_name <- paste0(
+      "Top ", input$string_go_go_topn,
+      " terms of String function enrichment plot in ",
+      category_with_direction,
+      " category"
+    )
+    sanitize_pdf_filename(raw_name)
   })
 
   output$GO_enrich_plot3 <- renderPlot({
@@ -368,6 +478,7 @@ mod_visualization_server <- function(input, output, session) {
       string_go_df(),
       topn = input$string_go_go_topn,
       label_format = input$string_go_go_label_width,
+      group_by = if (is.null(input$string_go_group_by)) "fdr" else input$string_go_group_by,
       x_axis = input$string_go_x_axis
     )
   },
@@ -384,10 +495,12 @@ mod_visualization_server <- function(input, output, session) {
       string_go_df(),
       topn = input$string_go_go_topn,
       label_format = input$string_go_go_label_width,
+      group_by = if (is.null(input$string_go_group_by)) "fdr" else input$string_go_group_by,
       x_axis = input$string_go_x_axis
     ),
     input       = input,
     suffix      = function() paste0("STRING_enrichment", string_param_suffix_tag()),
+    filename    = function() string_pdf_filename(),
     width       = function() input$string_go_width  / 100,
     height      = function() input$string_go_plot_height / 100,
     input_field = "string_go_file"

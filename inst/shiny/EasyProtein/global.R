@@ -182,9 +182,20 @@ help_qmark <- function(content,
 
 make_download_pdf <- function(plot_expr, input, suffix = NULL,
                               width = 7, height = 5,
-                              input_field = "se_file") {
+                              input_field = "se_file",
+                              filename = NULL) {
   downloadHandler(
     filename = function() {
+      if (!is.null(filename)) {
+        fname <- if (is.function(filename)) filename() else filename
+        fname <- as.character(fname)[1]
+        if (is.na(fname) || !nzchar(fname)) fname <- "plot"
+        if (!grepl("\\.pdf$", fname, ignore.case = TRUE)) {
+          fname <- paste0(fname, ".pdf")
+        }
+        return(fname)
+      }
+
       base <- tools::file_path_sans_ext(basename(input[[input_field]]$name))
       suffix_val <- if (is.function(suffix)) suffix() else suffix
       suffix_val <- as.character(suffix_val)[1]

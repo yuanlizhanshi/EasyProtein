@@ -1024,6 +1024,7 @@ ui <- {
                                      uiOutput("string_category_selector_ui"),
                                      uiOutput("string_direction_selector_ui"),
                                      uiOutput("string_x_axis_selector_ui"),
+                                     uiOutput("string_group_by_selector_ui"),
                                      sliderInput("string_go_go_topn", "Top N terms", min = 5, max = 50, value = 10, step = 1),
                                      sliderInput("string_go_go_label_width", "Label wrap width", min = 20, max = 80, value = 30, step = 2),
                                      sliderInput("string_go_width", "Plot width (px)", min = 400, max = 1200, value = 600, step = 50),

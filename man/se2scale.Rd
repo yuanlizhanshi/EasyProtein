@@ -10,8 +10,10 @@ se2scale(se)
 \item{se}{A SummarizedExperiment object.}
 }
 \value{
-A data.frame containing rowData and zscale assay.
+se2scale(se, rescale = FALSE)
 }
 \description{
 Convert SummarizedExperiment to z-scaled CPM data.frame
 }
+\item{rescale}{Logical. If \code{TRUE}, recompute zscale from the current
+\code{conc} assay; if \code{FALSE}, use the existing \code{zscale} assay.}

@@ -17,6 +17,30 @@ scale_mtx <- function(mtx) {
   return(new_mtx)
 }
 
+#' Convert data.frame to matrix using first column as row names
+#'
+#' @description
+#' Take the first column of a data.frame as row names and return the
+#' remaining columns as a matrix.
+#'
+#' @param df A data.frame.
+#'
+#' @return A matrix with row names taken from the first column.
+#' @export
+df2mtx <- function(df) {
+  if (!is.data.frame(df)) {
+    stop("df should be a data.frame")
+  }
+  if (ncol(df) < 2) {
+    stop("df must have at least two columns")
+  }
+
+  rn <- df[[1]]
+  mtx <- as.matrix(df[, -1, drop = FALSE])
+  rownames(mtx) <- as.character(rn)
+  return(mtx)
+}
+
 #' Geometric mean
 #'
 #' @description
@@ -175,11 +199,24 @@ se2conc <- function(se, group_by = 'condition') {
 #' Convert SummarizedExperiment to z-scaled CPM data.frame
 #'
 #' @param se A SummarizedExperiment object.
+#' @param rescale Logical. If \code{TRUE}, recompute zscale from the current
+#'   \code{conc} assay; if \code{FALSE}, use the existing \code{zscale} assay.
 #' @return A data.frame containing rowData and zscale assay.
 #' @export
-se2scale <- function(se) {
-  df <- cbind(as.data.frame(rowData(se)),
-              as.data.frame(assay(se, "zscale")))
+se2scale <- function(se, rescale = FALSE) {
+  if (isTRUE(rescale)) {
+    if (!"conc" %in% SummarizedExperiment::assayNames(se)) {
+      stop("Assay 'conc' not found in se.")
+    }
+    zscale_mtx <- scale_mtx(SummarizedExperiment::assay(se, "conc"))
+  } else {
+    if (!"zscale" %in% SummarizedExperiment::assayNames(se)) {
+      stop("Assay 'zscale' not found in se. Set rescale = TRUE to recompute it from 'conc'.")
+    }
+    zscale_mtx <- SummarizedExperiment::assay(se, "zscale")
+  }
+
+  df <- cbind(as.data.frame(rowData(se)), as.data.frame(zscale_mtx))
   return(df)
 }
 

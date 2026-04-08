@@ -734,7 +734,9 @@ auto_cluster_matrix_pca_one <- function(
 #' @param keyType Gene ID type used in \code{gene}, e.g. \code{"SYMBOL"}.
 #' @param qvalue_cutoff Q-value threshold for filtering.
 #' @param use_internal_data whether using internal KEGG data
-#' @return A data frame containing enriched GO/KEGG terms.
+#' @param return_data Logical. If \code{TRUE}, return \code{enriched@result};
+#'   otherwise return the full enrichment result object.
+#' @return A data frame or enrichment result object.
 #'
 #' @details
 #' KEGG analysis automatically converts gene IDs to ENTREZID using
@@ -754,7 +756,8 @@ enrichment_analysis <- function(
     species       = c("human", "mouse"),
     keyType       = "SYMBOL",
     qvalue_cutoff = 0.05,
-    use_internal_data = TRUE
+  use_internal_data = TRUE,
+  return_data = TRUE
 ){
   ## -------------------------------
   ## Argument processing
@@ -852,7 +855,10 @@ enrichment_analysis <- function(
     )
   }
 
-  return(enriched@result)
+  if (isTRUE(return_data)) {
+    return(enriched@result)
+  }
+  return(enriched)
 }
 #' Run GSEA (Gene Set Enrichment Analysis)
 #'

@@ -220,9 +220,17 @@ plot_pca <- function(pca.df, pca.res, colorby, label) {
       axis.title.y = element_text(size = 14, face = "bold")
     )
 
-  if (label == "NULL") {
+  no_label <- is.null(label) || isFALSE(label) || identical(label, "NULL")
+
+  if (no_label) {
     return(base_plot)
   } else {
+    if (!is.character(label) || length(label) != 1 || !nzchar(label)) {
+      stop("'label' must be a column name, FALSE, or 'NULL'.")
+    }
+    if (!label %in% colnames(pca.df)) {
+      stop(paste0("Column '", label, "' not found in pca.df"))
+    }
     return(
       base_plot +
         ggrepel::geom_text_repel(aes_string(label = label))

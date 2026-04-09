@@ -10,7 +10,8 @@ enrichment_analysis(
   species = c("human", "mouse"),
   keyType = "SYMBOL",
   qvalue_cutoff = 0.05,
-  use_internal_data = TRUE
+  use_internal_data = TRUE,
+  return_data = TRUE
 )
 }
 \arguments{
@@ -25,9 +26,12 @@ enrichment_analysis(
 \item{qvalue_cutoff}{Q-value threshold for filtering.}
 
 \item{use_internal_data}{whether using internal KEGG data}
+
+\item{return_data}{Logical. If \code{TRUE}, return \code{enriched@result};
+otherwise return the full enrichment result object.}
 }
 \value{
-A data frame containing enriched GO/KEGG terms.
+A data frame or enrichment result object.
 }
 \description{
 This function performs GO or KEGG enrichment analysis using

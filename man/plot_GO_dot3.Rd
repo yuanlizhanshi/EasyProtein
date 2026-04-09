@@ -8,6 +8,8 @@ plot_GO_dot3(
   GO_df,
   topn = 10,
   label_format = 30,
+  group_by = c("fdr", "observed_gene_count", "background_gene_count", "strength",
+    "gene_ratio", "genes_mapped", "enrichment_score"),
   x_axis = c("observed_gene_count", "background_gene_count", "strength", "gene_ratio",
     "genes_mapped", "enrichment_score")
 )

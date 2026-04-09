@@ -12,7 +12,7 @@ for proteomics workflows.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/yuanlizhanshi/EasyProtein}
+  \item \url{https://yuanlizhanshi.github.io/EasyProtein}
   \item Report bugs at \url{https://github.com/yuanlizhanshi/EasyProtein/issues}
 }
 

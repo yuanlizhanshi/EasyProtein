@@ -28,7 +28,7 @@ reference:
   - se2gene_group
   - se2scale
   - scale_mtx
-
+  - df2mtx
 - title: Analysis
   contents:
   - limma_protein_DE

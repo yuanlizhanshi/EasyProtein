@@ -217,7 +217,7 @@ mod_pattern_server <- function(input, output, session) {
       if (identical(input$row_k, "AUTO")) {
         row_cluster_df <- auto_cluster_matrix_pca_one(intersity_scale, mode = "row")
       } else {
-        rk <- kmeans(intersity_scale, centers = input$row_k, nstart = 1)
+        rk <- kmeans(intersity_scale, centers = as.numeric(input$row_k), nstart = 1)
         row_cluster_df <- tibble::tibble(
           gene = rownames(intersity_scale),
           km_cluster    = paste0('km',rk$cluster)
@@ -251,7 +251,7 @@ mod_pattern_server <- function(input, output, session) {
       if (identical(input$col_k, "AUTO")) {
         col_cluster_df <- auto_cluster_matrix_pca_one(intersity_scale, mode = "col")
       } else {
-        ck <- kmeans(t(intersity_scale), centers = input$col_k, nstart = 1)
+        ck <- kmeans(t(intersity_scale), centers = as.numeric(input$col_k), nstart = 1)
         col_cluster_df <- tibble::tibble(
           gene = colnames(intersity_scale),
           km_cluster    = paste0('km',ck$cluster)

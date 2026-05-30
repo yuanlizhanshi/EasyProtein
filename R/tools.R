@@ -1097,8 +1097,10 @@ get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20, use = c("c
   df <- data.frame(
     gene = rownames(mat),
     value = mat[, pc_name]
-  ) %>%
-    left_join(as.data.frame(rowData(se_obj)),by = 'gene')
+  )
+  if (!is.null(se_obj)) {
+    df <- df %>% left_join(as.data.frame(rowData(se_obj)), by = 'gene')
+  }
 
 
   df <- df[!is.na(df$value), ]

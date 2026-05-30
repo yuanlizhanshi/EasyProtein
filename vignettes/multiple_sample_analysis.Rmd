@@ -1,0 +1,405 @@
+---
+title: "Multiple Sample Analysis with EasyProtein"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Multiple Sample Analysis with EasyProtein}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(EasyProtein)
+  library(tidyverse)
+  library(SummarizedExperiment)
+})
+```
+
+# Multiple Sample Analysis with EasyProtein
+
+## 1. Tutorial metadata
+
+- **Tutorial name**: Multiple Sample Analysis with EasyProtein  
+- **Tutorial type**: Guided workflow for multi-sample proteomics data  
+- **Target audience**: Users working with several conditions and biological replicates  
+- **Primary goal**: Show how to inspect, organize, and understand a multi-sample protein expression dataset before downstream differential analysis  
+- **Expected outcome**: You will learn how to:
+  1. load a proteomics matrix into a standard EasyProtein object
+  2. define sample metadata for multiple conditions and replicates
+  3. perform basic quality control across all samples
+  4. inspect sample relationships and overall structure with PCA
+
+## 2. Load example data and build `SummarizedExperiment`
+
+In a multi-sample workflow, the first task is to bring all samples into a single analysis object so they can be compared consistently.
+
+This tutorial uses the example file `inst/extdata/mouse_multi-organ_DIA_report.pg_matrix.tsv.gz`.
+
+```{r load-data}
+exp_file <- system.file(
+  "extdata",
+  "mouse_multi-organ_DIA_report.pg_matrix.tsv.gz",
+  package = "EasyProtein"
+)
+
+stopifnot(file.exists(exp_file))
+
+se_obj <- rawdata2se(exp_file)
+se <- se_obj$se
+se
+```
+
+The object created by `rawdata2se()` already contains the main expression matrix and basic sample annotations. For multi-sample analysis, this is the point where you should check whether the experimental design has been read in correctly.
+
+## 3. Add sample metadata
+
+Multi-sample proteomics data usually need a few explicit grouping variables before any interpretation is possible. Typical examples are tissue, treatment, time point, sex, batch, or replicate number.
+
+Here we derive `tissue`, `age`, and `sex` from the existing `condition` field so the sample structure becomes easier to read.
+
+```{r add-metadata}
+se$tissue <- str_extract(se$condition, '[A-Za-z]+')
+se$age <- str_extract(se$condition, '\\dw')
+se$sex <- str_extract(se$condition, '\\w$')
+
+sample_table <- as.data.frame(SummarizedExperiment::colData(se)) %>%
+  dplyr::select(sample, condition, rep, tissue, age, sex)
+
+head(sample_table, 10)
+```
+
+This table is the minimum metadata map you need for a multi-sample study. In a real project, you may also add batch, instrument run, donor, or any other design variable that could influence the signal.
+
+## 4. Quick QC and sample relationships
+
+Before comparing conditions, it is important to check whether all samples behave in a broadly consistent way. We first inspect a few basic quality metrics, then use PCA to look at the overall sample structure.
+
+### 4.1 Basic QC across samples
+
+We inspect three common QC aspects:
+
+1. sample intensity distribution
+2. missing values per sample
+3. detected protein number per sample
+
+```{r qc-plots, fig.width=10, fig.height=8}
+se_sub <- se
+
+p_density <- plotSE_density(se_sub)
+p_missing <- plotSE_missing_value(se_sub)
+p_detected <- plotSE_protein_number(se_sub)
+```
+
+If the distributions are broadly aligned and no single sample stands out, the dataset is usually ready for deeper analysis. Large shifts, extreme missingness, or a very low detected-protein count are warning signs that should be checked before moving on.
+
+### 4.2 Sample relationships with PCA
+
+PCA is a simple way to see whether samples cluster by the variables you expect. In a multi-sample study, this helps answer questions such as:
+
+- Do biological replicates cluster together?
+- Are conditions separated in a meaningful way?
+- Are there obvious outliers or mislabeled samples?
+
+```{r pca, fig.width=7, fig.height=5}
+conc_mtx <- SummarizedExperiment::assay(se_sub, "conc")
+
+pca.res <- FactoMineR::PCA(t(conc_mtx), graph = FALSE)
+pca.df <- as.data.frame(pca.res$ind$coord)
+pca.df$sample <- rownames(pca.df)
+
+meta_df <- as.data.frame(SummarizedExperiment::colData(se_sub))
+
+pca.df <- dplyr::left_join(pca.df, meta_df, by = "sample")
+
+plot_pca(
+  pca.df = pca.df,
+  pca.res = pca.res,
+  colorby = "tissue",
+  label = "sample"
+)
+```
+
+In this view, a clean multi-sample dataset should show reproducible replicate behavior and a reasonable separation between tissues, treatments, or time points. If the PCA shows one sample far away from its group, that sample should be examined carefully before any downstream comparison.
+
+### 4.3 UMAP for a nonlinear view of sample similarity
+
+PCA is useful for a linear summary of the sample space, but it does not always capture local neighborhoods very well. UMAP can provide a complementary view when you want to see whether nearby samples stay close under a nonlinear embedding.
+
+```{r umap, fig.width=7, fig.height=5}
+if (requireNamespace("uwot", quietly = TRUE)) {
+  set.seed(123)
+
+  umap_mat <- t(conc_mtx)
+  umap_xy <- uwot::umap(
+    umap_mat,
+    n_neighbors = 15,
+    min_dist = 0.25,
+    metric = "cosine"
+  )
+
+  umap.df <- as.data.frame(umap_xy)
+  colnames(umap.df) <- c("UMAP1", "UMAP2")
+  umap.df$sample <- rownames(umap.df)
+
+  umap.df <- dplyr::left_join(umap.df, meta_df, by = "sample")
+
+  ggplot2::ggplot(umap.df, ggplot2::aes(UMAP1, UMAP2, color = tissue, label = sample)) +
+    ggplot2::geom_point(size = 2.5, alpha = 0.85) +
+    ggrepel::geom_text_repel(size = 2.5, max.overlaps = 30) +
+    ggplot2::theme_classic() +
+    ggplot2::labs(title = "UMAP of multi-sample proteomics data")
+} else {
+  message("Package 'uwot' is not installed, so the UMAP plot is skipped.")
+}
+```
+
+UMAP is not a replacement for PCA. The two views answer slightly different questions, and using both is usually the safest way to inspect a multi-sample dataset.
+
+## 5. Group-level summary and expression overview
+
+Once the full dataset has passed the global QC checks, it is usually easier to focus on one biologically coherent subset for more detailed summaries. Here we use male heart samples as a compact example for group-level inspection.
+
+```{r focus-subset}
+se_focus <- se[, se$tissue == "heart" & se$sex == "M"]
+se_focus$age <- factor(se_focus$age, levels = c("1w", "4w", "8w"))
+
+sample_focus <- as.data.frame(SummarizedExperiment::colData(se_focus)) %>%
+  dplyr::select(sample, condition, rep, tissue, age, sex)
+
+head(sample_focus, 10)
+```
+
+The first useful summary is the group-aggregated concentration table. This reduces replicate-level noise and makes it easier to see the overall expression pattern across conditions.
+
+```{r group-summary}
+conc_overview <- se2conc(se_focus, group_by = "age")
+head(conc_overview[, c("gene", "Mean_1w", "Mean_4w", "Mean_8w")])
+```
+
+For a more compact view, you can also calculate the mean and CV per group directly. The mean tells you the average abundance, while CV gives a quick sense of within-group stability.
+
+```{r mean-cv-summary}
+conc_mean_mtx <- calc_gene_mean_by_condition(
+  se = se_focus,
+  assay_name = "conc",
+  condition_col = "age"
+)
+
+conc_cv_df <- calc_gene_CV_by_condition(
+  se = se_focus,
+  assay_name = "conc",
+  condition_col = "age"
+)
+
+dim(conc_mean_mtx)
+head(conc_cv_df)
+```
+
+When you want to inspect the expression profile of a specific protein across groups, a trend plot is often easier to read than a table. The example below shows the group-level pattern for one feature.
+
+```{r expression-overview, fig.width=7, fig.height=5}
+example_gene <- rownames(conc_mean_mtx)[1]
+
+plot_gene_expression(se_focus, gene = example_gene, by = "age")
+```
+
+If you are summarizing many features at once, a heatmap or a trend plot can be used to highlight the main group-level expression patterns. The key idea is to move from replicate-level values to a condition-level overview before starting differential testing.
+
+## 6. Multi-group comparison and batch differential analysis
+
+With the samples organized into a clear subset, the next step is to compare all age groups in a batch manner. This is more efficient than writing a separate comparison for each pair.
+
+```{r batch-deg}
+deg_list <- get_batch_DEGs(
+  se = se_focus,
+  compare_col = "age",
+  start_col = 1
+)
+
+names(deg_list)
+
+deg_counts <- tibble::tibble(
+  comparison = names(deg_list),
+  n_total = purrr::map_int(deg_list, nrow),
+  n_sig = purrr::map_int(deg_list, ~ sum(.x$adj.P.Val <= 0.05, na.rm = TRUE))
+)
+
+deg_counts
+```
+
+The list returned by `get_batch_DEGs()` contains one DEG table for each comparison against the reference group. This format is convenient because you can inspect one comparison at a time, or combine them later for a broader summary.
+
+```{r batch-deg-preview}
+first_deg <- deg_list[[1]]
+
+head(
+  first_deg %>%
+    dplyr::select(gene, logFC, P.Value, adj.P.Val, DEGs_types, starts_with("median_")),
+  10
+)
+```
+
+If your study has more than one biological factor, the same approach still works, but you should choose a biologically coherent subset first. In practice, that usually means keeping one tissue, one sex, or one treatment context fixed before running a batch of pairwise comparisons.
+
+## 7. Result filtering and dynamic pattern analysis
+
+After running pairwise comparisons, you will typically filter results to a manageable set and then ask whether those proteins follow coherent dynamic patterns across conditions.
+
+```{r result-filter, fig.width=7, fig.height=5}
+# Combine DEG lists into a single table with comparison labels
+deg_combined <- purrr::imap_dfr(deg_list, ~ dplyr::mutate(.x, comparison = .y))
+
+# Example filter: significant and at least moderate effect size
+deg_sig <- deg_combined %>%
+  dplyr::filter(adj.P.Val <= 0.05, abs(logFC) >= 1)
+
+nrow(deg_sig)
+
+# Use se2gene_group to classify dynamic behaviors (requires Mfuzz + e1071)
+# Do not run clustering automatically during vignette render. If the package
+# user has installed Mfuzz/Biobase/e1071 and wants to run clustering, they can
+# call `se2gene_group()` interactively. For the vignette, ensure a stable
+# `gene_group` column exists to continue plotting.
+rd_df <- as.data.frame(rowData(se_focus))
+sel <- c("gene", "gene_group", "type")
+out_df <- dplyr::select(rd_df, dplyr::any_of(sel))
+if (ncol(out_df) > 0) {
+  print(head(out_df, 10))
+} else {
+  message("Clustering not performed in this render. To enable clustering, install 'Mfuzz' and 'Biobase' and run se2gene_group(se, group_by = 'age').")
+  rowData(se_focus)$gene_group <- "ungrouped"
+  rd_df <- as.data.frame(rowData(se_focus))
+  out_df <- dplyr::select(rd_df, dplyr::any_of(sel))
+  if (ncol(out_df) > 0) print(head(out_df, 10))
+}
+```
+
+`se2gene_group()` uses per-comparison logFCs and clustering to propose dynamic groups (Up/Down/Stable/Low). This helps prioritize proteins that follow consistent trends instead of isolated significant hits.
+
+## 8. Heatmaps and trend visualization
+
+Visual summaries are essential for communicating multi-group patterns. Below we show a heatmap of clustered genes and a trend plot for DEG clusters.
+
+```{r heatmap-trends, fig.width=8, fig.height=6, eval = FALSE}
+# Prepare z-scaled matrix for heatmap
+z_df <- se2scale(se_focus, rescale = TRUE)
+z_mtx <- as.matrix(z_df[,-1])
+rownames(z_mtx) <- z_df$gene
+
+# Select genes labelled as DEGs (be robust if `type` is missing or non-atomic)
+rd_df2 <- as.data.frame(rowData(se_focus))
+deg_genes <- character(0)
+if ("type" %in% colnames(rd_df2)) {
+  # Safely coerce possibly non-atomic/list entries to a single character per row
+  type_vec <- vapply(rd_df2$type, FUN = function(x) {
+    if (is.null(x)) return(NA_character_)
+    if (length(x) == 0) return(NA_character_)
+    if (is.atomic(x) && length(x) == 1) return(as.character(x))
+    return(paste(unlist(x), collapse = ";"))
+  }, FUN.VALUE = character(1), USE.NAMES = FALSE)
+  if ("gene" %in% colnames(rd_df2)) {
+    deg_genes <- rd_df2$gene[!is.na(type_vec) & type_vec == "DEGs"]
+  } else {
+    deg_genes <- character(0)
+  }
+} else {
+  deg_genes <- character(0)
+}
+
+if (length(deg_genes) > 1) {
+  sel_genes <- intersect(rownames(z_mtx), deg_genes)
+  z_sel <- z_mtx[sel_genes, , drop = FALSE]
+  # build row_split aligned to selected rows
+  rd <- as.data.frame(rowData(se_focus))
+  # ensure 'type' and 'gene_group' are atomic character vectors to avoid downstream filter errors
+  if ("type" %in% colnames(rd)) {
+    rd$type <- vapply(rd$type, function(x) {
+      if (is.null(x)) return(NA_character_)
+      if (length(x) == 0) return(NA_character_)
+      if (is.atomic(x) && length(x) == 1) return(as.character(x))
+      return(paste(unlist(x), collapse = ";"))
+    }, FUN.VALUE = character(1), USE.NAMES = FALSE)
+    rowData(se_focus)$type <- rd$type
+  }
+  if ("gene_group" %in% colnames(rd)) {
+    rd$gene_group <- vapply(rd$gene_group, function(x) {
+      if (is.null(x)) return(NA_character_)
+      if (length(x) == 0) return(NA_character_)
+      if (is.atomic(x) && length(x) == 1) return(as.character(x))
+      return(paste(unlist(x), collapse = ";"))
+    }, FUN.VALUE = character(1), USE.NAMES = FALSE)
+    rowData(se_focus)$gene_group <- rd$gene_group
+  }
+  row_split <- rd$gene_group[match(rownames(z_sel), rd$gene)]
+  ht <- plot_heatmap_withline(
+    mat = z_sel,
+    column_split = se_focus$age,
+    row_split = row_split
+  )
+  print(ht)
+}
+
+# Trend plot (mfuzz / cluster-level trends)
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  p_trend <- plot_deg_trends(se_focus, group_by = "age")
+  print(p_trend)
+}
+```
+Note: The heatmap and trend plotting code is disabled during vignette rendering to avoid requiring optional packages (Mfuzz/Biobase/ComplexHeatmap). To run these plots locally, set the chunk option `eval=TRUE` and ensure the necessary packages are installed.
+
+These visualizations let you inspect whether DEGs form coherent clusters, whether clusters correspond to biological hypotheses, and whether clusters are driven by outliers or consistent group-level changes.
+
+## 9. Functional enrichment and biological interpretation
+
+To move from proteins to biology, perform pathway and GO enrichment on sets of interest (for example, cluster members or up/down lists). `enrichment_analysis()` is a light wrapper that can use `clusterProfiler` if installed.
+
+```{r enrichment, eval = FALSE}
+# Example: take genes from a specific cluster
+cluster_genes <- rowData(se_focus) %>% as.data.frame() %>%
+  dplyr::filter(gene_group == "1") %>%
+  dplyr::pull(gene)
+
+if (length(cluster_genes) > 0) {
+  if (!requireNamespace("clusterProfiler", quietly = TRUE)) {
+    message("Install 'clusterProfiler' and organism DB to run enrichment.")
+  } else {
+    go_res <- enrichment_analysis(
+      gene = cluster_genes,
+      db = "GO",
+      species = "mouse",
+      keyType = "SYMBOL",
+      qvalue_cutoff = 0.05
+    )
+    head(go_res, 20)
+  }
+}
+```
+
+Functional enrichment helps summarize what a list of proteins might be doing biologically. Always interpret enrichments together with effect-size and expression patterns, not only p-values.
+
+## 10. Exporting results and reproducible analysis
+
+Save processed objects, DEG tables, and plots so your analysis can be reproduced.
+
+```{r save-results, eval = FALSE}
+# Save R objects
+saveRDS(se_focus, file = "results/se_focus_heart_male.rds")
+
+# Export DEG tables
+purrr::iwalk(deg_list, ~ write.csv(.x, file = paste0("results/DEGs_", .y, ".csv"), row.names = FALSE))
+
+# Save cluster gene lists
+cluster_df <- as.data.frame(rowData(se_focus))
+write.csv(cluster_df, file = "results/gene_groups.csv", row.names = FALSE)
+```
+
+
+
+

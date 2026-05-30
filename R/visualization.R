@@ -1368,6 +1368,20 @@ plot_deg_trends <- function(se,
   meta <- as.data.frame(colData(se))
   rowinfo <- as.data.frame(rowData(se))
 
+  # Ensure 'type' and 'gene' are atomic character vectors to avoid filtering errors
+  if (!"type" %in% colnames(rowinfo)) {
+    rowinfo$type <- NA_character_
+  } else {
+    rowinfo$type <- vapply(rowinfo$type, FUN = function(x) {
+      if (is.null(x)) return(NA_character_)
+      if (length(x) == 0) return(NA_character_)
+      if (is.atomic(x) && length(x) == 1) return(as.character(x))
+      return(paste(unlist(x), collapse = ";"))
+    }, FUN.VALUE = character(1), USE.NAMES = FALSE)
+  }
+  if (!"gene" %in% colnames(rowinfo)) {
+    rowinfo$gene <- rownames(se)
+  }
 
   deg_genes <- rowinfo %>%
     dplyr::filter(type == "DEGs") %>%

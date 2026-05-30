@@ -33,7 +33,8 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/quick_start.html">Quick Start with EasyProtein</a></li>
+<li><a class="dropdown-item" href="../articles/multiple_sample_analysis.html">Multiple Sample Analysis with EasyProtein</a></li>
+    <li><a class="dropdown-item" href="../articles/quick_start.html">Quick Start with EasyProtein</a></li>
   </ul>
 </li>
       </ul>
@@ -119,13 +120,13 @@ only</strong>)</li>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">se_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rawdata2se.html">rawdata2se</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [rawdata2se] Reading input took 1.78 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Reading input took 1.91 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Detecting raw columns took 0.00 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Preprocessing took 1.71 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 94.31 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Imputation took 8.05 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 2.09 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Stability filtering took 1.14 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Preprocessing took 2.00 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 109.70 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Imputation took 8.80 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 2.44 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Stability filtering took 1.50 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Done took 0.00 seconds</span></span>
 <span><span class="va">se</span> <span class="op">&lt;-</span> <span class="va">se_obj</span><span class="op">$</span><span class="va">se</span></span>
 <span><span class="va">se</span></span>

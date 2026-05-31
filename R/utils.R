@@ -53,9 +53,9 @@ df2mtx <- function(df) {
 #' @export
 geom_mean <- function(x, na.rm = TRUE) {
   if (na.rm) x <- x[!is.na(x)]
-  if (any(x <= 0, na.rm = TRUE)) {
-    stop("All values must be positive for geometric mean.")
-  }
+  # if (any(x <= 0, na.rm = TRUE)) {
+  #   stop("All values must be positive for geometric mean.")
+  # }
   exp(mean(log(x)))
 }
 

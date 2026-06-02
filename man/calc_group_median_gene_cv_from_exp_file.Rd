@@ -26,8 +26,8 @@ same filename-style suffix rules as \code{rawdata2se()}.}
 Default is \code{"condition"}.}
 }
 \value{
-A data.frame with one row per group and the median gene CV across
-  replicated samples in that group.
+A data.frame with one row per group, including the median gene CV
+  and the 95th percentile CV across replicated samples in that group.
 }
 \description{
 Read the same raw expression table accepted by \code{rawdata2se()}, parse

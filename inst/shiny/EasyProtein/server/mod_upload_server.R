@@ -13,7 +13,6 @@ mod_upload_server <- function(input, output, session, rv) {
   un_stable_gene_rv <- reactiveVal(NULL)
   missing_gene_rv <- reactiveVal(NULL)
   confirmed_qc_params_rv <- reactiveVal(NULL)
-  confirmed_group_cv_summary_rv <- reactiveVal(NULL)
   qc_context <- reactiveValues(
     exp_path = NULL,
     obs_choices = NULL,
@@ -206,7 +205,7 @@ mod_upload_server <- function(input, output, session, rv) {
         "Confirmed QC parameters"
       ),
       tags$div(
-        style = "display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:8px 16px; font-size:13px; color:#475569;",
+        style = "display:flex; flex-direction:column; gap:6px; font-size:13px; color:#475569;",
         tags$div(tags$b("Observation ID column: "), params$obs_col),
         tags$div(tags$b("Remove genes with <= N valid groups: "), params$min_valid_groups),
         tags$div(tags$b("Remove genes with <= N stable groups: "), params$min_stable_groups),
@@ -219,30 +218,7 @@ mod_upload_server <- function(input, output, session, rv) {
           style = "margin-top:10px; font-size:13px; color:#64748B;",
           params$group_cv_note
         )
-      },
-      if (!is.null(confirmed_group_cv_summary_rv())) {
-        tags$div(
-          style = "margin-top:10px;",
-          DTOutput("confirmed_qc_group_cv_table")
-        )
       }
-    )
-  })
-
-  output$confirmed_qc_group_cv_table <- renderDT({
-    req(confirmed_group_cv_summary_rv())
-
-    datatable(
-      confirmed_group_cv_summary_rv(),
-      rownames = FALSE,
-      options = list(
-        dom = "t",
-        paging = FALSE,
-        searching = FALSE,
-        info = FALSE,
-        ordering = FALSE,
-        scrollX = TRUE
-      )
     )
   })
 
@@ -283,7 +259,6 @@ mod_upload_server <- function(input, output, session, rv) {
     is_tsv <- tolower(tools::file_ext(input$upload_tsv$name)) %in% c("tsv")
 
     confirmed_qc_params_rv(NULL)
-    confirmed_group_cv_summary_rv(NULL)
 
     if (!is_tsv) {
       showNotification("Invalid file type: .tsv required.", type = "error", duration = NULL)
@@ -368,7 +343,6 @@ mod_upload_server <- function(input, output, session, rv) {
         paste0("Median gene CV preview calculated with observation column: ", qc_context$group_cv_obs_col)
       }
     ))
-    confirmed_group_cv_summary_rv(qc_context$group_cv_summary)
 
     rv$se <- se_rv()
     showNotification(paste0("Data loaded ✅ (column: ", input$obscol_select, ")"), type = "message")

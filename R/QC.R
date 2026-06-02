@@ -56,8 +56,8 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 #' @param group_by Column in the parsed sample metadata used for grouping.
 #'   Default is \code{"condition"}.
 #'
-#' @return A data.frame with one row per group and the median gene CV across
-#'   replicated samples in that group.
+#' @return A data.frame with one row per group, including the median gene CV
+#'   and the 95th percentile CV across replicated samples in that group.
 #' @export
 calc_group_median_gene_cv_from_exp_file <- function(
     exp_file,
@@ -151,14 +151,39 @@ calc_group_median_gene_cv_from_exp_file <- function(
 
   cv_df <- do.call(rbind, res_list)
 
+  summarise_cv_stat <- function(x, fun) {
+    x <- x[is.finite(x)]
+
+    if (length(x) == 0) {
+      return(NA_real_)
+    }
+
+    fun(x)
+  }
+
   out <- cv_df %>%
     dplyr::group_by(group) %>%
     dplyr::summarise(
-      median_CV = round(stats::median(CV, na.rm = TRUE),3),
+      median_CV = summarise_cv_stat(CV, stats::median),
+      high95_CV = summarise_cv_stat(
+        CV,
+        function(x) stats::quantile(x, probs = 0.95, names = FALSE)
+      ),
       .groups = "drop"
     )
 
   out$median_CV[is.nan(out$median_CV)] <- NA_real_
+  out$high95_CV[is.nan(out$high95_CV)] <- NA_real_
+  out$median_CV <- ifelse(
+    is.na(out$median_CV),
+    NA_character_,
+    sprintf("%.3f", out$median_CV)
+  )
+  out$high95_CV <- ifelse(
+    is.na(out$high95_CV),
+    NA_character_,
+    sprintf("%.3f", out$high95_CV)
+  )
   colnames(out)[colnames(out) == "group"] <- group_by
   out
 }

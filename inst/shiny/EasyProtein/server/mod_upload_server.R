@@ -12,11 +12,16 @@ mod_upload_server <- function(input, output, session, rv) {
   se_rv <- reactiveVal(NULL)
   un_stable_gene_rv <- reactiveVal(NULL)
   missing_gene_rv <- reactiveVal(NULL)
+  confirmed_qc_params_rv <- reactiveVal(NULL)
+  confirmed_group_cv_summary_rv <- reactiveVal(NULL)
   qc_context <- reactiveValues(
     exp_path = NULL,
     obs_choices = NULL,
     default_obs = NULL,
-    number_of_group = NULL
+    number_of_group = NULL,
+    group_cv_summary = NULL,
+    group_cv_obs_col = NULL,
+    group_cv_error = NULL
   )
 
   open_qc_modal <- function() {
@@ -87,40 +92,54 @@ mod_upload_server <- function(input, output, session, rv) {
           style = "cursor:pointer; font-weight:600; color:#2563EB; outline:none;",
           "Advanced options"
         ),
-        div(
+        tags$div(
           class = "ep-soft-panel",
           style = "margin-top:10px;",
-          sliderInput(
-            inputId = "frac_NA_threshold",
-            label = div(
-              style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
-              span("Missing-value threshold (frac_NA_threshold)"),
-              help_qmark(tagList(
-                tags$b("Meaning:"), " a condition is considered valid only when its missing-value fraction is below this cutoff.", tags$br(),
-                "Lower values make the missing-value filter stricter.", tags$br(),
-                tags$b("Default:"), " 0.5"
-              ))
+          tags$div(
+            style = "display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;",
+            tags$div(
+              style = "flex:1 1 360px; min-width:280px;",
+              sliderInput(
+                inputId = "frac_NA_threshold",
+                label = div(
+                  style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+                  span("Missing-value threshold (frac_NA_threshold)"),
+                  help_qmark(tagList(
+                    tags$b("Meaning:"), " a condition is considered valid only when its missing-value fraction is below this cutoff.", tags$br(),
+                    "Lower values make the missing-value filter stricter.", tags$br(),
+                    tags$b("Default:"), " 0.5"
+                  ))
+                ),
+                min = 0.35,
+                max = 1,
+                value = 1,
+                step = 0.05
+              ),
+              sliderInput(
+                inputId = "cv_threshold",
+                label = div(
+                  style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+                  span("Stability threshold (cv_threshold)"),
+                  help_qmark(tagList(
+                    tags$b("Meaning:"), " a condition is counted as stable only when its coefficient of variation is below this cutoff.", tags$br(),
+                    "Lower values make the stability filter stricter.", tags$br(),
+                    tags$b("Default:"), " 0.5"
+                  ))
+                ),
+                min = 0,
+                max = 1,
+                value = 0.5,
+                step = 0.05
+              )
             ),
-            min = 0.35,
-            max = 1,
-            value = 1,
-            step = 0.05
-          ),
-          sliderInput(
-            inputId = "cv_threshold",
-            label = div(
-              style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
-              span("Stability threshold (cv_threshold)"),
-              help_qmark(tagList(
-                tags$b("Meaning:"), " a condition is counted as stable only when its coefficient of variation is below this cutoff.", tags$br(),
-                "Lower values make the stability filter stricter.", tags$br(),
-                tags$b("Default:"), " 0.5"
-              ))
-            ),
-            min = 0,
-            max = 1,
-            value = 0.5,
-            step = 0.05
+            tags$div(
+              style = "flex:1 1 320px; min-width:280px;",
+              tags$div(
+                style = "font-weight: 600; margin-bottom: 6px;",
+                "Median gene CV within each group"
+              ),
+              uiOutput("qc_group_cv_ui")
+            )
           )
         )
       )
@@ -135,10 +154,136 @@ mod_upload_server <- function(input, output, session, rv) {
     }, once = TRUE)
   }
 
+  output$qc_group_cv_ui <- renderUI({
+    if (!is.null(qc_context$group_cv_error)) {
+      return(div(
+        class = "text-muted",
+        style = "font-size: 13px;",
+        qc_context$group_cv_error
+      ))
+    }
+
+    req(qc_context$group_cv_summary)
+
+    tagList(
+      helpText(
+        paste0(
+          "Preview calculated with observation column: ",
+          qc_context$group_cv_obs_col
+        )
+      ),
+      DTOutput("qc_group_cv_table")
+    )
+  })
+
+  output$qc_group_cv_table <- renderDT({
+    req(qc_context$group_cv_summary)
+
+    datatable(
+      qc_context$group_cv_summary,
+      rownames = FALSE,
+      options = list(
+        dom = "t",
+        paging = FALSE,
+        searching = FALSE,
+        info = FALSE,
+        ordering = FALSE,
+        scrollX = TRUE
+      )
+    )
+  })
+
+  output$confirmed_qc_params_ui <- renderUI({
+    req(confirmed_qc_params_rv())
+
+    params <- confirmed_qc_params_rv()
+
+    tags$div(
+      class = "ep-soft-panel",
+      style = "margin-top:12px;",
+      tags$div(
+        style = "font-weight:600; margin-bottom:8px;",
+        "Confirmed QC parameters"
+      ),
+      tags$div(
+        style = "display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:8px 16px; font-size:13px; color:#475569;",
+        tags$div(tags$b("Observation ID column: "), params$obs_col),
+        tags$div(tags$b("Remove genes with <= N valid groups: "), params$min_valid_groups),
+        tags$div(tags$b("Remove genes with <= N stable groups: "), params$min_stable_groups),
+        tags$div(tags$b("Detect outlier in replicates: "), params$enable_detect_outlier),
+        tags$div(tags$b("Missing-value threshold: "), params$frac_NA_threshold),
+        tags$div(tags$b("Stability threshold: "), params$cv_threshold)
+      ),
+      if (!is.null(params$group_cv_note)) {
+        tags$div(
+          style = "margin-top:10px; font-size:13px; color:#64748B;",
+          params$group_cv_note
+        )
+      },
+      if (!is.null(confirmed_group_cv_summary_rv())) {
+        tags$div(
+          style = "margin-top:10px;",
+          DTOutput("confirmed_qc_group_cv_table")
+        )
+      }
+    )
+  })
+
+  output$confirmed_qc_group_cv_table <- renderDT({
+    req(confirmed_group_cv_summary_rv())
+
+    datatable(
+      confirmed_group_cv_summary_rv(),
+      rownames = FALSE,
+      options = list(
+        dom = "t",
+        paging = FALSE,
+        searching = FALSE,
+        info = FALSE,
+        ordering = FALSE,
+        scrollX = TRUE
+      )
+    )
+  })
+
+  observeEvent(input$obscol_select, {
+    req(qc_context$exp_path, input$obscol_select)
+
+    withProgress(message = "Updating gene CV preview ...", value = 0.1, {
+      incProgress(0.8, detail = "Recalculating with selected observation column")
+
+      group_cv_summary <- tryCatch(
+        calc_group_median_gene_cv_from_exp_file(
+          exp_file = qc_context$exp_path,
+          obs_col = input$obscol_select
+        ),
+        error = function(e) e
+      )
+
+      qc_context$group_cv_obs_col <- input$obscol_select
+      qc_context$group_cv_summary <- NULL
+      qc_context$group_cv_error <- NULL
+
+      if (inherits(group_cv_summary, "error")) {
+        qc_context$group_cv_error <- paste0(
+          "Median gene CV preview unavailable: ",
+          group_cv_summary$message
+        )
+      } else {
+        qc_context$group_cv_summary <- group_cv_summary
+      }
+
+      incProgress(0.2, detail = "Done")
+    })
+  }, ignoreInit = TRUE)
+
   observeEvent(input$upload_tsv, {
     req(input$upload_tsv)
     exp_path <- input$upload_tsv$datapath
     is_tsv <- tolower(tools::file_ext(input$upload_tsv$name)) %in% c("tsv")
+
+    confirmed_qc_params_rv(NULL)
+    confirmed_group_cv_summary_rv(NULL)
 
     if (!is_tsv) {
       showNotification("Invalid file type: .tsv required.", type = "error", duration = NULL)
@@ -146,15 +291,42 @@ mod_upload_server <- function(input, output, session, rv) {
     }
 
     tryCatch({
-      cols_preview <- colnames(data.table::fread(exp_path, nrows = 1))
-      obs_choices <- cols_preview[!stringr::str_detect(cols_preview, "raw")]
-      default_obs <- if ("Genes" %in% obs_choices) "Genes" else obs_choices[1]
-      number_of_sample <- cols_preview[stringr::str_detect(cols_preview, "raw")]
-      number_of_group <- unique(stringr::str_extract(number_of_sample, "\\w+(?=_[^_]*$)"))
-      qc_context$exp_path <- exp_path
-      qc_context$obs_choices <- obs_choices
-      qc_context$default_obs <- default_obs
-      qc_context$number_of_group <- number_of_group
+      withProgress(message = "Preparing QC parameters ...", value = 0.05, {
+        incProgress(0.2, detail = "Reading TSV header")
+        cols_preview <- colnames(data.table::fread(exp_path, nrows = 1))
+        obs_choices <- cols_preview[!stringr::str_detect(cols_preview, "raw")]
+        default_obs <- if ("Genes" %in% obs_choices) "Genes" else obs_choices[1]
+        number_of_sample <- cols_preview[stringr::str_detect(cols_preview, "raw")]
+        number_of_group <- unique(stringr::str_extract(number_of_sample, "\\w+(?=_[^_]*$)"))
+
+        qc_context$exp_path <- exp_path
+        qc_context$obs_choices <- obs_choices
+        qc_context$default_obs <- default_obs
+        qc_context$number_of_group <- number_of_group
+        qc_context$group_cv_summary <- NULL
+        qc_context$group_cv_obs_col <- default_obs
+        qc_context$group_cv_error <- NULL
+
+        incProgress(0.65, detail = "Calculating median gene CV by group")
+        group_cv_summary <- tryCatch(
+          calc_group_median_gene_cv_from_exp_file(
+            exp_file = exp_path,
+            obs_col = default_obs
+          ),
+          error = function(e) e
+        )
+
+        if (inherits(group_cv_summary, "error")) {
+          qc_context$group_cv_error <- paste0(
+            "Median gene CV preview unavailable: ",
+            group_cv_summary$message
+          )
+        } else {
+          qc_context$group_cv_summary <- group_cv_summary
+        }
+
+        incProgress(0.15, detail = "Opening QC dialog")
+      })
 
       open_qc_modal()
 
@@ -183,6 +355,20 @@ mod_upload_server <- function(input, output, session, rv) {
     se_rv(se_list$se)
     missing_gene_rv(se_list$missing_gene_df)
     un_stable_gene_rv(se_list$un_stable_gene)
+    confirmed_qc_params_rv(list(
+      obs_col = input$obscol_select,
+      min_valid_groups = input$valid_group_cutoff_threhold,
+      min_stable_groups = input$valid_cv_cutoff_threhold,
+      enable_detect_outlier = if (isTRUE(input$enable_detect_outlier)) "Yes" else "No",
+      frac_NA_threshold = input$frac_NA_threshold,
+      cv_threshold = input$cv_threshold,
+      group_cv_note = if (!is.null(qc_context$group_cv_error)) {
+        qc_context$group_cv_error
+      } else {
+        paste0("Median gene CV preview calculated with observation column: ", qc_context$group_cv_obs_col)
+      }
+    ))
+    confirmed_group_cv_summary_rv(qc_context$group_cv_summary)
 
     rv$se <- se_rv()
     showNotification(paste0("Data loaded ✅ (column: ", input$obscol_select, ")"), type = "message")

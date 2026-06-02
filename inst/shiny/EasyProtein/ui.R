@@ -273,6 +273,7 @@ ui <- {
                            ),
                            uiOutput('reset_qc_params_ui'),
                            uiOutput('edit_coldata_ui'),
+                           uiOutput('confirmed_qc_params_ui'),
                            div(style = "margin-top:16px;", downloadButton("download_se", "Download results"))
                          )
                        ),
@@ -1192,7 +1193,7 @@ ui <- {
           )
         ),
         nav_spacer(),
-        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8.4)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
+        nav_item(tags$a(shiny::icon("github"), "EasyProtein(v0.8.5)", href = "https://github.com/yuanlizhanshi/EasyProtein", target = "_blank"))
       )
 
     #

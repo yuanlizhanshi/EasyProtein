@@ -154,9 +154,7 @@ calc_group_median_gene_cv_from_exp_file <- function(
   out <- cv_df %>%
     dplyr::group_by(group) %>%
     dplyr::summarise(
-      median_CV = stats::median(CV, na.rm = TRUE),
-      n_genes = dplyr::n(),
-      n_genes_with_cv = sum(!is.na(CV)),
+      median_CV = round(stats::median(CV, na.rm = TRUE),3),
       .groups = "drop"
     )
 

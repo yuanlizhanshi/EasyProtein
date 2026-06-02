@@ -38,6 +38,134 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 }
 
 
+#' Calculate median gene CV within each raw-data group
+#'
+#' @description
+#' Read the same raw expression table accepted by \code{rawdata2se()}, parse
+#' sample conditions using the same sample-name rule, calculate each gene's CV
+#' across replicates within each condition, and return the median CV per
+#' condition. Missing values are ignored.
+#'
+#' @param exp_file Path to the raw expression table file.
+#' @param obs_col Name of the column in \code{exp_file} used to define feature
+#'   identifiers. Only the substring before the first semicolon (\code{;}) will
+#'   be used as the feature name.
+#' @param raw_prefix Character string used to identify raw expression columns.
+#'   If \code{"auto"} (default), raw intensity columns are detected using the
+#'   same filename-style suffix rules as \code{rawdata2se()}.
+#' @param group_by Column in the parsed sample metadata used for grouping.
+#'   Default is \code{"condition"}.
+#'
+#' @return A data.frame with one row per group and the median gene CV across
+#'   replicated samples in that group.
+#' @export
+calc_group_median_gene_cv_from_exp_file <- function(
+    exp_file,
+    obs_col = "Genes",
+    raw_prefix = "auto",
+    group_by = "condition"
+) {
+  rawdata <- data.table::fread(exp_file) %>% as.data.frame()
+  colnames(rawdata) <- gsub("\\\\", "/", colnames(rawdata))
+
+  stopifnot(obs_col %in% colnames(rawdata))
+
+  rawdata$feature <- stringr::str_extract(rawdata[[obs_col]], "^[^;]+")
+
+  rawdata <- rawdata %>%
+    dplyr::filter(!is.na(feature), feature != "") %>%
+    dplyr::filter(!duplicated(feature))
+
+  detect_raw_cols <- function(nms, raw_prefix = "auto") {
+    nms_lower <- tolower(nms)
+
+    if (!identical(tolower(raw_prefix), "auto")) {
+      return(stringr::str_detect(nms_lower, tolower(raw_prefix)))
+    }
+
+    suffix_pattern <- paste0(
+      "(",
+      "\\.(raw|mzml|mzxml|wiff|d|dia|txt)$",
+      "|_raw$|_mzml$|_mzxml$|_wiff$|_dia$",
+      "|raw$|mzml$|mzxml$|wiff$",
+      ")"
+    )
+
+    detected <- stringr::str_detect(nms_lower, suffix_pattern)
+
+    if (!any(detected)) {
+      fallback_pattern <- "raw|mzml|mzxml|wiff|\\.d$|_d$"
+      detected <- stringr::str_detect(nms_lower, fallback_pattern)
+    }
+
+    detected
+  }
+
+  raw_cols <- detect_raw_cols(colnames(rawdata), raw_prefix = raw_prefix)
+  stopifnot(any(raw_cols))
+
+  rawdata_mtx <- rawdata[, raw_cols, drop = FALSE]
+  rawdata_mtx <- as.data.frame(lapply(rawdata_mtx, function(x) {
+    as.numeric(as.character(x))
+  }))
+  rownames(rawdata_mtx) <- rawdata$feature
+  colnames(rawdata_mtx) <- tools::file_path_sans_ext(
+    basename(colnames(rawdata[, raw_cols, drop = FALSE]))
+  )
+
+  obs <- tibble::tibble(
+    sample = colnames(rawdata_mtx),
+    condition = stringr::str_extract(sample, "\\w+(?=_[^_]*$)"),
+    rep = stringr::str_extract(sample, "\\d+$"),
+    group = paste0(condition, "#", rep)
+  ) %>% as.data.frame()
+
+  if (all(is.na(obs$condition))) obs$condition <- obs$sample
+  stopifnot(group_by %in% colnames(obs))
+
+  group_values <- as.character(obs[[group_by]])
+  group_levels <- unique(group_values)
+  mat <- as.matrix(rawdata_mtx)
+  feature_names <- rownames(mat)
+
+  res_list <- lapply(group_levels, function(g) {
+    idx <- which(group_values == g)
+    submat <- mat[, idx, drop = FALSE]
+
+    if (ncol(submat) < 2) {
+      cv_val <- rep(NA_real_, nrow(submat))
+    } else {
+      mean_val <- rowMeans(submat, na.rm = TRUE)
+      sd_val <- apply(submat, 1, stats::sd, na.rm = TRUE)
+      cv_val <- sd_val / mean_val
+      cv_val[mean_val == 0 | !is.finite(cv_val)] <- NA_real_
+    }
+
+    data.frame(
+      feature = feature_names,
+      group = g,
+      CV = cv_val,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  cv_df <- do.call(rbind, res_list)
+
+  out <- cv_df %>%
+    dplyr::group_by(group) %>%
+    dplyr::summarise(
+      median_CV = stats::median(CV, na.rm = TRUE),
+      n_genes = dplyr::n(),
+      n_genes_with_cv = sum(!is.na(CV)),
+      .groups = "drop"
+    )
+
+  out$median_CV[is.nan(out$median_CV)] <- NA_real_
+  colnames(out)[colnames(out) == "group"] <- group_by
+  out
+}
+
+
 #' Construct a SummarizedExperiment object from raw expression table
 #'
 #' This function reads a raw expression table, performs feature-level

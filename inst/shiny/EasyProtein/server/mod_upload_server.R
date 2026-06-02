@@ -12,6 +12,128 @@ mod_upload_server <- function(input, output, session, rv) {
   se_rv <- reactiveVal(NULL)
   un_stable_gene_rv <- reactiveVal(NULL)
   missing_gene_rv <- reactiveVal(NULL)
+  qc_context <- reactiveValues(
+    exp_path = NULL,
+    obs_choices = NULL,
+    default_obs = NULL,
+    number_of_group = NULL
+  )
+
+  open_qc_modal <- function() {
+    req(qc_context$exp_path, qc_context$obs_choices, qc_context$default_obs, qc_context$number_of_group)
+
+    showModal(modalDialog(
+      title = "Select Observation ID column",
+      size = "l",
+      easyClose = FALSE,
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_obscol", "Confirm", class = "btn btn-primary")
+      ),
+      selectInput(
+        "obscol_select",
+        label = "Select the column to use as row names (Observation ID)",
+        choices = qc_context$obs_choices,
+        selected = qc_context$default_obs
+      ),
+      helpText("Gene is preferred by default; otherwise the selected column is used."),
+      sliderInput(
+        inputId = "valid_group_cutoff_threhold",
+        label = div(
+          style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+          span("Remove genes with <= N valid groups (default: < 0.5 missing; adjustable in Advanced options)"),
+          help_qmark(tagList(
+            tags$b("Meaning:"), " a gene is kept only if it has enough condition groups with acceptable missingness.", tags$br(),
+            "Default condition: ", tags$b("< 0.5 missing"), ".", tags$br(),
+            tags$b("Default -1:"), " do not filter out any gene by this rule."
+          ))
+        ),
+        min = -1,
+        max = length(qc_context$number_of_group),
+        value = -1,
+        step = 1
+      ),
+      sliderInput(
+        inputId = "valid_cv_cutoff_threhold",
+        label = div(
+          style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+          span("Remove genes with <= N stable groups (default: < 0.5 CV; adjustable in Advanced options)"),
+          help_qmark(tagList(
+            tags$b("Meaning:"), " a gene is kept only if it is sufficiently stable across condition groups.", tags$br(),
+            "Default condition: ", tags$b("< 0.5 CV"), ".", tags$br(),
+            tags$b("Default -1:"), " do not filter out any gene by this rule."
+          ))
+        ),
+        min = -1,
+        max = length(qc_context$number_of_group),
+        value = -1,
+        step = 1
+      ),
+      checkboxInput(
+        "enable_detect_outlier",
+        label = div(
+          style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+          span("Enable detect outlier in replicates"),
+          help_qmark(tagList(
+            tags$b("Meaning:"), " detect extreme replicate-level values within each condition (>5 fold change) and mask them as missing before downstream filtering/imputation.", tags$br(),
+            "This is useful when a single replicate is obviously inconsistent with the rest of the group."
+          ))
+        ),
+        value = FALSE
+      ),
+      tags$details(
+        style = "margin: 8px 0 12px 0;",
+        tags$summary(
+          style = "cursor:pointer; font-weight:600; color:#2563EB; outline:none;",
+          "Advanced options"
+        ),
+        div(
+          class = "ep-soft-panel",
+          style = "margin-top:10px;",
+          sliderInput(
+            inputId = "frac_NA_threshold",
+            label = div(
+              style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+              span("Missing-value threshold (frac_NA_threshold)"),
+              help_qmark(tagList(
+                tags$b("Meaning:"), " a condition is considered valid only when its missing-value fraction is below this cutoff.", tags$br(),
+                "Lower values make the missing-value filter stricter.", tags$br(),
+                tags$b("Default:"), " 0.5"
+              ))
+            ),
+            min = 0,
+            max = 1,
+            value = 0.5,
+            step = 0.05
+          ),
+          sliderInput(
+            inputId = "cv_threshold",
+            label = div(
+              style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
+              span("Stability threshold (cv_threshold)"),
+              help_qmark(tagList(
+                tags$b("Meaning:"), " a condition is counted as stable only when its coefficient of variation is below this cutoff.", tags$br(),
+                "Lower values make the stability filter stricter.", tags$br(),
+                tags$b("Default:"), " 0.5"
+              ))
+            ),
+            min = 0,
+            max = 1,
+            value = 0.5,
+            step = 0.05
+          )
+        )
+      )
+    ))
+
+    session$onFlushed(function() {
+      updateSliderInput(session, "valid_group_cutoff_threhold", value = -1)
+      updateSliderInput(session, "valid_cv_cutoff_threhold", value = -1)
+      updateCheckboxInput(session, "enable_detect_outlier", value = FALSE)
+      updateSliderInput(session, "frac_NA_threshold", value = 0.5)
+      updateSliderInput(session, "cv_threshold", value = 0.5)
+    }, once = TRUE)
+  }
 
   observeEvent(input$upload_tsv, {
     req(input$upload_tsv)
@@ -19,107 +141,64 @@ mod_upload_server <- function(input, output, session, rv) {
     is_tsv <- tolower(tools::file_ext(input$upload_tsv$name)) %in% c("tsv")
 
     if (!is_tsv) {
-  showNotification("Invalid file type: .tsv required.", type = "error", duration = NULL)
+      showNotification("Invalid file type: .tsv required.", type = "error", duration = NULL)
       return(NULL)
     }
 
     tryCatch({
-
       cols_preview <- colnames(data.table::fread(exp_path, nrows = 1))
       obs_choices <- cols_preview[!stringr::str_detect(cols_preview, "raw")]
       default_obs <- if ("Genes" %in% obs_choices) "Genes" else obs_choices[1]
       number_of_sample <- cols_preview[stringr::str_detect(cols_preview, "raw")]
       number_of_group <- unique(stringr::str_extract(number_of_sample, "\\w+(?=_[^_]*$)"))
-      showModal(modalDialog(
-  title = "Select Observation ID column",
-        size = "m",
-        easyClose = FALSE,
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton("confirm_obscol", "Confirm", class = "btn btn-primary")
-        ),
+      qc_context$exp_path <- exp_path
+      qc_context$obs_choices <- obs_choices
+      qc_context$default_obs <- default_obs
+      qc_context$number_of_group <- number_of_group
 
-        selectInput(
-          "obscol_select",
-          label = "Select the column to use as row names (Observation ID)",
-          choices = obs_choices,
-          selected = default_obs
-        ),
-  helpText("Gene is preferred by default; otherwise the selected column is used."),
-        sliderInput(
-          inputId = "valid_group_cutoff_threhold",
-          label   = div(
-            style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
-            span("Remove genes with ≤ N valid groups ( < 0.5 missing)"),
-            help_qmark(tagList(
-              tags$b("Meaning:"), " a gene is kept only if it has enough condition groups with acceptable missingness.", tags$br(),
-              "A condition is counted as valid when the missing-value fraction is ", tags$b("< 0.5"), ".", tags$br(),
-              "Genes with valid groups fewer than this threshold will be removed.", tags$br(),
-              tags$b("Default -1:"), " do not filter out any gene by this rule."
-            ))
-          ),
-          min     = -1,
-          max     = length(number_of_group),
-          value   = -1,
-          step    = 1
-        ),
-        sliderInput(
-          inputId = "valid_cv_cutoff_threhold",
-          label   = div(
-            style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
-            span("Remove genes with ≤ N stable groups (CV < 0.5)"),
-            help_qmark(tagList(
-              tags$b("Meaning:"), " a gene is kept only if it is sufficiently stable across condition groups.", tags$br(),
-              "A condition is counted as stable when ", tags$b("CV < 0.5"), ".", tags$br(),
-              "Genes with stable groups fewer than this threshold will be removed as unstable.", tags$br(),
-              tags$b("Default -1:"), " do not filter out any gene by this rule."
-            ))
-          ),
-          min     = -1,
-          max     = length(number_of_group),
-          value   = -1,
-          step    = 1
-        ),
-        checkboxInput(
-          "enable_detect_outlier",
-          label = div(
-            style = "display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap;",
-            span("Enable detect outlier in replicates"),
-            help_qmark(tagList(
-              tags$b("Meaning:"), " detect extreme replicate-level values within each condition (>5 fold change) and mask them as missing before downstream filtering/imputation.", tags$br(),
-              "This is useful when a single replicate is obviously inconsistent with the rest of the group."
-            ))
-          ),
-          value = FALSE
-        )
-      ))
-
-  # ---- Build SummarizedExperiment after confirmation ----
-      observeEvent(input$confirm_obscol, {
-        removeModal()
-        withProgress(message = "Building SummarizedExperiment ...", value = 0.1, {
-          incProgress(0.3, detail = "Reading and parsing file")
-          se_list <- rawdata2se(
-            exp_file = exp_path,
-            obs_col = input$obscol_select,
-            enable_detect_outlier_gene = input$enable_detect_outlier,
-            min_valid_groups = input$valid_group_cutoff_threhold,
-            min_stable_groups = input$valid_cv_cutoff_threhold
-          )
-
-          incProgress(0.5, detail = "Done")
-        })
-        se_rv(se_list$se)
-        missing_gene_rv(se_list$missing_gene_df)
-        un_stable_gene_rv(se_list$un_stable_gene)
-
-        rv$se <- se_rv()
-        showNotification(paste0("Data loaded ✅ (column: ", input$obscol_select, ")"), type = "message")
-      }, once = TRUE)
+      open_qc_modal()
 
     }, error = function(e) {
       showNotification(paste0("Load failed: ", e$message), type = "error", duration = NULL)
     })
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$confirm_obscol, {
+    req(qc_context$exp_path)
+    removeModal()
+    withProgress(message = "Building SummarizedExperiment ...", value = 0.1, {
+      incProgress(0.3, detail = "Reading and parsing file")
+      se_list <- rawdata2se(
+        exp_file = qc_context$exp_path,
+        obs_col = input$obscol_select,
+        enable_detect_outlier_gene = input$enable_detect_outlier,
+        frac_NA_threshold = input$frac_NA_threshold,
+        min_valid_groups = input$valid_group_cutoff_threhold,
+        cv_threshold = input$cv_threshold,
+        min_stable_groups = input$valid_cv_cutoff_threhold
+      )
+
+      incProgress(0.5, detail = "Done")
+    })
+    se_rv(se_list$se)
+    missing_gene_rv(se_list$missing_gene_df)
+    un_stable_gene_rv(se_list$un_stable_gene)
+
+    rv$se <- se_rv()
+    showNotification(paste0("Data loaded ✅ (column: ", input$obscol_select, ")"), type = "message")
+  }, ignoreInit = TRUE)
+
+  output$reset_qc_params_ui <- renderUI({
+    req(se_rv())
+    div(
+      style = "margin-top: 12px;",
+      actionButton("reset_qc_params", "Reset QC parameters", icon = icon("rotate-left"), class = "btn btn-outline-primary")
+    )
+  })
+
+  observeEvent(input$reset_qc_params, {
+    req(se_rv(), qc_context$exp_path)
+    open_qc_modal()
   }, ignoreInit = TRUE)
 
 
@@ -241,14 +320,14 @@ mod_upload_server <- function(input, output, session, rv) {
 
     # ✅ Update reactiveVal
     se_rv(se)
-  rv$se <- se  # ensure global state stays in sync
+    rv$se <- se  # ensure global state stays in sync
 
     # ✅ Update edit table to avoid overwriting on save
     df_new <- as.data.frame(S4Vectors::DataFrame(
       cell_id = colnames(se),
       colData(se)
     ))
-  edit_df(df_new)  # keep display and saved content in sync
+    edit_df(df_new)  # keep display and saved content in sync
 
     showNotification(paste("✅ Added columns:", paste(new_cols, collapse = ", ")), type = "message")
   })

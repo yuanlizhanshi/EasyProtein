@@ -136,7 +136,7 @@ impute_low1pct_or_median_raw <- function(
     sample_col    = "sample",
     value_col     = "raw_value",
     condition_col = "condition",
-    low_prob      = 0.01,
+    low_prob      = 0.001,
     return_log2   = FALSE,
     seed          = 1
 ){

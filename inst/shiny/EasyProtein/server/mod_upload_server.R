@@ -101,9 +101,9 @@ mod_upload_server <- function(input, output, session, rv) {
                 tags$b("Default:"), " 0.5"
               ))
             ),
-            min = 0,
+            min = 0.35,
             max = 1,
-            value = 0.5,
+            value = 1,
             step = 0.05
           ),
           sliderInput(

@@ -60,6 +60,9 @@ A list with class \code{"RawDataSE"} containing:
     \item \code{se}: A \code{SummarizedExperiment} object storing raw
       intensities, imputed intensities, CPM-normalized values, and
       z-scored expression.
+    \item \code{cv_df}: A data frame containing a pre-imputation
+      feature-by-condition CV matrix calculated before stability
+      filtering.
     \item \code{un_stable_gene}: A data frame containing the original
       input rows of features removed due to high variability across
       conditions.

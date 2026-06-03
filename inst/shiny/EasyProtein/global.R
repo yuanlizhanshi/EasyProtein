@@ -308,6 +308,7 @@ load_module_packages <- function(pkgs, prefix = "Missing packages: ") {
 }
 make_download_se_qc_zip <- function(
   se_reactive,        # reactiveExpr: returns a SummarizedExperiment
+  cv_df = NULL,
   miss_gene,          # reactiveVal: missing_gene_rv
   unstable_gene,      # reactiveVal: un_stable_gene_rv
   confirmed_qc_params = NULL,
@@ -335,10 +336,11 @@ make_download_se_qc_zip <- function(
       }, add = TRUE)
 
       se_obj <- se_reactive()
+    cv_df_out <- if (is.null(cv_df)) NULL else cv_df()
   miss_gene_df <- miss_gene()         # ✅ reactive value
   unstable_gene_df <- unstable_gene() # ✅ reactive value
       qc_params <- if (is.null(confirmed_qc_params)) NULL else confirmed_qc_params()
-        group_cv_df <- if (is.null(group_cv_summary)) NULL else group_cv_summary()
+    group_cv_df <- if (is.null(group_cv_summary)) NULL else group_cv_summary()
 
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
       tmpdir <- tempfile("pack_")
@@ -352,6 +354,7 @@ make_download_se_qc_zip <- function(
       excel4_path <- file.path(tmpdir, paste0(base_full, "_many_missing_value_gene.xlsx"))
       excel5_path <- file.path(tmpdir, paste0(base_full, "_unstable_gene.xlsx"))
       excel6_path <- file.path(tmpdir, paste0(base_full, "_group_median_gene_cv.xlsx"))
+      excel7_path <- file.path(tmpdir, paste0(base_full, "_gene_by_group_cv_matrix.xlsx"))
       json_path <- file.path(tmpdir, paste0(base_full, "_confirmed_qc_parameters.json"))
 
   # ---- Write files
@@ -362,6 +365,7 @@ make_download_se_qc_zip <- function(
       if (!is.null(miss_gene_df)) writexl::write_xlsx(miss_gene_df, path = excel4_path)
       if (!is.null(unstable_gene_df)) writexl::write_xlsx(unstable_gene_df, path = excel5_path)
       if (!is.null(group_cv_df)) writexl::write_xlsx(group_cv_df, path = excel6_path)
+      if (!is.null(cv_df_out)) writexl::write_xlsx(cv_df_out, path = excel7_path)
       if (!is.null(qc_params)) {
         jsonlite::write_json(
           qc_params,
@@ -382,6 +386,9 @@ make_download_se_qc_zip <- function(
       )
       if (!is.null(group_cv_df)) {
         files_to_zip <- c(files_to_zip, excel6_path)
+      }
+      if (!is.null(cv_df_out)) {
+        files_to_zip <- c(files_to_zip, excel7_path)
       }
       if (!is.null(qc_params)) {
         files_to_zip <- c(files_to_zip, json_path)

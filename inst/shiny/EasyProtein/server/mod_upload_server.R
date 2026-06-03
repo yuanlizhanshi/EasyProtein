@@ -10,6 +10,7 @@ mod_upload_server <- function(input, output, session, rv) {
   # 1️⃣ Build SummarizedExperiment
   # -----------------------------
   se_rv <- reactiveVal(NULL)
+  cv_df_rv <- reactiveVal(NULL)
   un_stable_gene_rv <- reactiveVal(NULL)
   missing_gene_rv <- reactiveVal(NULL)
   confirmed_qc_params_rv <- reactiveVal(NULL)
@@ -328,6 +329,7 @@ mod_upload_server <- function(input, output, session, rv) {
       incProgress(0.5, detail = "Done")
     })
     se_rv(se_list$se)
+    cv_df_rv(se_list$cv_df)
     missing_gene_rv(se_list$missing_gene_df)
     un_stable_gene_rv(se_list$un_stable_gene)
     confirmed_qc_params_rv(list(
@@ -546,6 +548,7 @@ mod_upload_server <- function(input, output, session, rv) {
   # -----------------------------
   output$download_se <- make_download_se_qc_zip(
     se_reactive   = se_rv,
+    cv_df         = cv_df_rv,
     miss_gene     = missing_gene_rv,
     unstable_gene = un_stable_gene_rv,
     confirmed_qc_params = confirmed_qc_params_rv,

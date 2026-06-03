@@ -238,6 +238,9 @@ calc_group_median_gene_cv_from_exp_file <- function(
 #'     \item \code{se}: A \code{SummarizedExperiment} object storing raw
 #'       intensities, imputed intensities, CPM-normalized values, and
 #'       z-scored expression.
+#'     \item \code{cv_df}: A data frame containing a pre-imputation
+#'       feature-by-condition CV matrix calculated before stability
+#'       filtering.
 #'     \item \code{un_stable_gene}: A data frame containing the original
 #'       input rows of features removed due to high variability across
 #'       conditions.
@@ -378,7 +381,7 @@ rawdata2se <- function(
 
     progress("Done")
     return(structure(
-      list(se = se, un_stable_gene = NULL, missing_gene_df = NULL),
+      list(se = se, cv_df = NULL, un_stable_gene = NULL, missing_gene_df = NULL),
       class = "RawDataSE"
     ))
   }
@@ -418,6 +421,50 @@ rawdata2se <- function(
 
   progress("Missing-value filtering")
 
+  rawdata_cv_wide <- rawdata_df %>%
+    tidyr::pivot_wider(
+      id_cols = feature,
+      names_from = sample,
+      values_from = raw_value
+    )
+
+  raw_cv_mtx <- as.matrix(rawdata_cv_wide[, -1, drop = FALSE])
+  rownames(raw_cv_mtx) <- rawdata_cv_wide$feature
+  raw_cv_mtx <- raw_cv_mtx[, obs$sample, drop = FALSE]
+
+  cv_se <- SummarizedExperiment::SummarizedExperiment(
+    assays = list(raw_intensity = raw_cv_mtx),
+    rowData = S4Vectors::DataFrame(var[rownames(raw_cv_mtx), , drop = FALSE]),
+    colData = S4Vectors::DataFrame(obs[colnames(raw_cv_mtx), ])
+  )
+
+  cv_long_df <- calc_gene_CV_by_condition(cv_se, assay_name = "raw_intensity")
+
+  if (is.null(cv_long_df)) {
+    un_stable_cv_df <- data.frame(feature = character(0), stringsAsFactors = FALSE)
+    cv_df <- NULL
+  } else {
+    un_stable_cv_df <- cv_long_df %>%
+      dplyr::group_by(feature) %>%
+      dplyr::summarise(
+        n_stable_groups = sum(CV < cv_threshold, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      dplyr::filter(n_stable_groups < min_stable_groups)
+
+    cv_df <- cv_long_df %>%
+      dplyr::select(feature, condition, CV) %>%
+      tidyr::pivot_wider(names_from = condition, values_from = CV)
+  }
+
+  rawdata_df <- rawdata_df %>%
+    dplyr::filter(!feature %in% un_stable_cv_df$feature)
+
+  un_stable_gene_df <- rawdata %>%
+    dplyr::filter(feature %in% un_stable_cv_df$feature)
+
+  progress("Stability filtering")
+
   rawdata_impute_df <- impute_low1pct_or_median_raw(
     rawdata_df,
     id_col = "feature"
@@ -452,26 +499,10 @@ rawdata2se <- function(
 
   progress("Building SummarizedExperiment")
 
-  cv_df <- calc_gene_CV_by_condition(se)
-
-  un_stable_cv_df <- cv_df %>%
-    dplyr::group_by(feature) %>%
-    dplyr::summarise(
-      n_stable_groups = sum(CV < cv_threshold, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    dplyr::filter(n_stable_groups < min_stable_groups)
-
-  un_stable_gene_df <- rawdata %>%
-    dplyr::filter(feature %in% un_stable_cv_df$feature)
-
-  se <- se[!rownames(se) %in% un_stable_cv_df$feature, ]
-
-  progress("Stability filtering")
-
   progress("Done")
   list(
     se = se,
+    cv_df = cv_df,
     un_stable_gene = un_stable_gene_df,
     missing_gene_df = missing_gene_df
   )

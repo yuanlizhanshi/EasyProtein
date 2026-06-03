@@ -405,7 +405,7 @@ rawdata2se <- function(
       frac_NA = mean(is.na(raw_value)),
       .groups = "drop"
     ) %>%
-    dplyr::mutate(valid = frac_NA < frac_NA_threshold) %>%
+    dplyr::mutate(valid = frac_NA <= frac_NA_threshold) %>%
     dplyr::group_by(feature) %>%
     dplyr::summarise(n_valid_groups = sum(valid), .groups = "drop") %>%
     dplyr::filter(n_valid_groups < min_valid_groups)

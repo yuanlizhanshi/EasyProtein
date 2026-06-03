@@ -109,7 +109,7 @@ mod_upload_server <- function(input, output, session, rv) {
                     tags$b("Default:"), " 0.5"
                   ))
                 ),
-                min = 0.35,
+                min = 0,
                 max = 1,
                 value = 1,
                 step = 0.05
@@ -128,7 +128,7 @@ mod_upload_server <- function(input, output, session, rv) {
                 min = 0,
                 max = 1,
                 value = 0.5,
-                step = 0.05
+                step = 0.01
               )
             ),
             tags$div(

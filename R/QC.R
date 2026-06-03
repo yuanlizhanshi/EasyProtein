@@ -59,18 +59,17 @@ normalize_feature_ids <- function(x) {
   }
 
   make_unique_ids <- function(ids) {
-    counts <- integer(0)
+    counts <- new.env(parent = emptyenv())
 
     vapply(ids, function(id) {
-      current_count <- counts[[id]]
-
-      if (is.null(current_count)) {
-        counts[[id]] <<- 0L
+      if (!exists(id, envir = counts, inherits = FALSE)) {
+        assign(id, 0L, envir = counts)
         return(id)
       }
 
-      counts[[id]] <<- current_count + 1L
-      paste0(id, ".", counts[[id]])
+      current_count <- get(id, envir = counts, inherits = FALSE) + 1L
+      assign(id, current_count, envir = counts)
+      paste0(id, ".", current_count)
     }, character(1))
   }
 

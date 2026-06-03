@@ -310,6 +310,8 @@ make_download_se_qc_zip <- function(
   se_reactive,        # reactiveExpr: returns a SummarizedExperiment
   miss_gene,          # reactiveVal: missing_gene_rv
   unstable_gene,      # reactiveVal: un_stable_gene_rv
+  confirmed_qc_params = NULL,
+  group_cv_summary = NULL,
   input,              # Shiny input object
   file_input_id,      # upload file ID
   suffix = "_filtered",  # output filename suffix
@@ -335,6 +337,8 @@ make_download_se_qc_zip <- function(
       se_obj <- se_reactive()
   miss_gene_df <- miss_gene()         # ✅ reactive value
   unstable_gene_df <- unstable_gene() # ✅ reactive value
+      qc_params <- if (is.null(confirmed_qc_params)) NULL else confirmed_qc_params()
+        group_cv_df <- if (is.null(group_cv_summary)) NULL else group_cv_summary()
 
       base_full <- tools::file_path_sans_ext(basename(input[[file_input_id]]$name))
       tmpdir <- tempfile("pack_")
@@ -347,6 +351,8 @@ make_download_se_qc_zip <- function(
       excel3_path <- file.path(tmpdir, paste0(base_full, "_Zscaled_expression.xlsx"))
       excel4_path <- file.path(tmpdir, paste0(base_full, "_many_missing_value_gene.xlsx"))
       excel5_path <- file.path(tmpdir, paste0(base_full, "_unstable_gene.xlsx"))
+      excel6_path <- file.path(tmpdir, paste0(base_full, "_group_median_gene_cv.xlsx"))
+      json_path <- file.path(tmpdir, paste0(base_full, "_confirmed_qc_parameters.json"))
 
   # ---- Write files
       saveRDS(se_obj, rds_path)
@@ -355,18 +361,36 @@ make_download_se_qc_zip <- function(
       writexl::write_xlsx(se2scale(se_obj), path = excel3_path)
       if (!is.null(miss_gene_df)) writexl::write_xlsx(miss_gene_df, path = excel4_path)
       if (!is.null(unstable_gene_df)) writexl::write_xlsx(unstable_gene_df, path = excel5_path)
+      if (!is.null(group_cv_df)) writexl::write_xlsx(group_cv_df, path = excel6_path)
+      if (!is.null(qc_params)) {
+        jsonlite::write_json(
+          qc_params,
+          path = json_path,
+          auto_unbox = TRUE,
+          pretty = TRUE,
+          null = "null"
+        )
+      }
+
+      files_to_zip <- c(
+        rds_path,
+        excel1_path,
+        excel2_path,
+        excel3_path,
+        excel4_path,
+        excel5_path
+      )
+      if (!is.null(group_cv_df)) {
+        files_to_zip <- c(files_to_zip, excel6_path)
+      }
+      if (!is.null(qc_params)) {
+        files_to_zip <- c(files_to_zip, json_path)
+      }
 
   # ---- Package ZIP
       zip::zipr(
         zipfile = file,
-        files = c(
-          rds_path,
-          excel1_path,
-          excel2_path,
-          excel3_path,
-          excel4_path,
-          excel5_path
-        ),
+        files = files_to_zip,
         mode = "cherry-pick"
       )
     },

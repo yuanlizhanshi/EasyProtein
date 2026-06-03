@@ -23,6 +23,7 @@ Imports:
     edgeR,
     ggiraph,
     ggrepel,
+    jsonlite,
     limma,
     matrixStats,
     Mfuzz,

@@ -548,6 +548,8 @@ mod_upload_server <- function(input, output, session, rv) {
     se_reactive   = se_rv,
     miss_gene     = missing_gene_rv,
     unstable_gene = un_stable_gene_rv,
+    confirmed_qc_params = confirmed_qc_params_rv,
+    group_cv_summary = reactive(qc_context$group_cv_summary),
     input         = input,
     file_input_id = "upload_tsv",
     suffix        = "",

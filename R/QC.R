@@ -38,6 +38,46 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 }
 
 
+#' Normalize feature identifiers
+#'
+#' @description
+#' Extract the leading token before the first semicolon, replace missing or
+#' invalid identifiers with sequential \\code{unknown} labels, and append
+#' suffixes such as \\code{.1}, \\code{.2} to duplicated identifiers to ensure
+#' uniqueness.
+#'
+#' @param x A character vector containing raw feature identifiers.
+#'
+#' @return A character vector of normalized, unique feature identifiers.
+normalize_feature_ids <- function(x) {
+  feature_ids <- stringr::str_extract(x, "^[^;]+")
+  feature_ids <- trimws(as.character(feature_ids))
+
+  invalid_idx <- is.na(feature_ids) | feature_ids == ""
+  if (any(invalid_idx)) {
+    feature_ids[invalid_idx] <- paste0("unknown", seq_len(sum(invalid_idx)))
+  }
+
+  make_unique_ids <- function(ids) {
+    counts <- integer(0)
+
+    vapply(ids, function(id) {
+      current_count <- counts[[id]]
+
+      if (is.null(current_count)) {
+        counts[[id]] <<- 0L
+        return(id)
+      }
+
+      counts[[id]] <<- current_count + 1L
+      paste0(id, ".", counts[[id]])
+    }, character(1))
+  }
+
+  make_unique_ids(feature_ids)
+}
+
+
 #' Calculate median gene CV within each raw-data group
 #'
 #' @description
@@ -70,11 +110,7 @@ calc_group_median_gene_cv_from_exp_file <- function(
 
   stopifnot(obs_col %in% colnames(rawdata))
 
-  rawdata$feature <- stringr::str_extract(rawdata[[obs_col]], "^[^;]+")
-
-  rawdata <- rawdata %>%
-    dplyr::filter(!is.na(feature), feature != "") %>%
-    dplyr::filter(!duplicated(feature))
+  rawdata$feature <- normalize_feature_ids(rawdata[[obs_col]])
 
   detect_raw_cols <- function(nms, raw_prefix = "auto") {
     nms_lower <- tolower(nms)
@@ -273,11 +309,7 @@ rawdata2se <- function(
 
   stopifnot(obs_col %in% colnames(rawdata))
 
-  rawdata$feature <- stringr::str_extract(rawdata[[obs_col]], "^[^;]+")
-
-  rawdata <- rawdata %>%
-    dplyr::filter(!is.na(feature), feature != "") %>%
-    dplyr::filter(!duplicated(feature))
+  rawdata$feature <- normalize_feature_ids(rawdata[[obs_col]])
 
   var <- data.frame(gene = rawdata$feature)
   rownames(var) <- var$gene

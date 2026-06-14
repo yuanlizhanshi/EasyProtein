@@ -127,6 +127,7 @@ correlate_genes_to_target <- function(se,
 #' @param low_prob Low percentile used for imputation (default 0.01).
 #' @param return_log2 Return log2 values instead of raw (default FALSE).
 #' @param seed Random seed.
+#' @param enable_impute_with_replicate All defects are randomly filled in at the low end (default TRUE).
 #'
 #' @return Long-format data.frame with imputed values.
 #' @export
@@ -138,7 +139,8 @@ impute_low1pct_or_median_raw <- function(
     condition_col = "condition",
     low_prob      = 0.001,
     return_log2   = FALSE,
-    seed          = 1
+    seed          = 1,
+    enable_impute_with_replicate = TRUE
 ){
   stopifnot(all(c(id_col, sample_col, value_col, condition_col) %in% names(df)))
   set.seed(seed)
@@ -184,18 +186,38 @@ impute_low1pct_or_median_raw <- function(
       na_idx <- is.na(x)
       if (!any(na_idx)) next
 
+      if(enable_impute_with_replicate){
+
       if (miss_cnt[i] < n_reps / 2) {
-        # less than half missing -> geometric mean
+        # missing less than half  -> geometric mean
+        obs <- x[!na_idx]
+        med <- geom_mean(obs, na.rm = TRUE)
+        x[na_idx] <- med
+        
+      } else {
+        # missing more than half  -> low-end sampling
         obs <- x[!na_idx]
         if (length(obs) == 0) {
           x[na_idx] <- cond_low_log
         } else {
-          med <- geom_mean(obs, na.rm = TRUE)
-          x[na_idx] <- med
-        }
-      } else {
-        # less than half missing -> low-end sampling
         for (j in which(na_idx)) {
+          q1 <- col_quant[j]
+          m1 <- col_mins[j]
+          if (!is.finite(q1) || !is.finite(m1)) {
+            x[j] <- cond_low_log
+          } else {
+            lo <- min(m1, q1)
+            hi <- max(m1, q1)
+            if (!is.finite(lo) || !is.finite(hi) || lo == hi) {
+              x[j] <- q1
+            } else {
+              x[j] <- stats::runif(1, min = lo, max = hi)
+            }
+          }
+        }}
+      }
+      } else {
+         for (j in which(na_idx)) {
           q1 <- col_quant[j]
           m1 <- col_mins[j]
           if (!is.finite(q1) || !is.finite(m1)) {

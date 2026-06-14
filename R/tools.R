@@ -184,8 +184,8 @@ impute_low1pct_or_median_raw <- function(
       na_idx <- is.na(x)
       if (!any(na_idx)) next
 
-      if (miss_cnt[i] > n_reps / 2) {
-        # more than half missing -> geometric mean
+      if (miss_cnt[i] < n_reps / 2) {
+        # less than half missing -> geometric mean
         obs <- x[!na_idx]
         if (length(obs) == 0) {
           x[na_idx] <- cond_low_log

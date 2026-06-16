@@ -191,9 +191,9 @@ impute_low1pct_or_median_raw <- function(
       if (miss_cnt[i] < n_reps / 2) {
         # missing less than half  -> geometric mean
         obs <- x[!na_idx]
-        med <- geom_mean(obs, na.rm = TRUE)
+        med <- mean(obs, na.rm = TRUE)
         x[na_idx] <- med
-        
+
       } else {
         # missing more than half  -> low-end sampling
         obs <- x[!na_idx]

@@ -34,7 +34,7 @@ automatically from common raw file suffixes such as \'raw\', \'mzML\',
 mask extreme outlier measurements within each condition based on
 fold-change from the median.}
 
-\item{fc_threshold}{Numeric threshold for fold-change–based outlier
+\item{fc_threshold}{Numeric threshold for fold-change-based outlier
 detection. Values exceeding this fold change relative to the
 condition median will be set to \code{NA} when outlier detection is
 enabled.}

@@ -21,6 +21,12 @@ plot_GO_dot3(
 
 \item{label_format}{Width for wrapping labels.}
 
+\item{group_by}{Metric used to choose the top terms. One of
+\code{"fdr"}, \code{"observed_gene_count"},
+\code{"background_gene_count"}, \code{"strength"},
+\code{"gene_ratio"}, \code{"genes_mapped"}, or
+\code{"enrichment_score"}. Default is \code{"fdr"}.}
+
 \item{x_axis}{X-axis metric. One of
 \code{"observed_gene_count"}, \code{"background_gene_count"},
 \code{"strength"}, \code{"gene_ratio"},

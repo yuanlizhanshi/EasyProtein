@@ -680,7 +680,7 @@ ivolcano <- function(
     } +
     scale_color_manual(
       values = sig_colors,
-  labels = sig_labels,     # ✅ legend labels include counts
+  labels = sig_labels,     # legend labels include counts
   name = "Significance"    # legend title
     ) +
     labs(title = title, x = "log2 Fold Change", y = "-log10(FDR)") +
@@ -736,27 +736,13 @@ ivolcano <- function(
 
 }
 
-#' Dot plot for GO enrichment (style 1)
+#' Parse ratio-like values to numeric fractions
 #'
-#' This function takes a GO enrichment result (e.g. clusterProfiler output)
-#' and visualizes the top enriched categories. Top terms can be selected
-#' by different metrics.
+#' @param x A numeric vector, character vector, or ratio-like character vector
+#'   such as \code{"3/20"}.
 #'
-#' @param GO_df A GO enrichment result data frame.
-#' @param topn Number of categories to show.
-#' @param label_format Width for wrapped text labels.
-#' @param group_by Metric used to choose topN terms. One of
-#'   \code{"-log10(p.adjust)"}, \code{"GeneRatio"}, \code{"RichFactor"},
-#'   \code{"Count"}. Default is \code{"-log10(p.adjust)"}.
-#'
-#' @return A ggplot object.
-#'
-#' @importFrom ggplot2 labs theme element_text scale_x_discrete
-#' @importFrom dplyr arrange slice_head mutate
-#' @importFrom stringr str_wrap
-#' @importFrom ggpubr ggdotchart
-#'
-#' @export
+#' @return A numeric vector.
+#' @noRd
 .parse_ratio_to_numeric <- function(x) {
   x <- as.character(x)
   out <- suppressWarnings(as.numeric(x))
@@ -803,6 +789,27 @@ ivolcano <- function(
     dplyr::slice_head(n = topn)
 }
 
+#' Dot plot for GO enrichment (style 1)
+#'
+#' This function takes a GO enrichment result (e.g. clusterProfiler output)
+#' and visualizes the top enriched categories. Top terms can be selected
+#' by different metrics.
+#'
+#' @param GO_df A GO enrichment result data frame.
+#' @param topn Number of categories to show.
+#' @param label_format Width for wrapped text labels.
+#' @param group_by Metric used to choose topN terms. One of
+#'   \code{"-log10(p.adjust)"}, \code{"GeneRatio"}, \code{"RichFactor"},
+#'   \code{"Count"}. Default is \code{"-log10(p.adjust)"}.
+#'
+#' @return A ggplot object.
+#'
+#' @importFrom ggplot2 labs theme element_text scale_x_discrete
+#' @importFrom dplyr arrange slice_head mutate
+#' @importFrom stringr str_wrap
+#' @importFrom ggpubr ggdotchart
+#'
+#' @export
 plot_GO_dot1 <- function(
     GO_df,
     topn = 10,
@@ -907,6 +914,11 @@ plot_GO_dot2 <- function(
 #' @param GO_df A generic enrichment result table.
 #' @param topn Number of terms.
 #' @param label_format Width for wrapping labels.
+#' @param group_by Metric used to choose the top terms. One of
+#'   \code{"fdr"}, \code{"observed_gene_count"},
+#'   \code{"background_gene_count"}, \code{"strength"},
+#'   \code{"gene_ratio"}, \code{"genes_mapped"}, or
+#'   \code{"enrichment_score"}. Default is \code{"fdr"}.
 #' @param x_axis X-axis metric. One of
 #'   \code{"observed_gene_count"}, \code{"background_gene_count"},
 #'   \code{"strength"}, \code{"gene_ratio"},
@@ -1219,12 +1231,12 @@ plot_heatmap_withline <- function(mat = NULL,
       x_coords <- seq_along(means)
       from_range <- range(means, na.rm = TRUE)
 
-  # ✅ Rescale to 0.05–0.95 and clamp to bounds
+  # Rescale to 0.05-0.95 and clamp to bounds
       clip_range <- function(x) pmin(pmax(x, 0.05), 0.95)
       y_mean <- clip_range(scales::rescale(means, to = c(0.05, 0.95), from = from_range))
       x_scaled <- clip_range(scales::rescale(x_coords, to = c(0.05, 0.95)))
 
-  # ✅ Draw mean line (use NPC units to avoid panel overflow)
+  # Draw mean line (use NPC units to avoid panel overflow)
       grid::grid.lines(
         x = unit(x_scaled, "npc"),
         y = unit(y_mean, "npc"),
@@ -1243,7 +1255,7 @@ plot_heatmap_withline <- function(mat = NULL,
       )
     }
 
-  # ✅ Add text label
+  # Add text label
     grid.textbox <- utils::getFromNamespace("grid.textbox", "ComplexHeatmap")
     text <- paste("Gene number:", length(index))
     grid.textbox(

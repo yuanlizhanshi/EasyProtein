@@ -42,8 +42,8 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 #'
 #' @description
 #' Extract the leading token before the first semicolon, replace missing or
-#' invalid identifiers with sequential \\code{unknown} labels, and append
-#' suffixes such as \\code{.1}, \\code{.2} to duplicated identifiers to ensure
+#' invalid identifiers with sequential \code{unknown} labels, and append
+#' suffixes such as \code{.1}, \code{.2} to duplicated identifiers to ensure
 #' uniqueness.
 #'
 #' @param x A character vector containing raw feature identifiers.
@@ -248,7 +248,7 @@ calc_group_median_gene_cv_from_exp_file <- function(
 #'   mask extreme outlier measurements within each condition based on
 #'   fold-change from the median.
 #'
-#' @param fc_threshold Numeric threshold for fold-change–based outlier
+#' @param fc_threshold Numeric threshold for fold-change-based outlier
 #'   detection. Values exceeding this fold change relative to the
 #'   condition median will be set to \code{NA} when outlier detection is
 #'   enabled.

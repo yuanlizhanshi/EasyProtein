@@ -9,7 +9,6 @@
 #' @import stringr
 #' @import purrr
 #' @import SummarizedExperiment
-#' @import S4Vectors
 #'
 #' @docType package
 #' @name EasyProtein

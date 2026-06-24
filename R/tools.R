@@ -35,27 +35,27 @@ detect_species_from_symbol <- function(gene) {
 #'
 #' @description
 #' Computes the correlation between every gene in a
-#' \\code{SummarizedExperiment} object and a target gene profile across all
+#' \code{SummarizedExperiment} object and a target gene profile across all
 #' samples. When multiple target genes are provided, their sample-wise median
 #' expression is used as the reference profile.
 #'
 #' The target genes can be matched either against row names of the assay matrix
-#' or, when available, against \\code{rowData(se)$gene}.
+#' or, when available, against \code{rowData(se)$gene}.
 #'
-#' @param se A \\code{SummarizedExperiment} object.
+#' @param se A \code{SummarizedExperiment} object.
 #' @param gene A character vector of one or more target genes.
 #' @param assay_name Character. Assay name used for correlation calculation.
-#'   Default is \\code{"conc"}.
-#' @param method Character. Correlation method passed to \\code{stats::cor}.
-#'   Default is \\code{"pearson"}.
+#'   Default is \code{"conc"}.
+#' @param method Character. Correlation method passed to \code{stats::cor}.
+#'   Default is \code{"pearson"}.
 #'
 #' @return A data.frame with one row per gene and correlation values.
 #' The returned columns include:
-#' \\describe{
-#'   \\item{feature_id}{Row names of the assay matrix.}
-#'   \\item{gene}{Gene label. Uses \\code{rowData(se)$gene} when available,
+#' \describe{
+#'   \item{feature_id}{Row names of the assay matrix.}
+#'   \item{gene}{Gene label. Uses \code{rowData(se)$gene} when available,
 #'   otherwise row names.}
-#'   \\item{correlation}{Correlation between each gene and the target profile.}
+#'   \item{correlation}{Correlation between each gene and the target profile.}
 #' }
 #'
 #'
@@ -831,7 +831,8 @@ enrichment_analysis <- function(
     )
 
   } else {  # KEGG
-    if (isTRUE(use_internal_data) && !requireNamespace("KEGG.db", quietly = TRUE)) {
+    kegg_db_package <- paste0("KEGG", ".", "db")
+    if (isTRUE(use_internal_data) && !requireNamespace(kegg_db_package, quietly = TRUE)) {
       kegg_pkg <- system.file(
         "shiny", "EasyProtein", "www", "KEGG.db_1.0.tar.gz",
         package = "EasyProtein"
@@ -849,7 +850,7 @@ enrichment_analysis <- function(
 
       utils::install.packages(kegg_pkg, repos = NULL, type = "source")
 
-      if (!requireNamespace("KEGG.db", quietly = TRUE)) {
+      if (!requireNamespace(kegg_db_package, quietly = TRUE)) {
         stop("Failed to install/load package 'KEGG.db'.")
       }
     }
@@ -1147,5 +1148,1139 @@ get_pc_contributors <- function(pca.res,se_obj= NULL, pc = 1, n = 20, use = c("c
     positive = pos,
     negative = neg
   ))
+}
+
+
+
+#' Hybrid temporal signature clustering for multi-series time-course proteomics
+#'
+#' @description
+#' Cluster proteins by coordinated temporal response patterns across one or
+#' multiple biological time series. The method first estimates log2 fold change
+#' against the baseline time point within each series, gates non-significant
+#' comparisons to zero, and clusters the remaining dynamic proteins with a
+#' hybrid distance that combines response shape, amplitude, temporal trend and
+#' significant-response timing.
+#'
+#' Proteins with no statistically supported post-baseline change are not forced
+#' into dynamic clusters. They are returned in the background group
+#' \code{Flat_or_not_significant}.
+#'
+#' @param x A \code{SummarizedExperiment} object, or a named list of
+#'   gene-by-time matrices. For a \code{SummarizedExperiment}, samples are in
+#'   columns and features/proteins are in rows.
+#' @param assay_name Character. Assay used when \code{x} is a
+#'   \code{SummarizedExperiment}. Default is \code{"conc"}.
+#' @param time_col Character. Column in \code{colData(x)} containing ordered
+#'   time points. Default is \code{"time"}.
+#' @param series_col Character or \code{NULL}. Column in \code{colData(x)}
+#'   containing the biological series, such as cell line. If \code{NULL}, all
+#'   samples are treated as one series.
+#' @param baseline Baseline time point. If \code{NULL}, the first ordered time
+#'   point in each series is used.
+#' @param k Integer number of clusters or \code{"auto"}. When \code{"auto"},
+#'   the cluster number is selected by average silhouette width.
+#' @param k_range Integer vector of candidate cluster numbers used when
+#'   \code{k = "auto"}.
+#' @param min_mean Numeric. Minimum mean raw abundance for feature filtering.
+#' @param min_sd Numeric. Minimum standard deviation of the baseline-referenced
+#'   trajectory for feature filtering.
+#' @param log2_offset Numeric or \code{NULL}. Offset added before log2
+#'   transformation. If \code{NULL}, half of the minimum positive abundance is
+#'   used.
+#' @param p_adj_cutoff Numeric adjusted P-value cutoff used to define
+#'   significant time points.
+#' @param logFC_cutoff Numeric absolute log2FC cutoff used together with
+#'   \code{p_adj_cutoff}.
+#' @param min_cluster_prop Numeric. Cluster-level fraction threshold used to
+#'   call a cluster response time.
+#' @param min_significant_timepoints Integer. Minimum number of significant
+#'   post-baseline time points required for a protein to enter dynamic
+#'   clustering. Default is \code{1}.
+#' @param distance_weights Named numeric vector with entries \code{shape},
+#'   \code{amplitude}, \code{trend} and \code{timing}. Values are normalized to
+#'   sum to one.
+#' @param max_k_features Integer. Maximum number of proteins used to estimate
+#'   the silhouette score when selecting \code{k}. The final clustering still
+#'   uses all retained dynamic proteins.
+#' @param seed Integer random seed.
+#' @param scale_for_clustering Logical. If TRUE, scale the significance-gated matrix before clustering. Default is FALSE.
+#' @param distance Character. Distance used by the optional kmeans workflow; one of \code{"correlation"} or \code{"euclidean"}.
+#' @param common_features Logical. If TRUE, retain only features observed in all input series.
+#' @param clustering_method Character. Clustering backend. Default \code{"hybrid_hclust"} uses the hybrid temporal distance; \code{"kmeans"} is retained for compatibility.
+#'
+#' @return A list with class \code{EasyProteinTimecoursePattern}. Important
+#'   elements include:
+#' \describe{
+#'   \item{\code{gene_cluster}}{Dynamic proteins and their assigned pattern
+#'   clusters.}
+#'   \item{\code{gene_cluster_all}}{All proteins, including background proteins
+#'   labeled \code{Flat_or_not_significant}.}
+#'   \item{\code{background_genes}}{Proteins without enough significant
+#'   time-point changes for dynamic clustering.}
+#'   \item{\code{gene_change}}{Gene-level first significant and strongest
+#'   response times.}
+#'   \item{\code{cluster_change}}{Cluster-level significant response times.}
+#'   \item{\code{cluster_summary}}{Cluster sizes, centroid pattern labels and
+#'   activity summaries.}
+#'   \item{\code{cluster_input}}{The significance-gated log2FC matrix used for
+#'   clustering.}
+#'   \item{\code{timepoint_tests}}{limma time-point test results.}
+#' }
+#'
+#' @details
+#' For each protein \eqn{g}, series \eqn{s}, and time point \eqn{t}, the method
+#' estimates a baseline-referenced log2 fold change \eqn{L_{g,s,t}}. The
+#' clustering matrix is
+#'
+#' \deqn{
+#' Z_{g,s,t} =
+#' \begin{cases}
+#' L_{g,s,t}, & q_{g,s,t}\leq \alpha \text{ and } |L_{g,s,t}|\geq \delta,\\
+#' 0, & \text{otherwise}.
+#' \end{cases}
+#' }
+#'
+#' Dynamic proteins are clustered using a hybrid distance:
+#'
+#' \deqn{
+#' D = w_{shape}D_{shape} + w_{amp}D_{amp} +
+#'     w_{trend}D_{trend} + w_{time}D_{time}.
+#' }
+#'
+#' This makes the clustering sensitive to both response magnitude and temporal
+#' trajectory, while treating non-significant comparisons as explicit
+#' no-change observations.
+#'
+#' @examples
+#' \dontrun{
+#' res <- temporalSignatureClustering(
+#'   se,
+#'   assay_name = "conc",
+#'   time_col = "time",
+#'   series_col = "cell_line",
+#'   baseline = 0,
+#'   k = "auto",
+#'   k_range = 4:10
+#' )
+#'
+#' head(res$gene_cluster)
+#' res$cluster_summary
+#' }
+#'
+#' @export
+
+temporalSignatureClustering <- function(
+    x,
+    assay_name = "conc",
+    time_col = "time",
+    series_col = NULL,
+    baseline = NULL,
+    k = "auto",
+    k_range = 2:10,
+    min_mean = 0,
+    min_sd = 0.15,
+    log2_offset = NULL,
+    scale_for_clustering = FALSE,
+    distance = c("correlation", "euclidean"),
+    p_adj_cutoff = 0.05,
+    logFC_cutoff = 0.5,
+    min_cluster_prop = 0.2,
+    common_features = TRUE,
+    max_k_features = 2000,
+    min_significant_timepoints = 1,
+    clustering_method = c("hybrid_hclust", "kmeans"),
+    distance_weights = c(shape = 0.35, amplitude = 0.25, trend = 0.25, timing = 0.15),
+    seed = 1
+) {
+  distance <- match.arg(distance)
+  clustering_method <- match.arg(clustering_method)
+  set.seed(seed)
+
+  prepared <- prepare_timecourse_matrix(
+    x = x,
+    assay_name = assay_name,
+    time_col = time_col,
+    series_col = series_col,
+    baseline = baseline,
+    log2_offset = log2_offset,
+    common_features = common_features
+  )
+
+  trajectory <- prepared$trajectory
+  raw_mean <- prepared$raw_mean
+  feature_mean <- rowMeans(raw_mean, na.rm = TRUE)
+  feature_sd <- apply(trajectory, 1, stats::sd, na.rm = TRUE)
+  keep <- is.finite(feature_mean) & is.finite(feature_sd) &
+    feature_mean >= min_mean & feature_sd >= min_sd
+
+  if (sum(keep) < 3) {
+    stop("Fewer than three features passed filtering; lower min_mean/min_sd.")
+  }
+
+  trajectory <- trajectory[keep, , drop = FALSE]
+
+  test_res <- test_timecourse_changes(
+    x = x,
+    assay_name = assay_name,
+    time_col = time_col,
+    series_col = series_col,
+    baseline = baseline,
+    log2_offset = prepared$log2_offset,
+    p_adj_cutoff = p_adj_cutoff,
+    logFC_cutoff = logFC_cutoff
+  )
+
+  significant_logfc <- build_significant_logfc_matrix(
+    test_res = test_res,
+    genes = rownames(trajectory),
+    metadata = prepared$metadata,
+    p_adj_cutoff = p_adj_cutoff,
+    logFC_cutoff = logFC_cutoff
+  )
+
+  cluster_input <- significant_logfc$matrix
+
+  dynamic_keep <- rowSums(cluster_input != 0, na.rm = TRUE) >= min_significant_timepoints
+  background_genes <- tibble::tibble(
+    gene = rownames(cluster_input)[!dynamic_keep],
+    cluster = "Flat_or_not_significant",
+    pattern = "Flat_or_not_significant",
+    pattern_signature = "No significant log2FC across all series"
+  )
+
+  if (sum(dynamic_keep) < 3) {
+    stop("Fewer than three genes have enough significant time points for clustering.")
+  }
+
+  cluster_input <- cluster_input[dynamic_keep, , drop = FALSE]
+  trajectory <- trajectory[rownames(cluster_input), , drop = FALSE]
+
+  if (isTRUE(scale_for_clustering)) {
+    cluster_input <- scale(cluster_input)
+    cluster_input[!is.finite(cluster_input)] <- 0
+  }
+
+  if (clustering_method == "hybrid_hclust") {
+    cluster_fit <- run_hybrid_temporal_clustering(
+      mat = cluster_input,
+      metadata = significant_logfc$metadata,
+      k = k,
+      k_range = k_range,
+      weights = distance_weights,
+      max_features = max_k_features,
+      seed = seed
+    )
+    selected_k <- cluster_fit$selected_k
+    gene_cluster <- tibble::tibble(
+      gene = names(cluster_fit$cluster),
+      cluster = paste0("P", as.integer(cluster_fit$cluster))
+    )
+  } else {
+    selected_k <- select_timecourse_k(
+      cluster_input,
+      k = k,
+      k_range = k_range,
+      distance = distance,
+      max_features = max_k_features,
+      seed = seed
+    )
+
+    km <- stats::kmeans(cluster_input, centers = selected_k$k, nstart = 50, iter.max = 100)
+    gene_cluster <- tibble::tibble(
+      gene = rownames(cluster_input),
+      cluster = paste0("P", km$cluster)
+    )
+  }
+
+  centroids <- summarize_timecourse_clusters(
+    trajectory = cluster_input,
+    gene_cluster = gene_cluster,
+    feature_info = significant_logfc$metadata
+  )
+
+  cluster_activity <- tibble::tibble(
+    gene = rownames(cluster_input),
+    n_significant_timepoints = rowSums(cluster_input != 0, na.rm = TRUE),
+    mean_abs_sig_logFC = rowMeans(abs(cluster_input), na.rm = TRUE)
+  ) %>%
+    dplyr::left_join(gene_cluster, by = "gene") %>%
+    dplyr::group_by(.data$cluster) %>%
+    dplyr::summarise(
+      median_significant_timepoints = stats::median(.data$n_significant_timepoints),
+      mean_abs_sig_logFC = mean(.data$mean_abs_sig_logFC, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  centroids$cluster_summary <- centroids$cluster_summary %>%
+    dplyr::left_join(cluster_activity, by = "cluster")
+
+  gene_cluster <- gene_cluster %>%
+    dplyr::left_join(
+      centroids$cluster_summary[, c("cluster", "pattern", "pattern_signature")],
+      by = "cluster"
+    )
+
+  gene_cluster_all <- dplyr::bind_rows(gene_cluster, background_genes)
+
+  if (!is.null(test_res) && nrow(test_res) > 0) {
+    gene_change <- test_res %>%
+      dplyr::filter(.data$gene %in% gene_cluster$gene) %>%
+      dplyr::group_by(.data$gene, .data$series) %>%
+      dplyr::arrange(.data$time, .by_group = TRUE) %>%
+      dplyr::summarise(
+        first_significant_time = {
+          idx <- which(.data$significant)
+          if (length(idx) == 0) NA_character_ else as.character(.data$time[idx[1]])
+        },
+        strongest_time = as.character(.data$time[which.max(abs(.data$logFC))]),
+        max_abs_logFC = max(abs(.data$logFC), na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      dplyr::left_join(gene_cluster, by = "gene")
+
+    cluster_change <- test_res %>%
+      dplyr::inner_join(gene_cluster, by = "gene") %>%
+      dplyr::group_by(.data$cluster, .data$pattern, .data$series, .data$time) %>%
+      dplyr::summarise(
+        n_genes = dplyr::n(),
+        n_significant = sum(.data$significant, na.rm = TRUE),
+        significant_fraction = .data$n_significant / .data$n_genes,
+        median_logFC = stats::median(.data$logFC, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      dplyr::group_by(.data$cluster, .data$pattern, .data$series) %>%
+      dplyr::arrange(.data$time, .by_group = TRUE) %>%
+      dplyr::mutate(
+        cluster_significant_time = dplyr::if_else(
+          .data$significant_fraction >= min_cluster_prop,
+          as.character(.data$time),
+          NA_character_
+        )
+      ) %>%
+      dplyr::summarise(
+        first_cluster_significant_time = {
+          tt <- stats::na.omit(.data$cluster_significant_time)
+          if (length(tt) == 0) NA_character_ else tt[1]
+        },
+        max_significant_fraction = max(.data$significant_fraction, na.rm = TRUE),
+        strongest_cluster_time = as.character(.data$time[which.max(abs(.data$median_logFC))]),
+        .groups = "drop"
+      )
+  } else {
+    gene_change <- NULL
+    cluster_change <- NULL
+  }
+
+  out <- list(
+    gene_cluster = gene_cluster,
+    gene_cluster_all = gene_cluster_all,
+    background_genes = background_genes,
+    gene_change = gene_change,
+    cluster_change = cluster_change,
+    timepoint_tests = test_res,
+    cluster_summary = centroids$cluster_summary,
+    centroids = centroids$centroids,
+    trajectory = trajectory,
+    cluster_input = cluster_input,
+    selected_k = selected_k,
+    metadata = significant_logfc$metadata,
+    expression_metadata = prepared$metadata,
+    parameters = list(
+      assay_name = assay_name,
+      time_col = time_col,
+      series_col = series_col,
+      baseline = baseline,
+      min_mean = min_mean,
+      min_sd = min_sd,
+      clustering_matrix = "significant_log2FC_vs_baseline",
+      clustering_method = clustering_method,
+      distance_weights = distance_weights,
+      nonsignificant_value = 0,
+      p_adj_cutoff = p_adj_cutoff,
+      logFC_cutoff = logFC_cutoff
+      ,
+      min_significant_timepoints = min_significant_timepoints
+    )
+  )
+  class(out) <- c("EasyProteinTimecoursePattern", class(out))
+  out
+}
+
+prepare_timecourse_matrix <- function(
+    x,
+    assay_name = "conc",
+    time_col = "time",
+    series_col = NULL,
+    baseline = NULL,
+    log2_offset = NULL,
+    common_features = TRUE
+) {
+  if (inherits(x, "SummarizedExperiment")) {
+    stopifnot(assay_name %in% SummarizedExperiment::assayNames(x))
+    stopifnot(time_col %in% colnames(SummarizedExperiment::colData(x)))
+
+    mat_raw <- as.matrix(SummarizedExperiment::assay(x, assay_name))
+    if (is.null(log2_offset)) log2_offset <- infer_log2_offset(mat_raw)
+    mat_log <- log2(mat_raw + log2_offset)
+
+    meta <- as.data.frame(SummarizedExperiment::colData(x))
+    meta$.__time__ <- meta[[time_col]]
+    meta$.__series__ <- if (is.null(series_col)) "Series1" else meta[[series_col]]
+    series_levels <- unique(as.character(meta$.__series__))
+
+    series_mats <- lapply(series_levels, function(ss) {
+      idx_series <- which(as.character(meta$.__series__) == ss)
+      time_levels <- sort_unique_time(meta$.__time__[idx_series])
+      base <- choose_baseline(time_levels, baseline)
+      mean_mat <- sapply(time_levels, function(tt) {
+        idx <- idx_series[as.character(meta$.__time__[idx_series]) == as.character(tt)]
+        rowMeans(mat_log[, idx, drop = FALSE], na.rm = TRUE)
+      })
+      mean_mat <- as.matrix(mean_mat)
+      rownames(mean_mat) <- rownames(mat_log)
+      colnames(mean_mat) <- paste0(ss, "|", time_levels)
+      sweep(mean_mat, 1, mean_mat[, paste0(ss, "|", base)], "-")
+    })
+    names(series_mats) <- series_levels
+
+    raw_mean <- lapply(series_levels, function(ss) {
+      idx_series <- which(as.character(meta$.__series__) == ss)
+      time_levels <- sort_unique_time(meta$.__time__[idx_series])
+      mean_mat <- sapply(time_levels, function(tt) {
+        idx <- idx_series[as.character(meta$.__time__[idx_series]) == as.character(tt)]
+        rowMeans(mat_raw[, idx, drop = FALSE], na.rm = TRUE)
+      })
+      colnames(mean_mat) <- paste0(ss, "|", time_levels)
+      mean_mat
+    })
+    names(raw_mean) <- series_levels
+  } else {
+    as_mat <- function(z) {
+      z <- as.matrix(z)
+      if (is.null(rownames(z))) stop("Matrix-like input must have rownames.")
+      z
+    }
+    series_mats_input <- if (is.list(x) && !is.data.frame(x)) x else list(Series1 = x)
+    if (is.null(names(series_mats_input))) {
+      names(series_mats_input) <- paste0("Series", seq_along(series_mats_input))
+    }
+
+    raw_mean <- lapply(series_mats_input, as_mat)
+    if (is.null(log2_offset)) log2_offset <- infer_log2_offset(unlist(raw_mean, use.names = FALSE))
+
+    series_mats <- lapply(names(raw_mean), function(ss) {
+      mat_raw <- raw_mean[[ss]]
+      time_levels <- colnames(mat_raw)
+      if (is.null(time_levels)) time_levels <- seq_len(ncol(mat_raw))
+      base <- choose_baseline(time_levels, baseline)
+      mat_log <- log2(mat_raw + log2_offset)
+      colnames(mat_log) <- paste0(ss, "|", time_levels)
+      sweep(mat_log, 1, mat_log[, paste0(ss, "|", base)], "-")
+    })
+    names(series_mats) <- names(raw_mean)
+    raw_mean <- lapply(names(raw_mean), function(ss) {
+      mat <- raw_mean[[ss]]
+      colnames(mat) <- paste0(ss, "|", colnames(mat))
+      mat
+    })
+    names(raw_mean) <- names(series_mats)
+  }
+
+  feature_sets <- lapply(series_mats, rownames)
+  features <- if (isTRUE(common_features)) Reduce(intersect, feature_sets) else Reduce(union, feature_sets)
+
+  align_rows <- function(mat, features) {
+    out <- matrix(NA_real_, nrow = length(features), ncol = ncol(mat))
+    rownames(out) <- features
+    colnames(out) <- colnames(mat)
+    hit <- intersect(features, rownames(mat))
+    out[hit, ] <- mat[hit, , drop = FALSE]
+    out
+  }
+
+  trajectory <- do.call(cbind, lapply(series_mats, align_rows, features = features))
+  raw_mean_mtx <- do.call(cbind, lapply(raw_mean, align_rows, features = features))
+  trajectory[!is.finite(trajectory)] <- NA_real_
+
+  feature_info <- tibble::tibble(
+    feature = colnames(trajectory),
+    series = sub("\\|.*$", "", colnames(trajectory)),
+    time = sub("^.*\\|", "", colnames(trajectory))
+  )
+
+  list(
+    trajectory = trajectory,
+    raw_mean = raw_mean_mtx,
+    feature_info = feature_info,
+    metadata = feature_info,
+    log2_offset = log2_offset
+  )
+}
+
+build_significant_logfc_matrix <- function(
+    test_res,
+    genes,
+    metadata,
+    p_adj_cutoff = 0.05,
+    logFC_cutoff = 0.5
+) {
+  if (is.null(test_res) || nrow(test_res) == 0) {
+    stop("timepoint test results are required to build the significant log2FC matrix.")
+  }
+
+  metadata <- metadata %>%
+    dplyr::mutate(
+      time_num = suppressWarnings(as.numeric(.data$time)),
+      time_order = ifelse(is.na(time_num), match(.data$time, unique(.data$time)), time_num)
+    ) %>%
+    dplyr::arrange(.data$series, .data$time_order)
+
+  mat <- matrix(
+    0,
+    nrow = length(genes),
+    ncol = nrow(metadata),
+    dimnames = list(genes, metadata$feature)
+  )
+
+  test_res <- test_res %>%
+    dplyr::filter(.data$gene %in% genes) %>%
+    dplyr::mutate(
+      feature = paste0(.data$series, "|", .data$time),
+      significant_for_clustering =
+        .data$adj.P.Val <= p_adj_cutoff & abs(.data$logFC) >= logFC_cutoff,
+      cluster_value = dplyr::if_else(.data$significant_for_clustering, .data$logFC, 0)
+    )
+
+  row_idx <- match(test_res$gene, rownames(mat))
+  col_idx <- match(test_res$feature, colnames(mat))
+  keep <- !is.na(row_idx) & !is.na(col_idx)
+
+  mat[cbind(row_idx[keep], col_idx[keep])] <- test_res$cluster_value[keep]
+  mat[!is.finite(mat)] <- 0
+
+  list(matrix = mat, metadata = metadata)
+}
+
+select_timecourse_k <- function(
+    mat,
+    k = "auto",
+    k_range = 2:10,
+    distance = c("correlation", "euclidean"),
+    max_features = 2000,
+    seed = 1
+) {
+  distance <- match.arg(distance)
+  mat <- as.matrix(mat)
+  mat[!is.finite(mat)] <- 0
+
+  if (!identical(k, "auto")) {
+    return(list(k = as.integer(k), scores = NULL, method = "user"))
+  }
+
+  if (nrow(mat) > max_features) {
+    set.seed(seed)
+    pick <- sample(seq_len(nrow(mat)), max_features)
+    mat_for_k <- mat[pick, , drop = FALSE]
+  } else {
+    mat_for_k <- mat
+  }
+
+  max_possible <- max(2, min(nrow(mat_for_k) - 1, max(k_range)))
+  k_range <- k_range[k_range >= 2 & k_range <= max_possible]
+  if (length(k_range) == 0) stop("No valid k values in k_range.")
+
+  if (distance == "correlation") {
+    cor_m <- suppressWarnings(stats::cor(t(mat_for_k), method = "spearman", use = "pairwise.complete.obs"))
+    cor_m[!is.finite(cor_m)] <- 0
+    d <- stats::as.dist(1 - cor_m)
+  } else {
+    d <- stats::dist(mat_for_k)
+  }
+
+  scores <- lapply(k_range, function(kk) {
+    set.seed(seed)
+    km <- stats::kmeans(mat_for_k, centers = kk, nstart = 25, iter.max = 100)
+    sil <- if (requireNamespace("cluster", quietly = TRUE)) {
+      mean(cluster::silhouette(km$cluster, d)[, "sil_width"], na.rm = TRUE)
+    } else {
+      stats::cor(
+        as.numeric(d),
+        as.numeric(stats::dist(km$centers[km$cluster, , drop = FALSE])),
+        use = "pairwise.complete.obs"
+      )
+    }
+    data.frame(k = kk, score = sil, stringsAsFactors = FALSE)
+  })
+  scores <- do.call(rbind, scores)
+  scores <- scores[order(scores$score, decreasing = TRUE), , drop = FALSE]
+  list(k = scores$k[1], scores = scores, method = "average_silhouette")
+}
+
+run_hybrid_temporal_clustering <- function(
+    mat,
+    metadata,
+    k = "auto",
+    k_range = 2:10,
+    weights = c(shape = 0.35, amplitude = 0.25, trend = 0.25, timing = 0.15),
+    max_features = 2000,
+    seed = 1
+) {
+  mat <- as.matrix(mat)
+  mat[!is.finite(mat)] <- 0
+  metadata <- metadata[match(colnames(mat), metadata$feature), , drop = FALSE]
+
+  if (!all(c("shape", "amplitude", "trend", "timing") %in% names(weights))) {
+    stop("weights must include shape, amplitude, trend and timing.")
+  }
+  weights <- weights[c("shape", "amplitude", "trend", "timing")]
+  weights <- weights / sum(weights)
+
+  dist_full <- hybrid_temporal_distance(mat, metadata, weights)
+  hc <- stats::hclust(dist_full, method = "ward.D2")
+
+  selected_k <- select_hclust_k(
+    dist_obj = dist_full,
+    hc = hc,
+    k = k,
+    k_range = k_range,
+    max_features = max_features,
+    seed = seed
+  )
+
+  cluster_id <- stats::cutree(hc, k = selected_k$k)
+  names(cluster_id) <- rownames(mat)
+
+  list(
+    cluster = cluster_id,
+    selected_k = selected_k,
+    hclust = hc,
+    distance = dist_full
+  )
+}
+
+hybrid_temporal_distance <- function(
+    mat,
+    metadata,
+    weights = c(shape = 0.35, amplitude = 0.25, trend = 0.25, timing = 0.15),
+    logfc_cap = 4
+) {
+  mat <- as.matrix(mat)
+  mat[!is.finite(mat)] <- 0
+  mat <- pmax(pmin(mat, logfc_cap), -logfc_cap)
+
+  shape_mat <- t(scale(t(mat)))
+  shape_mat[!is.finite(shape_mat)] <- 0
+  shape_cor <- suppressWarnings(stats::cor(t(shape_mat), method = "pearson"))
+  shape_cor[!is.finite(shape_cor)] <- 0
+  d_shape <- stats::as.dist((1 - shape_cor) / 2)
+
+  d_amplitude <- normalize_dist(stats::dist(mat, method = "euclidean"))
+
+  trend_mat <- build_trend_matrix(mat, metadata)
+  d_trend <- normalize_dist(stats::dist(trend_mat, method = "euclidean"))
+
+  timing_mat <- (mat != 0) * 1
+  d_timing <- normalize_dist(stats::dist(timing_mat, method = "binary"))
+
+  d <- weights["shape"] * normalize_dist(d_shape) +
+    weights["amplitude"] * d_amplitude +
+    weights["trend"] * d_trend +
+    weights["timing"] * d_timing
+
+  attr(d, "method") <- "hybrid_temporal_distance"
+  d
+}
+
+build_trend_matrix <- function(mat, metadata) {
+  pieces <- lapply(unique(metadata$series), function(ss) {
+    cols <- metadata$feature[metadata$series == ss]
+    cols <- cols[cols %in% colnames(mat)]
+    if (length(cols) < 2) {
+      return(NULL)
+    }
+    t(diff(t(mat[, cols, drop = FALSE])))
+  })
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0) {
+    return(matrix(0, nrow = nrow(mat), ncol = 1, dimnames = list(rownames(mat), "trend0")))
+  }
+  trend <- do.call(cbind, pieces)
+  rownames(trend) <- rownames(mat)
+  trend[!is.finite(trend)] <- 0
+  trend
+}
+
+normalize_dist <- function(d) {
+  x <- as.numeric(d)
+  finite <- is.finite(x)
+  if (!any(finite) || max(x[finite], na.rm = TRUE) == 0) {
+    x[] <- 0
+  } else {
+    x[finite] <- x[finite] / stats::quantile(x[finite], probs = 0.95, na.rm = TRUE, names = FALSE)
+    x[!finite] <- 0
+    x <- pmin(x, 1)
+  }
+  out <- d
+  out[] <- x
+  out
+}
+
+select_hclust_k <- function(
+    dist_obj,
+    hc,
+    k = "auto",
+    k_range = 2:10,
+    max_features = 2000,
+    seed = 1
+) {
+  if (!identical(k, "auto")) {
+    return(list(k = as.integer(k), scores = NULL, method = "user"))
+  }
+
+  n <- attr(dist_obj, "Size")
+  k_range <- k_range[k_range >= 2 & k_range <= max(2, n - 1)]
+  if (length(k_range) == 0) stop("No valid k values in k_range.")
+
+  use_idx <- seq_len(n)
+  if (n > max_features) {
+    set.seed(seed)
+    use_idx <- sort(sample(seq_len(n), max_features))
+  }
+
+  dist_m <- as.matrix(dist_obj)
+  dist_sub <- stats::as.dist(dist_m[use_idx, use_idx, drop = FALSE])
+
+  scores <- lapply(k_range, function(kk) {
+    cluster_id <- stats::cutree(hc, k = kk)[use_idx]
+    sil <- if (requireNamespace("cluster", quietly = TRUE) && length(unique(cluster_id)) > 1) {
+      mean(cluster::silhouette(cluster_id, dist_sub)[, "sil_width"], na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    data.frame(k = kk, score = sil, stringsAsFactors = FALSE)
+  })
+
+  scores <- do.call(rbind, scores)
+  scores <- scores[order(scores$score, decreasing = TRUE), , drop = FALSE]
+  list(k = scores$k[1], scores = scores, method = "hybrid_silhouette")
+}
+
+summarize_timecourse_clusters <- function(trajectory, gene_cluster, feature_info) {
+  centroid_mtx <- rowsum(trajectory[gene_cluster$gene, , drop = FALSE], gene_cluster$cluster, na.rm = TRUE)
+  cluster_n <- table(gene_cluster$cluster)
+  centroid_mtx <- centroid_mtx / as.numeric(cluster_n[rownames(centroid_mtx)])
+
+  centroid_long <- as.data.frame(centroid_mtx) %>%
+    tibble::rownames_to_column("cluster") %>%
+    tidyr::pivot_longer(-"cluster", names_to = "feature", values_to = "value") %>%
+    dplyr::left_join(feature_info, by = "feature")
+
+  cluster_summary <- centroid_long %>%
+    dplyr::group_by(.data$cluster) %>%
+    dplyr::summarise(
+      n_genes = as.integer(cluster_n[.data$cluster[1]]),
+      max_abs_change = max(abs(.data$value), na.rm = TRUE),
+      pattern = .data$cluster[1],
+      pattern_signature = summarize_series_signature(.data$value, .data$time, .data$series),
+      centroid_change_time = infer_centroid_change_time(.data$value, .data$time, .data$series),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(.data$cluster)
+
+  list(cluster_summary = cluster_summary, centroids = centroid_long)
+}
+
+summarize_series_signature <- function(value, time, series) {
+  df <- data.frame(value = value, time = time, series = series, stringsAsFactors = FALSE)
+  sig <- vapply(split(df, df$series), function(dd) {
+    paste0(unique(dd$series), ":", label_single_centroid(dd$value))
+  }, character(1))
+  paste(sig, collapse = " | ")
+}
+
+label_single_centroid <- function(y) {
+  y <- as.numeric(y)
+  if (length(y) < 3 || all(!is.finite(y))) return("Mixed")
+  y[!is.finite(y)] <- 0
+  t <- seq_along(y)
+  rho <- suppressWarnings(stats::cor(y, t, method = "spearman", use = "complete.obs"))
+  if (!is.finite(rho)) rho <- 0
+  end_value <- y[length(y)]
+  peak_value <- y[which.max(abs(y))]
+  max_abs <- abs(peak_value)
+  if (max_abs < 0.1) return("Flat")
+  return_to_baseline <- abs(end_value) < 0.4 * max_abs
+  if (return_to_baseline && peak_value > 0) return("Transient_up")
+  if (return_to_baseline && peak_value < 0) return("Transient_down")
+  if (rho >= 0.5 && end_value > 0) return("Sustained_up")
+  if (rho <= -0.5 && end_value < 0) return("Sustained_down")
+  if (end_value > 0) return("Late_up")
+  if (end_value < 0) return("Late_down")
+  "Mixed"
+}
+
+test_timecourse_changes <- function(
+    x,
+    assay_name = "conc",
+    time_col = "time",
+    series_col = NULL,
+    baseline = NULL,
+    log2_offset = NULL,
+    p_adj_cutoff = 0.05,
+    logFC_cutoff = 0.5
+) {
+  if (!inherits(x, "SummarizedExperiment")) return(NULL)
+  stopifnot(assay_name %in% SummarizedExperiment::assayNames(x))
+  stopifnot(time_col %in% colnames(SummarizedExperiment::colData(x)))
+
+  mat_raw <- as.matrix(SummarizedExperiment::assay(x, assay_name))
+  if (is.null(log2_offset)) log2_offset <- infer_log2_offset(mat_raw)
+  mat_log <- log2(mat_raw + log2_offset)
+  meta <- as.data.frame(SummarizedExperiment::colData(x))
+  meta$.__series__ <- if (is.null(series_col)) "Series1" else meta[[series_col]]
+  meta$.__time__ <- meta[[time_col]]
+
+  out <- lapply(unique(as.character(meta$.__series__)), function(ss) {
+    idx_series <- which(as.character(meta$.__series__) == ss)
+    time_levels <- sort_unique_time(meta$.__time__[idx_series])
+    base <- choose_baseline(time_levels, baseline)
+    cmp_times <- setdiff(time_levels, base)
+
+    do.call(rbind, lapply(cmp_times, function(tt) {
+      idx <- idx_series[as.character(meta$.__time__[idx_series]) %in% as.character(c(base, tt))]
+      group <- factor(as.character(meta$.__time__[idx]), levels = as.character(c(base, tt)))
+      if (length(unique(group)) < 2) return(NULL)
+
+      design <- stats::model.matrix(~0 + group)
+      colnames(design) <- make.names(levels(group))
+      contrast <- paste0(make.names(as.character(tt)), "-", make.names(as.character(base)))
+
+      fit <- limma::lmFit(mat_log[, idx, drop = FALSE], design)
+      fit <- limma::contrasts.fit(fit, limma::makeContrasts(contrasts = contrast, levels = design))
+      fit <- limma::eBayes(fit, trend = TRUE, robust = TRUE)
+      tab <- limma::topTable(fit, number = Inf, sort.by = "none")
+      tab$gene <- rownames(tab)
+      tab$series <- ss
+      tab$time <- tt
+      tab$baseline <- base
+      tab$significant <- tab$adj.P.Val <= p_adj_cutoff & abs(tab$logFC) >= logFC_cutoff
+      tab[, c("gene", "series", "baseline", "time", "logFC", "P.Value", "adj.P.Val", "significant")]
+    }))
+  })
+
+  out <- do.call(rbind, out)
+  rownames(out) <- NULL
+  out
+}
+
+infer_log2_offset <- function(x) {
+  x <- as.numeric(x)
+  pos_min <- suppressWarnings(min(x[x > 0], na.rm = TRUE))
+  if (!is.finite(pos_min)) return(1e-6)
+  max(pos_min / 2, 1e-6)
+}
+
+sort_unique_time <- function(x) {
+  ux <- unique(x)
+  xn <- suppressWarnings(as.numeric(as.character(ux)))
+  if (all(is.finite(xn))) ux[order(xn)] else ux
+}
+
+choose_baseline <- function(time_levels, baseline = NULL) {
+  if (is.null(baseline)) return(time_levels[1])
+  hit <- which(as.character(time_levels) == as.character(baseline))
+  if (length(hit) == 0) stop("baseline is not present in time points.")
+  time_levels[hit[1]]
+}
+
+label_timecourse_pattern <- function(value, time, series) {
+  df <- data.frame(value = value, time = time, series = series, stringsAsFactors = FALSE)
+  series_scores <- lapply(split(df, df$series), function(dd) {
+    y <- dd$value
+    t <- seq_along(y)
+    rho <- suppressWarnings(stats::cor(y, t, method = "spearman", use = "complete.obs"))
+    end_delta <- y[length(y)] - y[1]
+    peak <- y[which.max(abs(y))]
+    returns <- abs(y[length(y)]) < 0.35 * max(abs(y), na.rm = TRUE)
+    c(
+      rho = ifelse(is.finite(rho), rho, 0),
+      end_delta = end_delta,
+      peak = peak,
+      returns = as.numeric(returns)
+    )
+  })
+  scores <- do.call(rbind, series_scores)
+  mean_rho <- mean(scores[, "rho"], na.rm = TRUE)
+  mean_end <- mean(scores[, "end_delta"], na.rm = TRUE)
+  peak_sign <- sign(mean(scores[, "peak"], na.rm = TRUE))
+  adaptive <- mean(scores[, "returns"], na.rm = TRUE) >= 0.5
+
+  if (adaptive && peak_sign > 0) return("Adaptive_up")
+  if (adaptive && peak_sign < 0) return("Adaptive_down")
+  if (mean_rho >= 0.6 && mean_end > 0) return("Sustained_up")
+  if (mean_rho <= -0.6 && mean_end < 0) return("Sustained_down")
+  if (mean_end > 0.5) return("Late_up")
+  if (mean_end < -0.5) return("Late_down")
+  if (peak_sign > 0) return("Transient_up")
+  if (peak_sign < 0) return("Transient_down")
+  "Mixed"
+}
+
+infer_centroid_change_time <- function(value, time, series) {
+  df <- data.frame(value = value, time = time, series = series, stringsAsFactors = FALSE)
+  tt <- lapply(split(df, df$series), function(dd) {
+    if (nrow(dd) < 2) return(NA_character_)
+    jump <- abs(diff(dd$value))
+    as.character(dd$time[which.max(jump) + 1])
+  })
+  names(sort(table(unlist(tt)), decreasing = TRUE))[1]
+}
+
+auto_consensus_timecourse_pattern_clustering <- function(
+    x,
+    assay_name = "conc",
+    time_col = "time",
+    series_col = "cell_line",
+    baseline = NULL,
+    min_mean = 10,
+    min_sd = 0.15,
+    log2_offset = NULL,
+    p_adj_cutoff = 0.05,
+    logFC_cutoff = 0.5,
+    min_series = 3,
+    keep_no_change = FALSE,
+    seed = 1
+) {
+  set.seed(seed)
+
+  prepared <- prepare_timecourse_matrix(
+    x = x,
+    assay_name = assay_name,
+    time_col = time_col,
+    series_col = series_col,
+    baseline = baseline,
+    log2_offset = log2_offset,
+    common_features = TRUE
+  )
+
+  test_res <- test_timecourse_changes(
+    x = x,
+    assay_name = assay_name,
+    time_col = time_col,
+    series_col = series_col,
+    baseline = baseline,
+    log2_offset = prepared$log2_offset,
+    p_adj_cutoff = p_adj_cutoff,
+    logFC_cutoff = logFC_cutoff
+  )
+
+  trajectory <- prepared$trajectory
+  raw_mean <- prepared$raw_mean
+  feature_mean <- rowMeans(raw_mean, na.rm = TRUE)
+  feature_sd <- apply(trajectory, 1, stats::sd, na.rm = TRUE)
+  keep_feature <- is.finite(feature_mean) & is.finite(feature_sd) &
+    feature_mean >= min_mean & feature_sd >= min_sd
+  trajectory <- trajectory[keep_feature, , drop = FALSE]
+
+  series_levels <- unique(prepared$metadata$series)
+  if (length(series_levels) < min_series) {
+    stop("Detected fewer series than min_series.")
+  }
+
+  pattern_by_series <- classify_gene_pattern_by_series(
+    trajectory = trajectory,
+    metadata = prepared$metadata,
+    timepoint_tests = test_res,
+    p_adj_cutoff = p_adj_cutoff,
+    logFC_cutoff = logFC_cutoff
+  )
+
+  pattern_wide <- pattern_by_series %>%
+    dplyr::select("gene", "series", "series_pattern") %>%
+    tidyr::pivot_wider(
+      names_from = "series",
+      values_from = "series_pattern",
+      names_prefix = "pattern_"
+    )
+
+  time_wide <- pattern_by_series %>%
+    dplyr::select("gene", "series", "first_significant_time") %>%
+    tidyr::pivot_wider(
+      names_from = "series",
+      values_from = "first_significant_time",
+      names_prefix = "first_time_"
+    )
+
+  pattern_cols <- grep("^pattern_", colnames(pattern_wide), value = TRUE)
+  consensus_df <- pattern_wide %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      n_series_called = sum(!is.na(c_across(dplyr::all_of(pattern_cols)))),
+      n_unique_pattern = length(unique(stats::na.omit(c_across(dplyr::all_of(pattern_cols))))),
+      consensus_pattern = {
+        vals <- stats::na.omit(c_across(dplyr::all_of(pattern_cols)))
+        if (length(vals) == 0 || length(unique(vals)) != 1) NA_character_ else unique(vals)
+      },
+      is_consensus = .data$n_series_called >= min_series &&
+        .data$n_unique_pattern == 1 &&
+        (keep_no_change || !.data$consensus_pattern %in% c("No_significant_change", "Mixed"))
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::left_join(time_wide, by = "gene")
+
+  consensus_genes <- consensus_df %>%
+    dplyr::filter(.data$is_consensus) %>%
+    dplyr::pull(.data$gene)
+
+  if (length(consensus_genes) == 0) {
+    stop("No genes have the same non-flat pattern across all series under current thresholds.")
+  }
+
+  gene_cluster <- consensus_df %>%
+    dplyr::filter(.data$is_consensus) %>%
+    dplyr::transmute(
+      gene = .data$gene,
+      cluster = .data$consensus_pattern,
+      pattern = .data$consensus_pattern
+    )
+
+  cluster_summary <- gene_cluster %>%
+    dplyr::count(.data$cluster, .data$pattern, name = "n_genes") %>%
+    dplyr::arrange(dplyr::desc(.data$n_genes))
+
+  cluster_change <- pattern_by_series %>%
+    dplyr::inner_join(gene_cluster, by = "gene") %>%
+    dplyr::group_by(.data$cluster, .data$pattern, .data$series) %>%
+    dplyr::summarise(
+      n_genes = dplyr::n(),
+      first_cluster_significant_time = {
+        tt <- stats::na.omit(.data$first_significant_time)
+        if (length(tt) == 0) NA_character_ else names(sort(table(tt), decreasing = TRUE))[1]
+      },
+      median_max_abs_logFC = stats::median(.data$max_abs_logFC, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  cluster_input <- t(scale(t(trajectory[consensus_genes, , drop = FALSE])))
+  cluster_input[!is.finite(cluster_input)] <- 0
+
+  consistency_audit <- consensus_df %>%
+    dplyr::count(.data$is_consensus, .data$consensus_pattern, name = "n_genes") %>%
+    dplyr::arrange(.data$is_consensus, .data$consensus_pattern)
+
+  list(
+    gene_cluster = gene_cluster,
+    gene_change = pattern_by_series,
+    gene_pattern_by_series = pattern_by_series,
+    gene_consensus = consensus_df,
+    cluster_change = cluster_change,
+    cluster_summary = cluster_summary,
+    consistency_audit = consistency_audit,
+    timepoint_tests = test_res,
+    trajectory = trajectory[consensus_genes, , drop = FALSE],
+    cluster_input = cluster_input,
+    metadata = prepared$metadata,
+    parameters = list(
+      assay_name = assay_name,
+      time_col = time_col,
+      series_col = series_col,
+      baseline = baseline,
+      min_mean = min_mean,
+      min_sd = min_sd,
+      p_adj_cutoff = p_adj_cutoff,
+      logFC_cutoff = logFC_cutoff,
+      min_series = min_series,
+      keep_no_change = keep_no_change
+    )
+  )
+}
+
+classify_gene_pattern_by_series <- function(
+    trajectory,
+    metadata,
+    timepoint_tests,
+    p_adj_cutoff = 0.05,
+    logFC_cutoff = 0.5
+) {
+  genes <- rownames(trajectory)
+  series_levels <- unique(metadata$series)
+
+  out <- lapply(series_levels, function(ss) {
+    cols <- metadata$feature[metadata$series == ss]
+    cols <- cols[cols %in% colnames(trajectory)]
+    time_values <- metadata$time[match(cols, metadata$feature)]
+
+    do.call(rbind, lapply(genes, function(gg) {
+      y <- as.numeric(trajectory[gg, cols])
+      tests <- timepoint_tests %>%
+        dplyr::filter(.data$gene == gg, .data$series == ss)
+
+      series_pattern <- classify_one_series_pattern(
+        y = y,
+        time = time_values,
+        tests = tests,
+        p_adj_cutoff = p_adj_cutoff,
+        logFC_cutoff = logFC_cutoff
+      )
+
+      sig_tests <- tests %>%
+        dplyr::filter(.data$adj.P.Val <= p_adj_cutoff, abs(.data$logFC) >= logFC_cutoff) %>%
+        dplyr::arrange(.data$time)
+
+      data.frame(
+        gene = gg,
+        series = ss,
+        series_pattern = series_pattern,
+        first_significant_time = if (nrow(sig_tests) == 0) NA_character_ else as.character(sig_tests$time[1]),
+        strongest_time = if (nrow(tests) == 0) NA_character_ else as.character(tests$time[which.max(abs(tests$logFC))]),
+        max_abs_logFC = if (nrow(tests) == 0) NA_real_ else max(abs(tests$logFC), na.rm = TRUE),
+        stringsAsFactors = FALSE
+      )
+    }))
+  })
+
+  dplyr::bind_rows(out)
+}
+
+classify_one_series_pattern <- function(
+    y,
+    time,
+    tests,
+    p_adj_cutoff = 0.05,
+    logFC_cutoff = 0.5
+) {
+  if (length(y) < 3 || all(!is.finite(y))) return("Mixed")
+  y[!is.finite(y)] <- NA_real_
+
+  sig_tests <- tests %>%
+    dplyr::filter(.data$adj.P.Val <= p_adj_cutoff, abs(.data$logFC) >= logFC_cutoff)
+
+  if (nrow(sig_tests) == 0) return("No_significant_change")
+
+  y0 <- y
+  y0[is.na(y0)] <- 0
+  t <- seq_along(y0)
+  rho <- suppressWarnings(stats::cor(y0, t, method = "spearman", use = "complete.obs"))
+  if (!is.finite(rho)) rho <- 0
+
+  end_value <- y0[length(y0)]
+  peak_idx <- which.max(abs(y0))
+  peak_value <- y0[peak_idx]
+  max_abs <- abs(peak_value)
+  return_to_baseline <- abs(end_value) < 0.4 * max_abs
+
+  sig_sign <- sign(stats::median(sig_tests$logFC, na.rm = TRUE))
+  if (!is.finite(sig_sign) || sig_sign == 0) sig_sign <- sign(peak_value)
+
+  if (return_to_baseline && sig_sign > 0) return("Transient_up")
+  if (return_to_baseline && sig_sign < 0) return("Transient_down")
+  if (rho >= 0.5 && end_value >= logFC_cutoff) return("Sustained_up")
+  if (rho <= -0.5 && end_value <= -logFC_cutoff) return("Sustained_down")
+  if (end_value >= logFC_cutoff && sig_sign > 0) return("Late_up")
+  if (end_value <= -logFC_cutoff && sig_sign < 0) return("Late_down")
+  if (sig_sign > 0) return("Transient_up")
+  if (sig_sign < 0) return("Transient_down")
+  "Mixed"
 }
 

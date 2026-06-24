@@ -12,7 +12,8 @@ impute_low1pct_or_median_raw(
   condition_col = "condition",
   low_prob = 0.001,
   return_log2 = FALSE,
-  seed = 1
+  seed = 1,
+  enable_impute_with_replicate = TRUE
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ impute_low1pct_or_median_raw(
 \item{return_log2}{Return log2 values instead of raw (default FALSE).}
 
 \item{seed}{Random seed.}
+
+\item{enable_impute_with_replicate}{All defects are randomly filled in at the low end (default TRUE).}
 }
 \value{
 Long-format data.frame with imputed values.

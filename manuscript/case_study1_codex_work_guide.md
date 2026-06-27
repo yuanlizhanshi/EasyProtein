@@ -1,109 +1,51 @@
-# Codex 工作指南：EasyProtein Case Study 1
+# Codex 最终工作指南：EasyProtein Case Study 1 / Figure 2
 
-## 1. 任务目标
+## 1. 最终任务
 
-基于仓库中已经准备好的公共定量蛋白质组数据、EasyProtein 函数和现有 vignettes，完成文章 **Case Study 1** 的全部分析、绘图和结果整理。
+基于 EasyProtein 仓库中已经准备好的公共多组织定量蛋白质组数据，完成文章 **Case Study 1** 的最终 Figure 2 和 Supplementary Figures。
 
-本案例的目标不是提出新的生物学机制，而是通过一个真实公共数据集展示 EasyProtein 的常规端到端分析能力：
+Figure 2 的内容已经确定，不再重新设计版式或增加新的分析模块。你的工作是：
 
-> raw quantitative protein matrix → structured `SummarizedExperiment` → preprocessing → quality control → sample-structure visualization → differential analysis → functional interpretation → publication-ready figures and exportable tables.
+1. 使用 EasyProtein 已有函数和 vignette 中已有代码完成分析；
+2. 生成 publication-ready 图形；
+3. 将 Main Figure 的全部代码放在一个 R 文件中；
+4. 将 Supplementary Figures 的全部代码放在另一个 R 文件中；
+5. 最终只需要交付 PDF 图；
+6. 图形保存优先使用 EasyProtein 的 `saveplot()` 函数。
 
-最终需要生成：
-
-1. Case Study 1 主图 Figure 2 的所有 panel；
-2. 对应的 Supplementary Figures；
-3. Supplementary Tables；
-4. 完整、可重复执行的 R 分析脚本；
-5. 用于 manuscript 的结果数字和简短结果摘要。
-
----
-
-## 2. 总体原则
-
-### 2.1 必须复用 EasyProtein
-
-分析优先调用 EasyProtein 已有函数，不要重新实现已有功能。需要重点复用：
-
-- `rawdata2se()`
-- `plotSE_density()`
-- `plotSE_missing_value()`
-- `plotSE_protein_number()`
-- `plot_pca()`
-- `se2DEGs()`
-- `enrichment_analysis()`
-- `plot_gene_expression()`
-- 其他仓库中已经存在、且适用于本案例的 QC、heatmap、volcano、normalization、filtering 和 export 函数
-
-如现有函数不能直接满足 publication-level 图形要求，可以：
-
-1. 先使用 EasyProtein 函数完成数据计算；
-2. 再基于函数返回结果单独编写绘图代码；
-3. 不要复制或重写核心统计逻辑。
-
-### 2.2 不修改原始数据
-
-- 原始数据文件只读；
-- 所有中间对象保存到新的 analysis/output 目录；
-- 不要覆盖 package 自带数据、vignettes 或原始矩阵。
-
-### 2.3 所有结果必须可重复
-
-- 所有随机过程设置 `set.seed(123)`；
-- 所有过滤阈值、比较方向和富集参数必须写入配置区；
-- 所有 figure 必须由脚本自动生成，禁止手工修改数值或图形元素；
-- 保存 `sessionInfo()`；
-- 脚本必须从干净 R session 中可以顺序运行。
-
-### 2.4 不安装任何额外软件或 R 包
-
-如果发现缺少依赖：
-
-- 不要自动安装；
-- 在日志中列出缺少的包；
-- 优先使用项目当前环境中已有包和 EasyProtein 已声明依赖；
-- 将缺失依赖及其用途写入 `missing_dependencies.md`。
+不要修改原始数据，不要自动安装新的 R 包，不要为了让结果更好看而手工调整统计结果或删除样本。
 
 ---
 
-## 3. 需要先阅读的文件
+## 2. 开始前必须阅读
 
-开始工作前，按顺序阅读：
+按以下顺序阅读并确认现有代码、对象和函数接口：
 
-1. `manuscript/section1_overview.md` 或名称最接近的 overview 文件；
+1. `manuscript/section1_overview.md` 或对应 overview 文件；
 2. `vignettes/quick_start.Rmd`；
 3. `vignettes/multiple_sample_analysis.Rmd`；
-4. `DESCRIPTION`；
-5. `NAMESPACE`；
-6. `R/` 下与以下功能相关的脚本：
-   - data import
-   - preprocessing
-   - missing-value handling
-   - normalization/scaling
-   - quality control
+4. `vignettes/complexheatmap_visualization.Rmd`；
+5. `R/visualization.R`；
+6. 与以下功能有关的 R 源码：
+   - `rawdata2se()`
    - PCA
+   - ComplexHeatmap
+   - tissue-specific gene/protein clustering
    - differential analysis
    - volcano plot
-   - heatmap
-   - enrichment analysis
-   - expression visualization
-7. `inst/extdata/` 下公共示例数据及相关 metadata；
-8. 仓库中已有的 manuscript figure theme、配色和保存函数。
+   - gene expression plot
+   - GO/KEGG enrichment
+   - 两种 enrichment visualization
+   - `saveplot()`
+7. 仓库中已经生成 `Supplementary_Figure_S2.pdf` 和 `Supplementary_Figure_S3.pdf` 的旧代码、对象和输出文件。
 
-不要只根据函数名称猜测行为。必须确认：
-
-- 输入 assay 名称；
-- 输出对象结构；
-- log transform 是否已执行；
-- missing-value filtering 规则；
-- normalization 方法；
-- differential comparison 的方向定义；
-- `logFC > 0` 对应哪一组更高。
+注意：当前 GitHub 已提交版本中可能暂时找不到 `vignettes/complexheatmap_visualization.Rmd`。如果本地工作目录中存在该文件，以本地文件为准；必须先定位并阅读它，不要凭函数名猜测热图和聚类逻辑。
 
 ---
 
-## 4. 数据集和分析设计
+## 3. 数据和 metadata
 
-当前 vignettes 使用的公共数据文件为：
+默认使用 vignette 中的公共数据：
 
 ```r
 system.file(
@@ -113,33 +55,9 @@ system.file(
 )
 ```
 
-如项目中已有同一数据的本地分析版本，优先使用项目内明确指定的数据路径，但需要记录实际路径。
+使用 `rawdata2se()` 构建 `SummarizedExperiment`。
 
-### 4.1 全数据集用途
-
-使用全部样本完成：
-
-- 数据导入；
-- metadata 构建；
-- 全局 QC；
-- missing-value assessment；
-- detected protein summary；
-- sample correlation；
-- PCA；
-- 可选 UMAP；
-- dataset composition summary。
-
-### 4.2 差异分析子集
-
-使用 vignette 中的标准比较：
-
-- tissue: Liver
-- sex: M
-- reference group: 1w
-- comparison group: 8w
-- comparison direction: `8w versus 1w`
-
-必须先检查 metadata 中实际值和大小写，再统一标准化：
+必须检查并统一 metadata：
 
 ```r
 se$tissue <- stringr::str_to_title(se$tissue)
@@ -147,252 +65,390 @@ se$sex <- stringr::str_to_upper(se$sex)
 se$age <- factor(se$age, levels = c("1w", "4w", "8w"))
 ```
 
-重点检查并修正现有 vignette 中可能存在的：
+检查并修正可能存在的：
 
-- `live` 与 `Liver` 不一致；
-- `heart` 与 `Heart` 不一致；
-- `M` 与 `m` 不一致。
+- `live` / `liver` / `Liver`；
+- `heart` / `Heart`；
+- `M` / `m`；
+- 样本顺序与 `colData(se)` 不一致；
+- 重复 sample name；
+- 无法解析 tissue、age、sex 或 replicate 的样本。
 
-任何修改都必须在 case-study 脚本中显式完成，不要静默依赖模糊匹配。
+不要重复执行已经由 `rawdata2se()` 完成的 log transformation、normalization 或 imputation。必须先读源码确认 assay 含义，再选择用于 PCA、heatmap 和差异分析的 assay。
 
 ---
 
-## 5. 建议目录结构
+# 4. 代码文件结构
 
-在仓库中建立：
+最终只保留两个主分析脚本：
 
 ```text
 case_study1/
-├── README.md
-├── config.R
-├── scripts/
-│   ├── 00_check_environment.R
-│   ├── 01_import_and_metadata.R
-│   ├── 02_preprocessing_and_qc.R
-│   ├── 03_sample_structure.R
-│   ├── 04_differential_analysis.R
-│   ├── 05_functional_enrichment.R
-│   ├── 06_main_figure.R
-│   ├── 07_supplementary_figures.R
-│   ├── 08_export_tables.R
-│   └── 09_generate_summary.R
-├── R/
-│   ├── plot_theme.R
-│   ├── figure_helpers.R
-│   └── validation_helpers.R
+├── Figure2_main.R
+├── Figure2_supplementary.R
 ├── output/
-│   ├── objects/
-│   ├── tables/
-│   ├── figures/
-│   │   ├── main/
-│   │   └── supplementary/
-│   ├── logs/
-│   └── manuscript_values/
-└── run_all.R
+│   ├── Figure2.pdf
+│   ├── Supplementary_Figure_S2.pdf
+│   ├── Supplementary_Figure_S3.pdf
+│   ├── Supplementary_Figure_S4.pdf
+│   └── Supplementary_Figure_S5.pdf
+└── intermediate/
+    ├── se_processed.rds
+    ├── tissue_specific_genes.csv
+    ├── tissue_specific_GO.csv
+    ├── tissue_specific_KEGG.csv
+    └── tissue_DEG_summary.csv
 ```
 
-如果仓库已有统一的 manuscript 或 analysis 目录规范，则遵循现有规范，但保持模块化脚本结构。
+允许保存必要的中间对象和结果表用于复现，但最终交付重点是上述 PDF。
+
+- `Figure2_main.R`：只负责 Main Figure 2A–D；
+- `Figure2_supplementary.R`：负责所有补充图；
+- 不要拆成大量零散脚本；
+- 两个文件都应能从项目根目录直接运行。
 
 ---
 
-## 6. 配置文件
+# 5. Main Figure 2 的最终结构
 
-在 `config.R` 中集中定义：
+Figure 2 只包含四个 panel：A–D。
+
+## Figure 2A. EasyProtein workflow
+
+这一部分已经完成。
+
+要求：
+
+1. 优先直接复用已经生成的 workflow panel；
+2. 不重新设计内容；
+3. 检查字体、尺寸、panel label 和最终拼图是否协调；
+4. 如果 workflow 是 PDF/SVG，尽量以矢量形式导入；
+5. 不要把 workflow 截成低分辨率位图。
+
+该 panel 表达：
+
+```text
+protein quantitative matrix
+→ SummarizedExperiment
+→ preprocessing / QC
+→ visualization
+→ clustering
+→ enrichment
+→ differential analysis
+```
+
+---
+
+## Figure 2B. PCA of all samples colored by tissue
+
+### 分析要求
+
+使用全部样本进行 PCA：
+
+- 输入使用 EasyProtein 推荐的 processed/concentration assay；
+- 删除全 NA 和零方差 feature；
+- PCA 基于样本，即对 expression matrix 转置；
+- color by `tissue`；
+- 不按 age 或 sex 分面；
+- 不需要为所有样本添加文字标签；
+- PC1 和 PC2 标注 variance explained；
+- 使用 EasyProtein 内置 `plot_pca()`，如需 publication-level 微调，可在其返回对象上继续加 theme。
+
+### 图形目标
+
+清楚显示：
+
+- 不同组织在蛋白质组层面形成明显分离；
+- 同一组织样本总体聚集；
+- 图例中的 tissue 顺序和颜色固定。
+
+不要删除 PCA 中位置不理想的样本。
+
+---
+
+## Figure 2C. Heatmap of all samples and tissue-specific protein clusters
+
+参考：
+
+```text
+vignettes/complexheatmap_visualization.Rmd
+```
+
+### 核心目标
+
+使用全部样本绘制表达热图，并通过聚类识别每个组织的特异性高表达蛋白/基因模块。
+
+### 必须完成的步骤
+
+1. 使用与 vignette 一致的 assay 和 scaling 方法；
+2. 根据需要先计算每个 tissue 的平均表达，或按照 vignette 的既定方式处理全部样本；
+3. 对 feature 进行 row-wise z-score；
+4. 对 rows 开启 clustering；
+5. 对 columns 进行合理排序或 clustering；
+6. column annotation 使用 tissue；
+7. 每个 tissue 使用与 PCA 完全一致的颜色；
+8. 从聚类结果中提取 tissue-specific gene/protein clusters；
+9. 将每个 cluster 分配给其最特异的 tissue；
+10. 输出每个 tissue 对应的特异性 gene/protein list。
+
+### tissue-specific cluster 的定义
+
+优先完全复用 `complexheatmap_visualization.Rmd` 中已经使用的方法。
+
+如果 vignette 只绘图但没有显式输出 cluster，则采用以下可重复规则：
+
+1. 在 tissue-level mean expression matrix 上进行 row z-score；
+2. 对蛋白进行层次聚类或 vignette 中使用的聚类；
+3. 将蛋白切分为若干 cluster；
+4. 对每个 cluster 计算各 tissue 的平均 z-score；
+5. 将 cluster 指派给平均 z-score 最高的 tissue；
+6. 只有当该 tissue 的平均 z-score 明显高于其他 tissue 时，才称为 tissue-specific；
+7. 输出 cluster size 和 specificity score。
+
+不要为每个 tissue 强行制造一个 cluster。若某个组织没有稳定特异模块，应如实记录。
+
+### Figure 2C 的表现形式
+
+建议：
+
+- columns：全部样本；
+- column split 或顶部 annotation：tissue；
+- rows：选定的 tissue-specific proteins；
+- row split：对应 tissue-specific cluster；
+- heatmap color：z-score；
+- 显示每个 cluster 对应的 tissue 名称；
+- 不显示全部 row names，避免拥挤；
+- 可在每个 cluster 旁标注 feature 数量。
+
+必须保存：
+
+```text
+case_study1/intermediate/tissue_specific_genes.csv
+```
+
+至少包含：
+
+- gene/protein identifier
+- gene symbol
+- cluster
+- assigned tissue
+- tissue mean expression
+- tissue mean z-score
+- specificity score
+
+---
+
+## Figure 2D. GO enrichment of tissue-specific clusters
+
+对 Figure 2C 中识别的每个 tissue-specific gene/protein set 分别做 GO enrichment。
+
+### 分析要求
+
+1. 每个 tissue 单独富集；
+2. Main Figure 只展示 GO Biological Process；
+3. species 使用 mouse；
+4. key type 根据实际 gene identifier 设置；
+5. 使用 EasyProtein 内置 `enrichment_analysis()` 或 package 中对应函数；
+6. background/universe 如函数支持，应使用进入 heatmap/clustering 的可检测蛋白；
+7. 不将所有 tissue-specific genes 混合后统一富集；
+8. 无显著 term 的 tissue 如实标记，不要放宽阈值凑结果。
+
+建议阈值：
 
 ```r
-seed <- 123
+p.adjust <= 0.05
+qvalue <= 0.05
+```
 
-comparison <- list(
-  tissue = "Liver",
-  sex = "M",
-  ref = "1w",
-  cmp = "8w",
-  label = "Male liver: 8 weeks versus 1 week"
-)
+每个 tissue 保留 top 3–5 个非冗余 GO terms。
 
-deg_threshold <- list(
-  logFC = 1,
-  adj_p = 0.05
-)
+### 两种 enrichment visualization
 
-enrichment_threshold <- list(
-  qvalue = 0.05,
-  top_n = 8
-)
+EasyProtein 包中存在两种富集结果可视化代码。必须：
 
-figure_size <- list(
-  single_width = 4,
-  single_height = 3.5,
-  main_width = 14,
-  main_height = 10
+1. 找到这两种可视化函数或 vignette 示例；
+2. 对同一 GO enrichment result 分别画两版；
+3. 比较哪一种更适合 Main Figure；
+4. 最终 Figure 2D 选择信息密度更高、组织间更容易比较的一版；
+5. 另一版可以作为测试输出保留，但不必进入最终 Supplementary Figure，除非版面合适。
+
+优先考虑的最终形式：
+
+- tissue × GO term dot plot；或
+- 每个 tissue 的 enrichment bar/dot plot 组合。
+
+必须确保：
+
+- tissue 顺序与 Figure 2B/C 一致；
+- GO term 标签可读；
+- point size、颜色和横轴含义明确；
+- 不显示大量高度重复 term。
+
+保存：
+
+```text
+case_study1/intermediate/tissue_specific_GO.csv
+```
+
+---
+
+# 6. Main Figure 拼图
+
+在 `Figure2_main.R` 中完成：
+
+1. 读取/生成 Figure 2A；
+2. 生成 Figure 2B；
+3. 生成 Figure 2C；
+4. 生成 Figure 2D 的两种候选版本；
+5. 选择最终 D；
+6. 拼接 A–D；
+7. 添加统一 panel labels；
+8. 使用 `saveplot()` 保存最终图。
+
+推荐布局：
+
+```text
+A ─────────────────────────
+B ────────── C ─────────────
+D ─────────────────────────
+```
+
+或者根据实际图形比例采用：
+
+```text
+A        B
+C        D
+```
+
+热图通常需要较大空间，因此优先确保 Figure 2C 可读，不要为了整齐强行压缩。
+
+最终文件名必须为：
+
+```text
+Figure2.pdf
+```
+
+使用：
+
+```r
+saveplot(
+  object = Figure2,
+  filenames = "Figure2",
+  width = ..., 
+  height = ...,
+  dpi = 600
 )
 ```
 
-不要把阈值散落在各个脚本中。
+`saveplot()` 会自动写入 `Fig/PDF/`。运行后将最终 PDF 复制到：
 
----
-
-## 7. 分析步骤
-
-# Step 1. 环境和函数检查
-
-脚本：`00_check_environment.R`
-
-完成：
-
-1. 加载 EasyProtein；
-2. 检查所需函数是否存在；
-3. 检查数据文件是否存在；
-4. 检查必需 R 包；
-5. 输出 package version；
-6. 记录 `sessionInfo()`；
-7. 建立输出目录。
-
-输出：
-
-- `output/logs/environment_check.txt`
-- `output/logs/sessionInfo.txt`
-
-如发现关键函数或数据缺失，使用明确错误信息停止，不要继续生成空图。
-
----
-
-# Step 2. 数据导入和 metadata 构建
-
-脚本：`01_import_and_metadata.R`
-
-完成：
-
-1. 使用 `rawdata2se()` 导入数据；
-2. 提取 `se_obj$se`；
-3. 检查 assays、rowData 和 colData；
-4. 从 condition 或 sample name 中解析：
-   - tissue
-   - age
-   - sex
-   - replicate
-5. 标准化 metadata 大小写和 factor 顺序；
-6. 检查重复 sample name；
-7. 检查每个 tissue × age × sex 的样本数；
-8. 检查 expression matrix 的维度和 NA 数量。
-
-输出：
-
-- `output/objects/se_imported.rds`
-- `output/tables/sample_metadata.csv`
-- `output/tables/dataset_composition.csv`
-- `output/tables/import_summary.csv`
-
-`import_summary.csv` 至少包含：
-
-- number of proteins before filtering
-- number of samples
-- number of tissues
-- number of age groups
-- number of male/female samples
-- total missing-value fraction
-- assay names
-
----
-
-# Step 3. 预处理和 QC
-
-脚本：`02_preprocessing_and_qc.R`
-
-必须首先阅读 `rawdata2se()` 及相关函数源码，确认哪些步骤已经自动执行，避免二次 log transform 或二次 normalization。
-
-完成：
-
-1. 保存可用的 raw/processed/normalized/concentration assays；
-2. 计算每个样本：
-   - total/median intensity
-   - missing fraction
-   - detected protein number
-3. 计算每个蛋白：
-   - missing fraction
-   - mean abundance
-   - CV，若适用
-4. 根据 EasyProtein 默认逻辑执行 filtering；
-5. 记录 filtering 前后保留蛋白数；
-6. 使用 EasyProtein QC 函数生成基础图；
-7. 同时生成 publication-ready 版本。
-
-输出表：
-
-- `sample_qc_metrics.csv`
-- `protein_qc_metrics.csv`
-- `filtering_summary.csv`
-
-输出图：
-
-- raw or initial intensity density
-- processed intensity density
-- sample missing fraction
-- detected protein count
-- protein missingness distribution
-- CV distribution
-
-注意：
-
-- 如果数据对象不存在真正意义上的“处理前 assay”，不要伪造 before/after 图；
-- 此时主图只展示 processed intensity distribution，Supplement 中展示 filtering summary；
-- 在日志中说明哪些 preprocessing 已由 `rawdata2se()` 自动完成。
-
----
-
-# Step 4. 样本结构分析
-
-脚本：`03_sample_structure.R`
-
-完成：
-
-1. 选用 EasyProtein 推荐的 processed/concentration assay；
-2. 删除全 NA 或零方差蛋白；
-3. 计算 sample–sample Spearman correlation；
-4. 绘制 correlation heatmap；
-5. 运行 PCA；
-6. 输出 variance explained；
-7. PCA 分别按以下变量着色：
-   - tissue
-   - age
-   - sex
-8. 可选运行 UMAP，仅用于 Supplementary Figure；
-9. 检查每个 biological group 的 replicate dispersion；
-10. 标记潜在 outlier，但不要自动删除。
-
-输出：
-
-- `sample_correlation_matrix.csv`
-- `pca_coordinates.csv`
-- `pca_variance_explained.csv`
-- `potential_outliers.csv`
-
-图形要求：
-
-- 主图 PCA：color = tissue；
-- shape 可使用 age 或 sex，但不能导致图例过度拥挤；
-- 不给所有点添加长文本标签；
-- 只标注需要解释的离群点或组织中心；
-- correlation heatmap 添加 tissue、age、sex annotation。
-
----
-
-# Step 5. 差异蛋白分析
-
-脚本：`04_differential_analysis.R`
-
-分析子集：
-
-```r
-se_liver_male <- se[, se$tissue == "Liver" & se$sex == "M"]
-se_de <- se_liver_male[, se_liver_male$age %in% c("1w", "8w")]
+```text
+case_study1/output/Figure2.pdf
 ```
 
-运行：
+用户最终只需要 PDF，不需要整理或提交 PNG/TIFF。
+
+---
+
+# 7. Supplementary Figures
+
+所有补充图代码写在：
+
+```text
+case_study1/Figure2_supplementary.R
+```
+
+最终补充图编号如下。
+
+---
+
+## Supplementary Figure S2
+
+仓库中已经做过：
+
+```text
+Supplementary_Figure_S2.pdf
+```
+
+任务：重新运行并完整复现一次。
+
+要求：
+
+1. 找到生成该图的原始代码；
+2. 不改变该图的分析内容；
+3. 使用当前数据对象和当前 package 版本重新生成；
+4. 检查 panel、字体、图例、尺寸和输出是否完整；
+5. 使用 `saveplot()` 保存；
+6. 最终文件名保持：
+
+```text
+Supplementary_Figure_S2.pdf
+```
+
+不要重新设计 S2，除非原代码无法运行；如需修复，只修复错误和兼容性问题。
+
+---
+
+## Supplementary Figure S3
+
+仓库中已经做过：
+
+```text
+Supplementary_Figure_S3.pdf
+```
+
+任务与 S2 相同：定位原代码并重新运行复现。
+
+要求：
+
+- 不改变原分析逻辑；
+- 使用当前数据和当前 EasyProtein 版本；
+- 使用 `saveplot()`；
+- 最终输出：
+
+```text
+Supplementary_Figure_S3.pdf
+```
+
+---
+
+## Supplementary Figure S4. Differential proteomics across tissues: 1w versus 8w
+
+### S4A. Number of differential proteins in each tissue
+
+对每个组织分别比较：
+
+```text
+8w versus 1w
+```
+
+尽可能保持 sex 一致。优先方案：
+
+- 若每个 tissue 的 male 样本数量足够，固定 `sex == "M"`；
+- 如果数据设计更适合合并 sex，必须在模型中考虑 sex，或明确说明合并规则；
+- 不允许在不同 tissue 中使用不同的比较设计。
+
+优先使用统一简单阈值：
 
 ```r
-deg_res <- se2DEGs(
-  se = se_de,
+adj.P.Val <= 0.05
+abs(logFC) >= 1
+```
+
+如果由于样本数或数据特征导致绝大多数 tissue 没有 DEG，可以使用：
+
+```r
+P.Value <= 0.05
+abs(logFC) >= 1
+```
+
+但只能统一更改一次，并必须在图注和代码中明确记录。不要为每个 tissue 单独调整阈值。
+
+使用 EasyProtein 内置 differential analysis 函数，例如：
+
+```r
+se2DEGs(
+  se = se_tissue,
   compare_col = "age",
   ref = "1w",
   cmp = "8w",
@@ -401,645 +457,366 @@ deg_res <- se2DEGs(
 )
 ```
 
-必须验证：
+生成一个统计图比较每个 tissue 的 DEG 数量：
 
-- `logFC > 0` 是否表示 8w 高于 1w；
-- ref/cmp 方向是否与标题一致；
-- 每组样本数；
-- design matrix 是否满秩；
-- 是否存在缺失 group；
-- 是否存在异常 P value；
-- 是否存在 duplicated gene symbols。
+- x = tissue；
+- y = number of differential proteins；
+- UP 和 DOWN 分开显示；
+- tissue 顺序与 Main Figure 一致；
+- 可使用 stacked bar 或 grouped bar；
+- 图中标注每个组织的总 DEG 数量。
 
-生成：
+输出完整汇总：
 
-1. full DEG table；
-2. UP/DOWN/NS counts；
-3. volcano plot；
-4. MA plot；
-5. P-value distribution；
-6. top differential protein heatmap；
-7. representative protein expression plots。
-
-主图 heatmap：
-
-- 选择 top 30–50 proteins；
-- 首先筛选 `adj.P.Val <= 0.05`；
-- 再按 `abs(logFC)` 和 `adj.P.Val` 排序；
-- row z-score；
-- columns 按 age 和 replicate 固定顺序；
-- rows 可 split 为 UP 和 DOWN；
-- 不允许使用只基于选定样本结果的 circular clustering 解释。
-
-代表性蛋白：
-
-- 选择 2–4 个；
-- 至少一个 UP、一个 DOWN；
-- 优先来自主富集通路；
-- 展示所有 biological replicates；
-- 使用 boxplot/violin + jitter；
-- 不只展示均值和误差条。
-
-输出：
-
-- `DEG_Liver_M_8w_vs_1w_full.csv`
-- `DEG_Liver_M_8w_vs_1w_significant.csv`
-- `DEG_summary.csv`
-- `top_heatmap_proteins.csv`
-- `representative_proteins.csv`
-
----
-
-# Step 6. 功能富集
-
-脚本：`05_functional_enrichment.R`
-
-UP 和 DOWN 必须分开分析。
-
-分别运行：
-
-- GO Biological Process
-- KEGG
-- 若现有 EasyProtein 已支持且依赖完整，可增加 GSEA
-
-标准：
-
-```r
-adj.P.Val <= 0.05
-abs(logFC) >= 1
+```text
+case_study1/intermediate/tissue_DEG_summary.csv
 ```
-
-对于 ORA：
-
-- UP genes 单独输入；
-- DOWN genes 单独输入；
-- 背景基因应优先使用实际进入差异分析的可检测蛋白，而不是全部基因组；
-- 若 EasyProtein 当前函数不支持自定义 universe，记录这一限制，不要私自更换统计实现。
-
-对于 GSEA：
-
-- 使用完整 ranked list；
-- 明确 ranking metric；
-- 记录重复 gene symbol 的处理方式。
-
-生成：
-
-- GO_UP.csv
-- GO_DOWN.csv
-- KEGG_UP.csv
-- KEGG_DOWN.csv
-- optional GSEA result tables
-- publication-ready enrichment dot plots
-
-主图 enrichment plot：
-
-- UP 与 DOWN 分面或左右排列；
-- 每个方向 top 5–8 terms；
-- x = GeneRatio 或 enrichment ratio；
-- point size = Count；
-- color = adjusted P value；
-- pathway label 不得被截断；
-- 不展示高度冗余的多个近义 GO term。
-
-如需去冗余，可基于 semantic similarity 或简单关键词人工规则，但规则必须写入脚本并输出被移除 term 列表。
-
----
-
-## 8. Main Figure 2
-
-脚本：`06_main_figure.R`
-
-标题建议：
-
-> **Figure 2 | EasyProtein provides an end-to-end workflow for routine quantitative proteomics analysis.**
-
-主图由以下 panel 构成。
-
-### Figure 2A. Dataset and analytical workflow
-
-内容：
-
-- public mouse multi-organ DIA proteomics dataset；
-- protein-group quantitative matrix；
-- `rawdata2se()`；
-- `SummarizedExperiment`；
-- assays / rowData / colData；
-- preprocessing → QC → differential analysis → enrichment → export。
-
-要求：
-
-- 画成矢量 schematic；
-- 不要使用网页截图；
-- 不要与 Figure 1 软件总览完全重复；
-- 突出本案例中的实际数据流。
-
-### Figure 2B. Protein intensity distribution
-
-优先展示 processed sample intensity density。
-
-如果存在可靠 before/after assays，则展示 before versus after；否则只展示 processed distribution，并在标题中准确描述。
-
-### Figure 2C. Data completeness
-
-组合两个小图：
-
-- missing-value fraction per sample；
-- detected proteins per sample。
-
-按 tissue 排序或分组，避免给每个样本使用独立颜色。
-
-### Figure 2D. Sample–sample correlation heatmap
-
-- Spearman correlation；
-- annotation = tissue, age, sex；
-- publication-level ComplexHeatmap 或等价实现。
-
-### Figure 2E. PCA
-
-- full dataset；
-- color = tissue；
-- biological replicates 应可识别；
-- 轴标题写明 variance explained。
-
-### Figure 2F. Volcano plot
-
-比较：
-
-> Male liver: 8 weeks versus 1 week
-
-- x = log2 fold change；
-- y = `-log10(P.Value)` 或 `-log10(adj.P.Val)`，但图注必须准确；
-- 标记 cutoff；
-- 标注 6–10 个代表性蛋白；
-- 标注不能严重重叠。
-
-### Figure 2G. Differential protein heatmap
-
-- top 30–50 differential proteins；
-- row z-score；
-- sample annotation；
-- UP/DOWN row split。
-
-### Figure 2H. Functional interpretation
-
-组合：
-
-- GO/KEGG enrichment dot plot；
-- 2–4 个 representative protein expression plots。
-
-最终主图输出：
-
-- `Figure2_case_study1.pdf`
-- `Figure2_case_study1.svg`
-- `Figure2_case_study1.png`，600 dpi
-
-并保存每个独立 panel：
-
-- `Figure2A.pdf` ... `Figure2H.pdf`
-
----
-
-## 9. Supplementary Figures
-
-脚本：`07_supplementary_figures.R`
-
-### Supplementary Figure S1. Dataset composition and object construction
-
-建议 panel：
-
-- S1A tissue × age × sex sample composition；
-- S1B sample-name/condition parsing schematic；
-- S1C sample metadata preview；
-- S1D `SummarizedExperiment` structure；
-- S1E assay dimensions and missingness summary。
-
-### Supplementary Figure S2. Comprehensive quality control
-
-建议 panel：
-
-- S2A all-sample intensity density；
-- S2B intensity boxplots；
-- S2C sample missing fraction；
-- S2D detected protein count；
-- S2E protein-level missingness distribution；
-- S2F within-group CV distribution。
-
-### Supplementary Figure S3. Sample relationships
-
-建议 panel：
-
-- S3A PCA colored by tissue；
-- S3B PCA colored by age；
-- S3C PCA colored by sex；
-- S3D UMAP colored by tissue；
-- S3E hierarchical clustering dendrogram；
-- S3F within-group replicate correlation summary。
-
-UMAP 仅作为补充，不替代 PCA。
-
-### Supplementary Figure S4. Preprocessing and filtering assessment
-
-根据 EasyProtein 实际支持能力选择：
-
-- S4A filtering 前后的蛋白数量；
-- S4B protein missingness versus abundance；
-- S4C retained proteins under different missingness cutoffs；
-- S4D processed matrix distribution；
-- S4E normalization/scaling impact；
-- S4F filtering flow summary。
-
-不要为了凑 panel 比较 package 当前不支持的 imputation 方法。
-
-### Supplementary Figure S5. Differential-analysis diagnostics
-
-建议 panel：
-
-- S5A MA plot；
-- S5B P-value distribution；
-- S5C UP/DOWN/NS counts；
-- S5D logFC distribution；
-- S5E–H representative proteins；
-- S5I top-hit effect size and group median comparison。
-
-### Supplementary Figure S6. Functional interpretation and interface consistency
-
-建议 panel：
-
-- S6A GO enrichment, UP；
-- S6B GO enrichment, DOWN；
-- S6C KEGG enrichment, UP；
-- S6D KEGG enrichment, DOWN；
-- S6E optional GSEA curves；
-- S6F optional STRING/network output；
-- S6G R package versus Shiny logFC concordance；
-- S6H R package versus Shiny DE classification concordance。
-
-只有在可以从同一输入和相同参数可靠获得 Shiny 输出时才制作 S6G–H。不能使用模拟数据或手工复制结果。
-
-所有 Supplementary Figure 输出：
-
-- PDF
-- SVG
-- 600-dpi PNG
-- 独立 panel 文件
-
----
-
-## 10. Supplementary Tables
-
-脚本：`08_export_tables.R`
-
-生成一个 Excel 文件：
-
-`CaseStudy1_Supplementary_Tables.xlsx`
 
 至少包含：
 
-### Table S1. Sample metadata
-
-- sample
-- condition
 - tissue
-- age
-- sex
-- replicate
+- n_samples_1w
+- n_samples_8w
+- n_UP
+- n_DOWN
+- n_total_DEG
+- threshold
 
-### Table S2. Data-processing summary
+### S4B. Representative volcano plot
 
-- original protein count
-- duplicated features removed
-- invalid features removed
-- proteins removed by missingness
-- retained protein count
-- sample count
-- assay used for downstream analysis
+从所有 tissue 中选择一个代表组织绘制 volcano plot。
 
-### Table S3. Full differential-analysis results
+选择规则：
 
-- gene/protein ID
-- gene symbol
-- logFC
-- AveExpr, if available
-- P.Value
-- adj.P.Val
-- DEGs_types
-- median_1w
-- median_8w
+1. 样本数充足；
+2. DEG 数量适中；
+3. UP 和 DOWN 均存在；
+4. 图形信息量高；
+5. 不要仅因为某个组织最符合预期就挑选。
 
-### Table S4. Significant differential proteins
+优先选择 DEG 总数较多且统计结构正常的 tissue。
 
-### Table S5. GO enrichment results
+必须使用 EasyProtein 内置 volcano plot 函数。开始前找到实际函数名和参数，不要自己重新写 volcano plot 替代 package 功能。
 
-UP 和 DOWN 分 sheet。
+标题必须明确：
 
-### Table S6. KEGG enrichment results
-
-UP 和 DOWN 分 sheet。
-
-### Table S7. Functions and parameters used
-
-至少包含：
-
-- analysis step
-- EasyProtein function
-- input assay/object
-- key parameters
-- output
-- corresponding figure panel
-
-Excel sheet 名称不能超过 31 个字符。
-
----
-
-## 11. Manuscript 数值和结果摘要
-
-脚本：`09_generate_summary.R`
-
-自动生成：
-
-`output/manuscript_values/case_study1_key_numbers.md`
-
-包括：
-
-- total samples；
-- total proteins before and after filtering；
-- number of tissues；
-- overall missing fraction；
-- liver male 1w and 8w sample numbers；
-- number of UP proteins；
-- number of DOWN proteins；
-- top differential proteins；
-- top enriched GO/KEGG terms；
-- PCA variance explained；
-- minimum within-group replicate correlation；
-- potential outlier summary。
-
-同时生成：
-
-`output/manuscript_values/case_study1_result_draft.md`
-
-写成 3–4 个简短段落：
-
-1. data import and object construction；
-2. QC and sample structure；
-3. differential analysis；
-4. functional interpretation。
-
-只报告由脚本实际计算得到的数字，不要编造结论。
-
----
-
-## 12. 绘图统一规范
-
-### 12.1 基本主题
-
-建立统一 theme，例如：
-
-```r
-theme_case_study <- function(base_size = 8) {
-  ggplot2::theme_classic(base_size = base_size) +
-    ggplot2::theme(
-      plot.title = element_text(face = "bold", hjust = 0),
-      axis.title = element_text(face = "plain"),
-      legend.title = element_text(face = "bold"),
-      strip.background = element_blank(),
-      strip.text = element_text(face = "bold"),
-      panel.border = element_rect(fill = NA, linewidth = 0.4)
-    )
-}
+```text
+<Tissue>: 8 weeks versus 1 week
 ```
 
-可根据仓库已有主题调整，不要破坏全文视觉一致性。
+图中标注少量 top proteins，避免标签拥挤。
 
-### 12.2 配色
+### S4C. Representative gene/protein expression plot
 
-- tissue 使用固定离散色板；
-- age 使用有顺序的色板；
-- UP/DOWN/NS 全文保持一致；
-- annotation colors 在所有 heatmap 中保持一致；
-- 不使用彩虹色板；
-- 保证色盲友好和灰度可区分性。
+从 S4B 的 volcano plot 中选择一个代表性差异蛋白：
 
-建议：
+- adjusted P value 显著；
+- absolute logFC 较大；
+- 在多数样本中有可靠定量值；
+- 尽量避免主要由单个 outlier 驱动。
 
-- UP：暖色；
-- DOWN：冷色；
-- NS：浅灰；
-- 缺失值：浅灰或白色。
+使用 EasyProtein 内置：
 
-### 12.3 字体与输出
+```r
+plot_gene_expression()
+```
 
-- 优先使用通用 sans-serif 字体；
-- PDF 中嵌入字体；
-- panel label 为粗体 A–H；
-- 主图最终文字在单栏/双栏缩放后仍可阅读；
-- raster 图 600 dpi；
-- heatmap 优先矢量 PDF，但注意文件大小。
+在同一个 tissue 中展示该 gene/protein 在 1w 和 8w 的表达量。
 
-### 12.4 图形真实性
+目的：验证 volcano plot 中的差异方向与原始样本表达一致。
 
-- 不删除不理想的样本以改善图形；
-- 不对 PCA 坐标进行非线性人工移动；
-- 不手动改变 P value；
-- 不只挑选支持预期结论的代表性蛋白；
-- representative protein 的选择规则必须输出到表格。
+图中必须展示 biological replicates；如内置函数只画 boxplot，可在其返回对象上增加 jitter，但不要重新计算表达量。
+
+### S4 最终布局
+
+```text
+A. DEG counts across tissues
+B. Representative volcano plot
+C. Representative gene expression
+```
+
+最终输出：
+
+```text
+Supplementary_Figure_S4.pdf
+```
 
 ---
 
-## 13. 质量控制和自动验证
+## Supplementary Figure S5. KEGG enrichment of tissue-specific clusters
 
-在 `validation_helpers.R` 中加入自动检查。
+使用 Main Figure 2C 中同一批 tissue-specific gene/protein sets。
 
-至少检查：
-
-```r
-stopifnot(!anyDuplicated(colnames(assay(se))))
-stopifnot(all(colnames(assay(se)) %in% rownames(colData(se))))
-stopifnot(all(c("Liver", "1w", "8w", "M") %in% expected_metadata_values))
-stopifnot(ncol(se_de) >= 4)
-stopifnot(all(is.finite(deg_res$logFC[!is.na(deg_res$logFC)])))
-stopifnot(all(deg_res$adj.P.Val >= 0 & deg_res$adj.P.Val <= 1, na.rm = TRUE))
-```
-
-还要检查：
-
-- comparison direction；
-- figure input row count；
-- heatmap 至少有足够的显著蛋白；
-- enrichment 输入基因数量；
-- 输出文件是否实际生成；
-- 所有 CSV 可重新读入；
-- Excel 中所有 sheet 非空或明确标记 no significant result。
-
-当显著蛋白少于预期时，不要放宽阈值来凑图。应：
-
-1. 使用全部显著蛋白；
-2. 在图注和结果中准确报告数量；
-3. heatmap 可按最显著蛋白展示，但明确标记 selection rule。
-
----
-
-## 14. `run_all.R`
-
-建立总入口：
-
-```r
-source("case_study1/config.R")
-source("case_study1/scripts/00_check_environment.R")
-source("case_study1/scripts/01_import_and_metadata.R")
-source("case_study1/scripts/02_preprocessing_and_qc.R")
-source("case_study1/scripts/03_sample_structure.R")
-source("case_study1/scripts/04_differential_analysis.R")
-source("case_study1/scripts/05_functional_enrichment.R")
-source("case_study1/scripts/06_main_figure.R")
-source("case_study1/scripts/07_supplementary_figures.R")
-source("case_study1/scripts/08_export_tables.R")
-source("case_study1/scripts/09_generate_summary.R")
-```
+Main Figure 2D 已经完成 GO enrichment，因此 Supplementary Figure S5 只做 KEGG enrichment。
 
 要求：
 
-- 每一步打印清楚进度；
-- 每一步写日志；
-- 已有中间结果可选择安全复用，但默认从头运行；
-- 任何关键错误必须停止，并指出具体文件和步骤。
+1. 每个 tissue 单独运行 KEGG；
+2. gene set 与 Main Figure 2D 完全一致；
+3. 不重新聚类或重新筛选一套 tissue-specific genes；
+4. species = mouse；
+5. 使用 EasyProtein 内置 enrichment function；
+6. 使用 package 中适合跨组织比较的 enrichment visualization；
+7. 每个 tissue 展示 top 3–5 pathways；
+8. 没有显著 KEGG pathway 的 tissue 如实标记；
+9. 不放宽阈值来强行填满所有 tissue。
+
+建议阈值：
+
+```r
+p.adjust <= 0.05
+qvalue <= 0.05
+```
+
+若 KEGG 结果普遍较少，可以保留 nominally significant pathways 作为 exploratory result，但必须：
+
+- 使用统一阈值；
+- 在标题或图注中明确；
+- 不与 FDR-significant 结果混淆。
+
+最终输出：
+
+```text
+Supplementary_Figure_S5.pdf
+```
+
+同时保存：
+
+```text
+case_study1/intermediate/tissue_specific_KEGG.csv
+```
 
 ---
 
-## 15. README 内容
+# 8. 两个 R 文件的具体责任
 
-`case_study1/README.md` 必须说明：
+## `Figure2_main.R`
 
-1. 本案例目标；
-2. 数据来源和实际文件路径；
-3. 运行环境；
-4. 一键运行方式；
-5. 主要输出；
-6. Figure 2 每个 panel 对应哪个脚本和文件；
-7. Supplementary Figure 对应关系；
-8. 已知限制；
-9. Shiny consistency 是否完成。
+该文件必须完整包含或调用：
 
----
+1. package loading；
+2. data loading；
+3. metadata correction；
+4. assay selection；
+5. Figure 2A workflow loading；
+6. all-sample PCA；
+7. all-sample ComplexHeatmap；
+8. tissue-specific cluster extraction；
+9. GO enrichment；
+10. 两种 GO visualization；
+11. Figure 2 assembly；
+12. `saveplot()`；
+13. 将最终 PDF 复制到 `case_study1/output/Figure2.pdf`。
 
-## 16. 工作顺序
+## `Figure2_supplementary.R`
 
-严格按以下顺序执行：
+该文件必须完整包含或调用：
 
-1. 阅读源码和 vignettes；
-2. 确认数据对象及 assay；
-3. 确认 metadata 值；
-4. 完成可重复的数据导入；
-5. 完成 QC 和 sample structure；
-6. 验证 differential direction；
-7. 完成 enrichment；
-8. 先保存所有单独 panel；
-9. 再拼接主图和补图；
-10. 输出表格；
-11. 生成 key numbers 和 result draft；
-12. 从干净 session 运行 `run_all.R`；
-13. 检查所有输出是否存在且非空。
+1. 读取 Main Figure 产生的 `se_processed.rds`；
+2. 复现 Supplementary Figure S2；
+3. 复现 Supplementary Figure S3；
+4. 每个 tissue 的 1w versus 8w differential analysis；
+5. DEG count summary；
+6. 内置 volcano plot；
+7. 内置 gene expression plot；
+8. tissue-specific KEGG enrichment；
+9. S4 和 S5 的拼图；
+10. 使用 `saveplot()` 保存全部 Supplementary PDFs。
 
-不要一开始就拼主图。先确保每个分析结果和单独 panel 正确。
-
----
-
-## 17. 最终交付清单
-
-完成后必须提供以下文件：
-
-### 代码
-
-- [ ] `case_study1/run_all.R`
-- [ ] `case_study1/config.R`
-- [ ] 所有模块化分析脚本
-- [ ] figure helper 和 validation helper
-
-### 主图
-
-- [ ] Figure 2 完整 PDF
-- [ ] Figure 2 完整 SVG
-- [ ] Figure 2 完整 600-dpi PNG
-- [ ] Figure 2A–H 独立 panel
-
-### 补充图
-
-- [ ] Supplementary Figures S1–S6
-- [ ] 每张图的 PDF、SVG 和 PNG
-- [ ] 所有独立 panel
-
-### 表格
-
-- [ ] sample metadata
-- [ ] QC metrics
-- [ ] filtering summary
-- [ ] full differential results
-- [ ] significant differential results
-- [ ] GO/KEGG/GSEA results
-- [ ] combined supplementary Excel
-
-### Manuscript 辅助文件
-
-- [ ] `case_study1_key_numbers.md`
-- [ ] `case_study1_result_draft.md`
-- [ ] figure-to-script mapping
-- [ ] sessionInfo
-- [ ] analysis log
-- [ ] missing dependencies，若存在
+两个文件中不要复制一大段相同的数据预处理代码。Supplementary 脚本优先读取 Main 脚本保存的标准对象和 tissue-specific gene list。
 
 ---
 
-## 18. 验收标准
+# 9. `saveplot()` 使用要求
+
+EasyProtein 的 `saveplot()` 当前调用形式为：
+
+```r
+saveplot(
+  object = plot_object,
+  filenames = "Figure_name",
+  width = 6,
+  height = 4,
+  dpi = 600
+)
+```
+
+该函数会自动创建：
+
+```text
+Fig/PDF/
+Fig/TIFF/
+Fig/PNG/
+```
+
+本任务最终只整理和交付 PDF：
+
+```text
+Fig/PDF/Figure2.pdf
+Fig/PDF/Supplementary_Figure_S2.pdf
+Fig/PDF/Supplementary_Figure_S3.pdf
+Fig/PDF/Supplementary_Figure_S4.pdf
+Fig/PDF/Supplementary_Figure_S5.pdf
+```
+
+运行完成后，将 PDF 复制到：
+
+```text
+case_study1/output/
+```
+
+不要手工在 Illustrator 中修改统计图。若版式需要调整，回到 R 代码中修改并重新导出。
+
+注意 `saveplot()` 内部会将 PDF width 和 height 乘以 2，因此传入尺寸时先用小规模测试图确认最终页面比例，避免输出过大或字体过小。
+
+---
+
+# 10. 统一绘图规范
+
+## Tissue colors
+
+PCA、heatmap annotation、GO、KEGG 和 DEG count 中，同一 tissue 必须使用完全相同颜色。
+
+建立一个命名向量：
+
+```r
+tissue_colors <- c(
+  "Tissue1" = "...",
+  "Tissue2" = "..."
+)
+```
+
+不要在不同 panel 中重新自动生成颜色。
+
+## DEG colors
+
+全文统一：
+
+- UP：红/暖色；
+- DOWN：蓝/冷色；
+- NS：灰色。
+
+## Text and labels
+
+- 使用通用 sans-serif 字体；
+- panel labels 为粗体大写；
+- pathway 名称不能被裁切；
+- 不在 PCA 中标全部样本；
+- 不在 heatmap 中显示数千个 row names；
+- volcano 只标注少量 top proteins。
+
+## Statistical transparency
+
+所有 panel 的代码附近必须注释：
+
+- assay；
+- transformation/scaling；
+- comparison direction；
+- DEG threshold；
+- enrichment threshold；
+- clustering method；
+- tissue-specific assignment rule。
+
+---
+
+# 11. 必须进行的验证
+
+在生成图之前执行：
+
+```r
+stopifnot(!anyDuplicated(colnames(SummarizedExperiment::assay(se))))
+stopifnot(all(colnames(SummarizedExperiment::assay(se)) == rownames(SummarizedExperiment::colData(se))))
+stopifnot(!anyNA(se$tissue))
+stopifnot(all(c("1w", "8w") %in% as.character(unique(se$age))))
+```
+
+此外检查：
+
+1. PCA 输入无 Inf；
+2. heatmap 输入无全 NA row；
+3. row z-score 后无 NaN；
+4. 每个 tissue-specific cluster 有明确 gene list；
+5. GO/KEGG 输入 ID 类型正确；
+6. `8w versus 1w` 中 `logFC > 0` 的方向经过一个代表 gene 的原始表达验证；
+7. volcano plot 使用的 DEG table 与 DEG count 使用同一阈值；
+8. Supplementary expression plot 的 gene 与 volcano 中方向一致；
+9. S5 使用的 gene sets 与 Main Figure D 完全一致；
+10. 所有 PDF 均存在且文件大小大于 0。
+
+不要在代码中静默跳过错误。如果某个 tissue 样本数不足，应在 DEG summary 中标为 `not_tested`，而不是返回空结果后继续当作 0 DEG。
+
+---
+
+# 12. 最终交付文件
+
+最终只需要整理以下 PDF：
+
+```text
+case_study1/output/Figure2.pdf
+case_study1/output/Supplementary_Figure_S2.pdf
+case_study1/output/Supplementary_Figure_S3.pdf
+case_study1/output/Supplementary_Figure_S4.pdf
+case_study1/output/Supplementary_Figure_S5.pdf
+```
+
+以及两个可重复运行的代码文件：
+
+```text
+case_study1/Figure2_main.R
+case_study1/Figure2_supplementary.R
+```
+
+同时保留下列中间结果以便检查：
+
+```text
+case_study1/intermediate/se_processed.rds
+case_study1/intermediate/tissue_specific_genes.csv
+case_study1/intermediate/tissue_specific_GO.csv
+case_study1/intermediate/tissue_specific_KEGG.csv
+case_study1/intermediate/tissue_DEG_summary.csv
+```
+
+---
+
+# 13. 完成标准
 
 只有满足以下条件才算完成：
 
-1. 从原始公共数据到最终 Figure 2 可通过一个入口脚本重复生成；
-2. 所有主图数值均可追溯到输出表；
-3. comparison direction 明确且经过验证；
-4. metadata 大小写和 factor 顺序一致；
-5. 没有二次 log transformation 或重复 normalization；
-6. UP 和 DOWN 分开富集；
-7. 主图不包含与 Figure 1 重复的 Shiny 截图；
-8. UMAP 只放补图；
-9. 所有 figure 达到 publication-ready 水平；
-10. 所有结果均来自真实数据和实际函数输出；
-11. 不存在空 panel、临时文件、绝对个人路径或不可复现的手工步骤；
-12. `run_all.R` 在干净 session 中成功运行。
+1. Figure 2 严格包含 A workflow、B PCA、C tissue-specific heatmap、D GO enrichment；
+2. PCA 使用全部样本并按 tissue 着色；
+3. heatmap 使用全部样本，开启聚类，并输出每个 tissue 的特异性 gene/protein；
+4. Figure 2D 对 C 中每个 tissue-specific set 分别做 GO enrichment；
+5. EasyProtein 的两种 enrichment visualization 都实际生成并比较；
+6. S2 和 S3 从已有代码重新完整复现；
+7. S4 比较所有可分析 tissue 的 1w versus 8w DEG 数量；
+8. S4 包含一个 EasyProtein 内置 volcano plot；
+9. S4 包含一个 EasyProtein 内置 gene expression plot验证 volcano 结果；
+10. S5 对 Main Figure 的同一组 tissue-specific genes 做 KEGG enrichment；
+11. Main Figure 代码只有一个文件；
+12. Supplementary Figure 代码只有一个文件；
+13. 最终所有图均为 PDF；
+14. 所有最终 PDF 由 R 代码和 `saveplot()` 可重复生成；
+15. 没有手工修改图形、伪造结果、按组织调整不同阈值或删除不理想样本。
 
 ---
 
-## 19. 禁止事项
+# 14. 完成后的汇报格式
 
-- 不要修改或覆盖原始公共数据；
-- 不要自动安装新软件或 R 包；
-- 不要更换差异分析方法，除非现有 `se2DEGs()` 无法运行，并且先清楚记录原因；
-- 不要将 UP 和 DOWN 混在一起做主富集分析；
-- 不要为了得到更多显著结果随意降低阈值；
-- 不要伪造 preprocessing before/after 对比；
-- 不要把 UMAP 当作主要质量证据；
-- 不要只生成图而不保存底层表格；
-- 不要在脚本中使用用户个人电脑的绝对路径；
-- 不要声称获得某个生物学机制，除非数据和富集结果明确支持。
-
----
-
-## 20. 最终总结格式
-
-任务完成后，在 pull request 或工作总结中按以下格式报告：
+完成后只需报告：
 
 ```text
-1. Data used
-2. EasyProtein functions reused
-3. Metadata corrections made
-4. Assay selected for downstream analysis
-5. QC summary
-6. Differential comparison and direction
-7. Number of UP/DOWN proteins
-8. Main enriched processes
-9. Figures generated
-10. Tables generated
-11. Missing dependencies or unresolved issues
-12. Exact command used to reproduce all results
+1. Figure2_main.R path
+2. Figure2_supplementary.R path
+3. Figure2.pdf path
+4. Supplementary Figure S2–S5 PDF paths
+5. Assay used
+6. Tissue-specific clustering method
+7. Number of tissue-specific genes per tissue
+8. DEG threshold used for S4
+9. Representative tissue and gene used in S4
+10. GO and KEGG enrichment thresholds
+11. Any tissue that could not be tested and the reason
+12. Any unresolved error or missing dependency
 ```
 
-不要只写“分析已完成”。必须列出实际输出路径和关键结果数字。
+不要只回复“已经完成”。必须给出实际文件路径和关键分析设置。

@@ -1,0 +1,612 @@
+---
+title: "ComplexHeatmap Visualization with EasyProtein"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ComplexHeatmap Visualization with EasyProtein}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(EasyProtein)
+  library(tidyverse)
+  library(SummarizedExperiment)
+  library(ComplexHeatmap)
+})
+```
+
+# ComplexHeatmap Visualization with EasyProtein
+
+## 1. Tutorial metadata
+
+- **Tutorial name**: ComplexHeatmap Visualization with EasyProtein
+- **Tutorial type**: Heatmap-focused workflow
+- **Target audience**: Users who already have EasyProtein-preprocessed proteomics data
+- **Primary goal**: Show how to turn an EasyProtein `SummarizedExperiment` object into several common ComplexHeatmap visualizations
+- **Expected outcome**: You will learn how to:
+  1. load data with `rawdata2se()`
+  2. build sample-level and condition-level heatmap matrices
+  3. select protein subsets from PCA or user-defined gene lists
+  4. add column and row annotations
+  5. split rows by unsupervised clusters
+  6. use `plot_heatmap_withline()` for cluster-level trend summaries
+  7. export heatmaps with `saveplot()`
+
+## 2. Load example data and build `SummarizedExperiment`
+
+This tutorial uses the example file shipped with EasyProtein. In a real
+analysis, replace `exp_file` with your own EasyProtein-compatible protein
+matrix, then keep the downstream code unchanged.
+
+```{r load-data}
+exp_file <- system.file(
+  "extdata",
+  "mouse_multi-organ_DIA_report.pg_matrix.tsv.gz",
+  package = "EasyProtein"
+)
+
+stopifnot(file.exists(exp_file))
+
+se_obj <- rawdata2se(exp_file)
+se <- se_obj$se
+se
+```
+
+## 3. Add sample metadata
+
+ComplexHeatmap becomes most useful when the columns can be split or annotated
+by biological variables. Here we derive `tissue`, `age`, and `sex` from the
+example `condition` column, following the same data preparation used in the
+quick start and multi-sample tutorials.
+
+```{r add-metadata}
+se$tissue <- stringr::str_extract(se$condition, "[A-Za-z]+")
+se$age <- stringr::str_extract(se$condition, "\\dw")
+se$sex <- stringr::str_extract(se$condition, "\\w$")
+
+sample_table <- as.data.frame(SummarizedExperiment::colData(se)) %>%
+  dplyr::select(sample, condition, rep, tissue, age, sex)
+
+head(sample_table, 10)
+```
+
+For compact figures, we focus on one coherent subset: male heart samples across
+three ages. This keeps the biological interpretation simple while preserving
+replicate-level structure.
+
+```{r subset-data}
+se_focus <- se[, se$tissue == "heart" & se$sex == "M"]
+se_focus$age <- factor(se_focus$age, levels = c("1w", "4w", "8w"))
+se_focus$condition <- factor(se_focus$condition, levels = unique(se_focus$condition))
+
+rep_levels <- unique(as.character(se_focus$rep))
+rep_numeric <- suppressWarnings(as.numeric(rep_levels))
+if (all(!is.na(rep_numeric))) {
+  rep_levels <- rep_levels[order(rep_numeric)]
+} else {
+  rep_levels <- sort(rep_levels)
+}
+se_focus$rep <- factor(se_focus$rep, levels = rep_levels)
+
+as.data.frame(SummarizedExperiment::colData(se_focus)) %>%
+  dplyr::select(sample, condition, rep, tissue, age, sex)
+```
+
+## 4. Build heatmap matrices from EasyProtein objects
+
+EasyProtein stores several assays in the `SummarizedExperiment` object. For
+heatmaps, two views are especially common:
+
+- **sample-level matrix**: one column per biological replicate
+- **condition-level matrix**: one column per condition, usually the mean or median across replicates
+
+For visual stability, the examples below select the top variable proteins
+instead of plotting every detected protein in the vignette.
+
+```{r prepare-matrices}
+z_df <- se2scale(se_focus, rescale = TRUE)
+
+z_mtx <- as.matrix(z_df[, colnames(se_focus), drop = FALSE])
+rownames(z_mtx) <- rownames(se_focus)
+z_mtx[!is.finite(z_mtx)] <- 0
+
+top_n <- min(300, nrow(z_mtx))
+row_var <- matrixStats::rowVars(z_mtx)
+names(row_var) <- rownames(z_mtx)
+top_variable_genes <- names(sort(row_var, decreasing = TRUE))[seq_len(top_n)]
+
+z_top <- z_mtx[top_variable_genes, , drop = FALSE]
+
+condition_mean_mtx <- calc_gene_mean_by_condition(
+  se = se_focus,
+  assay_name = "conc",
+  method = "mean",
+  condition_col = "age"
+)
+
+condition_mean_z <- scale_mtx(condition_mean_mtx)
+condition_mean_z[!is.finite(condition_mean_z)] <- 0
+condition_mean_top <- condition_mean_z[top_variable_genes, , drop = FALSE]
+
+dim(z_top)
+dim(condition_mean_top)
+```
+
+If your input data contain duplicated gene symbols, keep row names as unique
+protein IDs for computation. You can still display gene symbols later by adding
+row annotations or by selecting representative rows after aggregation.
+
+## 5. Sample-level heatmap
+
+The first heatmap keeps biological replicates as separate columns. This view is
+useful for checking whether replicates behave consistently inside each age group.
+
+```{r sample-heatmap, fig.width=7, fig.height=6}
+ht_sample <- ComplexHeatmap::Heatmap(
+  z_top,
+  name = "Z-score",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  show_row_names = FALSE,
+  show_column_names = FALSE,
+  column_split = se_focus$age,
+  column_title = NULL,
+  use_raster = TRUE
+)
+
+ht_sample
+```
+
+## 6. Condition-level heatmap
+
+When the question is about the overall pattern across conditions, average the
+replicates first. This makes the heatmap smaller and easier to interpret.
+
+```{r condition-heatmap, fig.width=5, fig.height=6}
+ht_condition <- ComplexHeatmap::Heatmap(
+  condition_mean_top,
+  name = "Z-score",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  show_row_names = FALSE,
+  show_column_names = TRUE,
+  column_title = NULL,
+  use_raster = TRUE
+)
+
+ht_condition
+```
+
+Use the sample-level heatmap to inspect replicate behavior. Use the
+condition-level heatmap to communicate the main biological trend.
+
+## 7. Add column annotations
+
+Column annotations make the experimental design explicit. The example below
+colors age groups and replicate numbers above the sample-level heatmap.
+
+```{r column-annotation, fig.width=7, fig.height=6}
+age_col <- c(
+  "1w" = "#1F77B4",
+  "4w" = "#2CA02C",
+  "8w" = "#D62728"
+)
+
+rep_levels <- levels(se_focus$rep)
+rep_col <- setNames(
+  grDevices::hcl.colors(length(rep_levels), palette = "Dark 3"),
+  rep_levels
+)
+
+top_anno <- ComplexHeatmap::HeatmapAnnotation(
+  age = se_focus$age,
+  rep = se_focus$rep,
+  col = list(
+    age = age_col,
+    rep = rep_col
+  ),
+  show_annotation_name = TRUE
+)
+
+ht_anno <- ComplexHeatmap::Heatmap(
+  z_top,
+  name = "Z-score",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  show_row_names = FALSE,
+  show_column_names = FALSE,
+  top_annotation = top_anno,
+  column_split = se_focus$age,
+  column_title = NULL,
+  use_raster = TRUE
+)
+
+ht_anno
+```
+
+## 8. Heatmap for selected proteins
+
+You often do not want an unsupervised heatmap of all proteins. Instead, select
+proteins from a biological hypothesis, PCA contributors, DEG results, or any
+custom gene list.
+
+### 8.1 Select proteins from PCA contributors
+
+This example identifies proteins that contribute strongly to PC1 and draws a
+focused heatmap. Positive and negative contributors are used as row splits.
+
+```{r pca-contributors}
+conc_mtx <- SummarizedExperiment::assay(se_focus, "conc")
+pca_res <- FactoMineR::PCA(t(conc_mtx), scale.unit = TRUE, graph = FALSE)
+
+pc1_genes <- dplyr::bind_rows(
+  get_pc_contributors(pca_res, se_focus, pc = 1, n = 30)$positive,
+  get_pc_contributors(pca_res, se_focus, pc = 1, n = 30)$negative
+) %>%
+  dplyr::filter(gene %in% rownames(z_mtx)) %>%
+  dplyr::distinct(gene, .keep_all = TRUE)
+
+pc1_label_genes <- pc1_genes %>%
+  dplyr::group_by(type) %>%
+  dplyr::slice_head(n = 5) %>%
+  dplyr::ungroup() %>%
+  dplyr::pull(gene)
+
+head(pc1_genes)
+```
+
+```{r pca-heatmap, fig.width=7, fig.height=5}
+pc1_mtx <- z_mtx[pc1_genes$gene, , drop = FALSE]
+pc1_row_labels <- ifelse(rownames(pc1_mtx) %in% pc1_label_genes, rownames(pc1_mtx), "")
+
+ht_pc1 <- ComplexHeatmap::Heatmap(
+  pc1_mtx,
+  name = "Z-score",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  row_split = pc1_genes$type,
+  show_row_names = TRUE,
+  row_labels = pc1_row_labels,
+  show_column_names = FALSE,
+  top_annotation = top_anno,
+  column_split = se_focus$age,
+  column_title = NULL,
+  use_raster = TRUE
+)
+
+ht_pc1
+```
+
+### 8.2 Select proteins from a custom gene list
+
+For user-defined markers, keep only genes found in the matrix. The same pattern
+works for lists imported from CSV, Excel, enrichment results, or manual curation.
+
+```{r custom-gene-list, eval=FALSE}
+target_genes <- c("Actb", "Gapdh", "Myh6")
+target_genes <- intersect(target_genes, rownames(z_mtx))
+
+ht_targets <- ComplexHeatmap::Heatmap(
+  z_mtx[target_genes, , drop = FALSE],
+  name = "Z-score",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  top_annotation = top_anno,
+  column_split = se_focus$age,
+  column_title = NULL
+)
+
+ht_targets
+```
+
+## 9. Unsupervised row clustering
+
+For exploratory analysis, cluster the condition-level matrix first, then use the
+cluster assignment to split rows in the replicate-level heatmap.
+
+```{r kmeans-clustering}
+set.seed(1)
+
+k <- 4
+km <- stats::kmeans(condition_mean_top, centers = k, nstart = 20)
+
+row_cluster_df <- tibble::tibble(
+  gene = rownames(condition_mean_top),
+  km_cluster = paste0("km", km$cluster)
+) %>%
+  dplyr::arrange(km_cluster)
+
+head(row_cluster_df)
+```
+
+```{r cluster-heatmap, fig.width=7, fig.height=6}
+cluster_genes <- row_cluster_df$gene
+
+ht_cluster <- ComplexHeatmap::Heatmap(
+  z_mtx[cluster_genes, , drop = FALSE],
+  name = "Z-score",
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  row_split = row_cluster_df$km_cluster,
+  show_row_names = FALSE,
+  show_column_names = FALSE,
+  top_annotation = top_anno,
+  column_split = se_focus$age,
+  column_title = NULL,
+  use_raster = TRUE
+)
+
+ht_cluster
+```
+
+The number of clusters should be chosen according to the biological question.
+Start with a small value such as 4 to 6, then inspect whether the resulting
+groups are interpretable.
+
+### 9.1 Enrichment analysis for each k-means cluster
+
+After the heatmap clusters are defined, each cluster can be treated as a gene
+set for functional interpretation. The code below runs GO enrichment for every
+`km_cluster` and prints the top terms per cluster when `clusterProfiler` and the
+mouse annotation database are available.
+
+```{r km-enrichment}
+cluster_gene_list <- split(row_cluster_df$gene, row_cluster_df$km_cluster)
+
+if (
+  requireNamespace("clusterProfiler", quietly = TRUE) &&
+  requireNamespace("org.Mm.eg.db", quietly = TRUE)
+) {
+  km_go_list <- purrr::imap(cluster_gene_list, function(genes, cluster_name) {
+    genes <- unique(stats::na.omit(genes))
+
+    if (length(genes) < 5) {
+      return(NULL)
+    }
+
+    res <- tryCatch(
+      enrichment_analysis(
+        gene = genes,
+        db = "GO",
+        species = "mouse",
+        keyType = "SYMBOL",
+        qvalue_cutoff = 0.05
+      ),
+      error = function(e) {
+        message(cluster_name, ": enrichment skipped - ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    if (is.null(res) || nrow(res) == 0) {
+      return(NULL)
+    }
+
+    dplyr::mutate(as.data.frame(res), km_cluster = cluster_name, .before = 1)
+  })
+
+  km_go_df <- dplyr::bind_rows(km_go_list)
+
+  if (nrow(km_go_df) > 0) {
+    km_go_df %>%
+      dplyr::group_by(km_cluster) %>%
+      dplyr::slice_head(n = 5) %>%
+      dplyr::ungroup()
+  } else {
+    message("No enriched GO terms were found for the current k-means clusters.")
+  }
+} else {
+  message("Install 'clusterProfiler' and 'org.Mm.eg.db' to run per-cluster GO enrichment.")
+}
+```
+
+## 10. Add row annotations
+
+Row annotations are useful when you have feature-level labels such as protein
+class, DEG direction, pathway membership, or cluster identity.
+
+```{r row-annotation, fig.width=8, fig.height=6}
+row_cluster_df <- row_cluster_df %>%
+  dplyr::mutate(direction = ifelse(km_cluster %in% c("km1", "km2"), "early_high", "late_high"))
+
+direction_levels <- unique(row_cluster_df$direction)
+direction_col <- setNames(
+  grDevices::hcl.colors(length(direction_levels), palette = "Set 2"),
+  direction_levels
+)
+
+right_anno <- ComplexHeatmap::rowAnnotation(
+  direction = row_cluster_df$direction,
+  col = list(direction = direction_col),
+  show_annotation_name = TRUE
+)
+
+ht_row_anno <- ComplexHeatmap::Heatmap(
+  z_mtx[row_cluster_df$gene, , drop = FALSE],
+  name = "Z-score",
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  row_split = row_cluster_df$km_cluster,
+  show_row_names = FALSE,
+  show_column_names = FALSE,
+  top_annotation = top_anno,
+  right_annotation = right_anno,
+  column_split = se_focus$age,
+  column_title = NULL,
+  use_raster = TRUE
+)
+
+ht_row_anno
+```
+
+In a real project, replace the toy `direction` labels with actual annotations,
+for example `DEGs_types`, pathway class, subcellular location, or cluster labels
+from `se2gene_group()`.
+
+## 11. Cluster heatmap with trend summary lines
+
+EasyProtein includes `plot_heatmap_withline()`, a ComplexHeatmap wrapper that
+adds a right-side line panel for each row cluster. This is useful when you want
+to show both the per-sample heatmap and the average trend of each cluster.
+
+```{r heatmap-withline, fig.width=9, fig.height=6}
+ht_line <- plot_heatmap_withline(
+  mat = z_mtx[row_cluster_df$gene, colnames(se_focus), drop = FALSE],
+  row_split = row_cluster_df$km_cluster,
+  column_split = se_focus$age,
+  top_annotation = top_anno,
+  show_column_names = FALSE,
+  set.md = "mean"
+)
+
+ht_line
+```
+
+This plot is best used after you have a meaningful row grouping. The grouping
+can come from k-means, Mfuzz, time-course clustering, DEG direction, pathway
+sets, or any manually curated protein class.
+
+## 12. Export heatmaps
+
+`saveplot()` can save ComplexHeatmap objects to the standard EasyProtein figure
+folders. The code below is disabled during vignette rendering so that package
+builds do not write output files.
+
+```{r save-heatmaps, eval=FALSE}
+saveplot(
+  object = ht_sample,
+  filenames = "sample_level_heatmap",
+  width = 4,
+  height = 4
+)
+
+saveplot(
+  object = ht_cluster,
+  filenames = "clustered_heatmap",
+  width = 5,
+  height = 5
+)
+
+saveplot(
+  object = ht_line,
+  filenames = "clustered_heatmap_with_trend_lines",
+  width = 6,
+  height = 4
+)
+```
+
+For publication figures, adjust `width`, `height`, row names, annotation colors,
+and cluster numbers after inspecting the first exported draft.
+
+## 13. Practical templates
+
+### 13.1 Use your own preprocessed EasyProtein object
+
+```{r own-data-template, eval=FALSE}
+se <- readRDS("Rds/my_easyprotein_se.rds")
+
+se$condition <- factor(se$condition, levels = unique(se$condition))
+
+z_df <- se2scale(se, rescale = TRUE)
+z_mtx <- as.matrix(z_df[, colnames(se), drop = FALSE])
+rownames(z_mtx) <- rownames(se)
+z_mtx[!is.finite(z_mtx)] <- 0
+
+row_var <- matrixStats::rowVars(z_mtx)
+names(row_var) <- rownames(z_mtx)
+top_n <- min(500, nrow(z_mtx))
+top_genes <- names(sort(row_var, decreasing = TRUE))[seq_len(top_n)]
+
+ComplexHeatmap::Heatmap(
+  z_mtx[top_genes, , drop = FALSE],
+  name = "Z-score",
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  column_split = se$condition,
+  show_row_names = FALSE,
+  show_column_names = FALSE,
+  use_raster = TRUE
+)
+```
+
+### 13.2 Aggregate duplicated gene symbols before plotting
+
+Some proteomics reports contain multiple protein IDs for the same gene symbol.
+When you want a gene-level heatmap, aggregate the matrix before plotting.
+
+```{r aggregate-template, eval=FALSE}
+scale_df <- se2scale(se, rescale = TRUE) %>%
+  dplyr::mutate(gene_symbol = stringr::str_extract(Genes, "^[^;]+")) %>%
+  dplyr::filter(!is.na(gene_symbol), gene_symbol != "") %>%
+  dplyr::group_by(gene_symbol) %>%
+  dplyr::summarise(
+    dplyr::across(dplyr::all_of(colnames(se)), mean, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+gene_z_mtx <- as.matrix(scale_df[, colnames(se), drop = FALSE])
+rownames(gene_z_mtx) <- scale_df$gene_symbol
+```
+
+### 13.3 Plot DEG proteins only
+
+```{r deg-template, fig.width=7, fig.height=5}
+deg_res <- se2DEGs(
+  se = se_focus,
+  compare_col = "age",
+  ref = "1w",
+  cmp = "8w",
+  logFC_cutoff = 1,
+  adj_p_cutoff = 0.05
+)
+
+deg_genes <- deg_res %>%
+  dplyr::filter(DEGs_types %in% c("UP", "DOWN")) %>%
+  dplyr::pull(gene) %>%
+  unique()
+
+deg_genes <- intersect(deg_genes, rownames(z_mtx))
+
+if (length(deg_genes) == 0) {
+  deg_genes <- deg_res %>%
+    dplyr::arrange(adj.P.Val, dplyr::desc(abs(logFC))) %>%
+    dplyr::slice_head(n = 40) %>%
+    dplyr::pull(gene) %>%
+    intersect(rownames(z_mtx))
+}
+
+ht_deg <- ComplexHeatmap::Heatmap(
+  z_mtx[deg_genes, , drop = FALSE],
+  name = "Z-score",
+  row_split = deg_res$DEGs_types[match(deg_genes, deg_res$gene)],
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  column_split = se_focus$age,
+  top_annotation = top_anno,
+  show_row_names = FALSE,
+  show_column_names = FALSE
+)
+
+ht_deg
+```
+
+## 14. Recommended heatmap workflow
+
+1. Build `se` with `rawdata2se()` or load a saved EasyProtein `SummarizedExperiment`.
+2. Add explicit metadata columns to `colData(se)`.
+3. Use `se2scale()` for sample-level z-score heatmaps.
+4. Use `calc_gene_mean_by_condition()` plus `scale_mtx()` for condition-level heatmaps.
+5. Select a biologically meaningful feature set before fine-tuning aesthetics.
+6. Add `HeatmapAnnotation()` and `rowAnnotation()` only after the matrix and ordering are correct.
+7. Use `plot_heatmap_withline()` when row clusters need trend summaries.
+8. Export final figures with `saveplot()`.

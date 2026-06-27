@@ -18,3 +18,4 @@ invalid identifiers with sequential \code{unknown} labels, and append
 suffixes such as \code{.1}, \code{.2} to duplicated identifiers to ensure
 uniqueness.
 }
+\keyword{internal}

@@ -801,6 +801,8 @@ ivolcano <- function(
 #' @param group_by Metric used to choose topN terms. One of
 #'   \code{"-log10(p.adjust)"}, \code{"GeneRatio"}, \code{"RichFactor"},
 #'   \code{"Count"}. Default is \code{"-log10(p.adjust)"}.
+#' @param palette Color palette passed to \code{ggpubr::ggdotchart()}.
+#'   Default is \code{NULL}, which uses the ggplot2 default palette.
 #'
 #' @return A ggplot object.
 #'
@@ -814,7 +816,8 @@ plot_GO_dot1 <- function(
     GO_df,
     topn = 10,
     label_format = 30,
-    group_by = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count")
+    group_by = c("-log10(p.adjust)", "GeneRatio", "RichFactor", "Count"),
+    palette = NULL
 ){
   go_res <- .select_top_enrich(GO_df = GO_df, topn = topn, group_by = group_by)
 
@@ -824,7 +827,7 @@ plot_GO_dot1 <- function(
     y = "neg10_p",
     color = "Description",
     sorting = "descending",
-    palette = if (exists("cols")) cols else NULL,
+    palette = palette,
     add = "segments",
     rotate = TRUE,
     dot.size = 3,

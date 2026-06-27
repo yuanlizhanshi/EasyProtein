@@ -11,6 +11,14 @@ navbar:
     left: [home, reference, articles]
     right: [github]
 
+articles:
+- title: Tutorials
+  navbar: Tutorials
+  contents:
+  - quick_start
+  - multiple_sample_analysis
+  - complexheatmap_visualization
+
 reference:
 - title: Data import and preprocessing
   contents:
@@ -18,6 +26,7 @@ reference:
   - rawdata2se
   - impute_low1pct_or_median_raw
   - calculate_cv
+  - calc_group_median_gene_cv_from_exp_file
   - calc_gene_CV_by_condition
   - calc_gene_mean_by_condition
   - summarize_se_by_coldata
@@ -41,6 +50,7 @@ reference:
   - classify_timecourse_by_round
   - get_turning_point
   - get_pc_contributors
+  - temporalSignatureClustering
 
 - title: Visualization
   contents:
@@ -52,7 +62,7 @@ reference:
   - plotSE_missing_value
   - plotSE_protein_number
   - plot_gene_expression
-  - ".parse_ratio_to_numeric"
+  - plot_GO_dot1
   - plot_GO_dot2
   - plot_GO_dot3
   - plot_FC_trend

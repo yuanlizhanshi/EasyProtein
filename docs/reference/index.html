@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EasyProtein</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/multiple_sample_analysis.html">Multiple Sample Analysis with EasyProtein</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/quick_start.html">Quick Start with EasyProtein</a></li>
+    <li><a class="dropdown-item" href="../articles/multiple_sample_analysis.html">Multiple Sample Analysis with EasyProtein</a></li>
+    <li><a class="dropdown-item" href="../articles/complexheatmap_visualization.html">ComplexHeatmap Visualization with EasyProtein</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/yuanlizhanshi/EasyProtein/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
@@ -68,6 +71,12 @@
 
         </dt>
         <dd>Calculate coefficient of variation</dd>
+      </dl><dl><dt>
+
+          <code><a href="calc_group_median_gene_cv_from_exp_file.html">calc_group_median_gene_cv_from_exp_file()</a></code>
+
+        </dt>
+        <dd>Calculate median gene CV within each raw-data group</dd>
       </dl><dl><dt>
 
           <code><a href="calc_gene_CV_by_condition.html">calc_gene_CV_by_condition()</a></code>
@@ -205,6 +214,12 @@
 
         </dt>
         <dd>Extract positive and negative contributors for a given PCA component</dd>
+      </dl><dl><dt>
+
+          <code><a href="temporalSignatureClustering.html">temporalSignatureClustering()</a></code>
+
+        </dt>
+        <dd>Hybrid temporal signature clustering for multi-series time-course proteomics</dd>
       </dl></div><div class="section level2">
       <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a></h2>
 
@@ -266,7 +281,7 @@
         <dd>Plot gene expression across samples or conditions</dd>
       </dl><dl><dt>
 
-          <code><a href="dot-parse_ratio_to_numeric.html">.parse_ratio_to_numeric()</a></code>
+          <code><a href="plot_GO_dot1.html">plot_GO_dot1()</a></code>
 
         </dt>
         <dd>Dot plot for GO enrichment (style 1)</dd>

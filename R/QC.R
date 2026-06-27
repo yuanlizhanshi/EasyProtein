@@ -49,6 +49,7 @@ fix_duplicate_protein_ids <- function(df, id_col = "Protein.Ids") {
 #' @param x A character vector containing raw feature identifiers.
 #'
 #' @return A character vector of normalized, unique feature identifiers.
+#' @keywords internal
 normalize_feature_ids <- function(x) {
   feature_ids <- stringr::str_extract(x, "^[^;]+")
   feature_ids <- trimws(as.character(feature_ids))

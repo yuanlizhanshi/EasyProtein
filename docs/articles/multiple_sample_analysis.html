@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EasyProtein</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,8 +33,11 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/multiple_sample_analysis.html">Multiple Sample Analysis with EasyProtein</a></li>
+<li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/quick_start.html">Quick Start with EasyProtein</a></li>
+    <li><a class="dropdown-item" href="../articles/multiple_sample_analysis.html">Multiple Sample Analysis with EasyProtein</a></li>
+    <li><a class="dropdown-item" href="../articles/complexheatmap_visualization.html">ComplexHeatmap Visualization with EasyProtein</a></li>
   </ul>
 </li>
       </ul>
@@ -67,7 +70,8 @@
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://yuanlizhanshi.github.io/EasyProtein">EasyProtein</a></span><span class="op">)</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bioconductor.org/packages/SummarizedExperiment" class="external-link">SummarizedExperiment</a></span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'ggplot2' was built under R version 4.4.3</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="multiple-sample-analysis-with-easyprotein">Multiple Sample Analysis with EasyProtein<a class="anchor" aria-label="anchor" href="#multiple-sample-analysis-with-easyprotein"></a>
 </h2>
@@ -121,21 +125,21 @@ into a single analysis object so they can be compared consistently.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">se_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rawdata2se.html">rawdata2se</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [rawdata2se] Reading input took 2.32 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Detecting raw columns took 0.00 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Preprocessing took 1.94 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 108.11 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Imputation took 9.45 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 1.82 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Stability filtering took 1.50 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Reading input took 0.99 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Detecting raw columns took 0.01 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Preprocessing took 2.56 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 115.80 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Stability filtering took 3.70 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Imputation took 9.42 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 1.67 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Done took 0.00 seconds</span></span>
 <span><span class="va">se</span> <span class="op">&lt;-</span> <span class="va">se_obj</span><span class="op">$</span><span class="va">se</span></span>
 <span><span class="va">se</span></span>
 <span><span class="co">#&gt; class: SummarizedExperiment </span></span>
-<span><span class="co">#&gt; dim: 11497 299 </span></span>
+<span><span class="co">#&gt; dim: 11556 299 </span></span>
 <span><span class="co">#&gt; metadata(0):</span></span>
 <span><span class="co">#&gt; assays(4): raw_intensity intensity conc zscale</span></span>
-<span><span class="co">#&gt; rownames(11497): 0610012G03Rik 1700010I14Rik ... mt-Nd3 rp9</span></span>
+<span><span class="co">#&gt; rownames(11556): 0610012G03Rik 1700010I14Rik ... unknown8 unknown9</span></span>
 <span><span class="co">#&gt; rowData names(1): gene</span></span>
 <span><span class="co">#&gt; colnames(299): brain_1w_F_5 brain_1w_F_7 ... Muscle8w_M_4 Muscle8w_M_5</span></span>
 <span><span class="co">#&gt; colData names(4): sample condition rep group</span></span></code></pre></div>
@@ -232,7 +236,16 @@ as:</p>
 <span>  colorby <span class="op">=</span> <span class="st">"tissue"</span>,</span>
 <span>  label <span class="op">=</span> <span class="st">"sample"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: ggrepel: 297 unlabeled data points (too many overlaps). Consider</span></span>
+<span><span class="co">#&gt; Warning: `aes_string()` was deprecated in ggplot2 3.0.0.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use tidy evaluation idioms with `aes()`.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See also `vignette("ggplot2-in-packages")` for more information.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">EasyProtein</span> package.</span></span>
+<span><span class="co">#&gt;   Please report the issue at</span></span>
+<span><span class="co">#&gt;   <span style="color: #0000BB; font-style: italic;">&lt;https://github.com/yuanlizhanshi/EasyProtein/issues&gt;</span>.</span></span>
+<span><span class="co">#&gt; <span style="color: #555555;">This warning is displayed once every 8 hours.</span></span></span>
+<span><span class="co">#&gt; <span style="color: #555555;">Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span></span>
+<span><span class="co">#&gt; <span style="color: #555555;">generated.</span></span></span>
+<span><span class="co">#&gt; Warning: ggrepel: 298 unlabeled data points (too many overlaps). Consider</span></span>
 <span><span class="co">#&gt; increasing max.overlaps</span></span></code></pre></div>
 <p><img src="multiple_sample_analysis_files/figure-html/pca-1.png" width="672"></p>
 <p>In this view, a clean multi-sample dataset should show reproducible
@@ -274,7 +287,7 @@ close under a nonlinear embedding.</p>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Package 'uwot' is not installed, so the UMAP plot is skipped."</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; Warning: ggrepel: 247 unlabeled data points (too many overlaps). Consider</span></span>
+<span><span class="co">#&gt; Warning: ggrepel: 244 unlabeled data points (too many overlaps). Consider</span></span>
 <span><span class="co">#&gt; increasing max.overlaps</span></span></code></pre></div>
 <p><img src="multiple_sample_analysis_files/figure-html/umap-1.png" width="672"></p>
 <p>UMAP is not a replacement for PCA. The two views answer slightly
@@ -314,13 +327,13 @@ overall expression pattern across conditions.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">conc_overview</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/se2conc.html">se2conc</a></span><span class="op">(</span><span class="va">se_focus</span>, group_by <span class="op">=</span> <span class="st">"age"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">conc_overview</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gene"</span>, <span class="st">"Mean_1w"</span>, <span class="st">"Mean_4w"</span>, <span class="st">"Mean_8w"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                        gene     Mean_1w     Mean_4w    Mean_8w</span></span>
-<span><span class="co">#&gt; 0610012G03Rik 0610012G03Rik  15.2254061   6.1545148   6.374968</span></span>
-<span><span class="co">#&gt; 1700010I14Rik 1700010I14Rik   1.4031078   1.4759257   1.258625</span></span>
-<span><span class="co">#&gt; 1810009J06Rik 1810009J06Rik 126.8390611 193.5404487 195.996658</span></span>
-<span><span class="co">#&gt; 1810024B03Rik 1810024B03Rik   0.6274805   0.5633799   0.582554</span></span>
-<span><span class="co">#&gt; 1810065E05Rik 1810065E05Rik   0.6274805   0.5633799   0.582554</span></span>
-<span><span class="co">#&gt; 2010106E10Rik 2010106E10Rik  12.1389260   0.5633799   0.582554</span></span></code></pre></div>
+<span><span class="co">#&gt;                        gene     Mean_1w     Mean_4w     Mean_8w</span></span>
+<span><span class="co">#&gt; 0610012G03Rik 0610012G03Rik  15.4157394   7.9023121   1.4531309</span></span>
+<span><span class="co">#&gt; 1700010I14Rik 1700010I14Rik   1.4205627   1.5103857   1.2756508</span></span>
+<span><span class="co">#&gt; 1810009J06Rik 1810009J06Rik 128.3608581 198.0634763 234.2058277</span></span>
+<span><span class="co">#&gt; 1810024B03Rik 1810024B03Rik   0.2554929   0.2323941   0.2004997</span></span>
+<span><span class="co">#&gt; 1810065E05Rik 1810065E05Rik   0.2554929   0.2323941   0.2004997</span></span>
+<span><span class="co">#&gt; 2010106E10Rik 2010106E10Rik   2.4292260   0.2323941   0.2004997</span></span></code></pre></div>
 <p>For a more compact view, you can also calculate the mean and CV per
 group directly. The mean tells you the average abundance, while CV gives
 a quick sense of within-group stability.</p>
@@ -338,15 +351,15 @@ a quick sense of within-group stability.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">conc_mean_mtx</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 11497     3</span></span>
+<span><span class="co">#&gt; [1] 11556     3</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">conc_cv_df</span><span class="op">)</span></span>
 <span><span class="co">#&gt;         feature age    mean_val       sd_val         CV n</span></span>
-<span><span class="co">#&gt; 1 0610012G03Rik  1w  15.2254061   3.82438137 0.25118419 5</span></span>
-<span><span class="co">#&gt; 2 1700010I14Rik  1w   1.4031078   0.18123432 0.12916636 5</span></span>
-<span><span class="co">#&gt; 3 1810009J06Rik  1w 126.8390611 181.15313809 1.42821254 5</span></span>
-<span><span class="co">#&gt; 4 1810024B03Rik  1w   0.6274805   0.02720596 0.04335746 5</span></span>
-<span><span class="co">#&gt; 5 1810065E05Rik  1w   0.6274805   0.02720596 0.04335746 5</span></span>
-<span><span class="co">#&gt; 6 2010106E10Rik  1w  12.1389260   0.52631295 0.04335746 5</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 0610012G03Rik  1w  15.4157394   3.88874091 0.25225783 5</span></span>
+<span><span class="co">#&gt; 2 1700010I14Rik  1w   1.4205627   0.18633648 0.13117090 5</span></span>
+<span><span class="co">#&gt; 3 1810009J06Rik  1w 128.3608581 183.23032456 1.42746260 5</span></span>
+<span><span class="co">#&gt; 4 1810024B03Rik  1w   0.2554929   0.01148398 0.04494835 5</span></span>
+<span><span class="co">#&gt; 5 1810065E05Rik  1w   0.2554929   0.01148398 0.04494835 5</span></span>
+<span><span class="co">#&gt; 6 2010106E10Rik  1w   2.4292260   5.08799076 2.09449052 5</span></span></code></pre></div>
 <p>When you want to inspect the expression profile of a specific protein
 across groups, a trend plot is often easier to read than a table. The
 example below shows the group-level pattern for one feature.</p>
@@ -386,8 +399,8 @@ writing a separate comparison for each pair.</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 3</span></span></span>
 <span><span class="co">#&gt;   comparison n_total n_sig</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 4w           <span style="text-decoration: underline;">11</span>497  <span style="text-decoration: underline;">9</span>364</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 8w           <span style="text-decoration: underline;">11</span>497  <span style="text-decoration: underline;">9</span>559</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 4w           <span style="text-decoration: underline;">11</span>556  <span style="text-decoration: underline;">8</span>770</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 8w           <span style="text-decoration: underline;">11</span>556  <span style="text-decoration: underline;">9</span>095</span></span></code></pre></div>
 <p>The list returned by <code><a href="../reference/get_batch_DEGs.html">get_batch_DEGs()</a></code> contains one DEG
 table for each comparison against the reference group. This format is
 convenient because you can inspect one comparison at a time, or combine
@@ -401,27 +414,27 @@ them later for a broader summary.</p>
 <span>  <span class="fl">10</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;             gene       logFC      P.Value    adj.P.Val DEGs_types   median_1w</span></span>
-<span><span class="co">#&gt; 1  0610012G03Rik -1.94818514 6.736674e-02 8.036060e-02         NS  16.3401402</span></span>
-<span><span class="co">#&gt; 2  1700010I14Rik  0.06745842 6.056912e-01 6.327123e-01         NS   1.4052343</span></span>
-<span><span class="co">#&gt; 3  1810009J06Rik  1.49130329 7.773877e-02 9.190362e-02         NS  38.3382445</span></span>
-<span><span class="co">#&gt; 4  1810024B03Rik -0.14922572 2.476699e-03 3.509318e-03         NS   0.6248956</span></span>
-<span><span class="co">#&gt; 5  1810065E05Rik -0.14922572 2.476699e-03 3.509318e-03         NS   0.6248956</span></span>
-<span><span class="co">#&gt; 6  2010106E10Rik -4.37102295 7.228256e-14 4.444025e-12       DOWN  12.0889200</span></span>
-<span><span class="co">#&gt; 7  2200002D01Rik -0.14922572 2.476699e-03 3.509318e-03         NS   0.6248956</span></span>
-<span><span class="co">#&gt; 8  2210010C04Rik -0.73500677 2.491517e-01 2.754589e-01         NS 225.0269049</span></span>
-<span><span class="co">#&gt; 9  2210016F16Rik -0.20844247 1.268875e-02 1.658041e-02         NS  46.1569277</span></span>
-<span><span class="co">#&gt; 10 2310061I04Rik  1.00147397 8.073709e-07 3.567388e-06         UP   8.9466816</span></span>
+<span><span class="co">#&gt; 1  0610012G03Rik -0.93855436 1.419631e-03 3.536727e-03         NS  16.5796535</span></span>
+<span><span class="co">#&gt; 2  1700010I14Rik  0.08268248 6.254021e-01 6.702353e-01         NS   1.4214735</span></span>
+<span><span class="co">#&gt; 3  1810009J06Rik  1.50682138 7.548573e-02 9.632433e-02         NS  38.7228996</span></span>
+<span><span class="co">#&gt; 4  1810024B03Rik -0.12335733 6.404744e-03 9.248185e-03         NS   0.2542564</span></span>
+<span><span class="co">#&gt; 5  1810065E05Rik -0.12335733 6.404744e-03 9.248185e-03         NS   0.2542564</span></span>
+<span><span class="co">#&gt; 6  2010106E10Rik -0.62202254 6.045739e-01 6.514178e-01         NS   0.1808223</span></span>
+<span><span class="co">#&gt; 7  2200002D01Rik -0.12335733 6.404744e-03 9.248185e-03         NS   0.2542564</span></span>
+<span><span class="co">#&gt; 8  2210010C04Rik -0.71945320 2.601416e-01 3.104018e-01         NS 227.6273719</span></span>
+<span><span class="co">#&gt; 9  2210016F16Rik -0.19289113 1.860646e-02 2.536168e-02         NS  46.6280649</span></span>
+<span><span class="co">#&gt; 10 2310061I04Rik  1.01688936 8.234601e-07 5.422168e-06         UP   9.0778218</span></span>
 <span><span class="co">#&gt;      median_4w</span></span>
-<span><span class="co">#&gt; 1    7.7089354</span></span>
-<span><span class="co">#&gt; 2    1.5053991</span></span>
-<span><span class="co">#&gt; 3  180.9654997</span></span>
-<span><span class="co">#&gt; 4    0.5550303</span></span>
-<span><span class="co">#&gt; 5    0.5550303</span></span>
-<span><span class="co">#&gt; 6    0.5550303</span></span>
-<span><span class="co">#&gt; 7    0.5550303</span></span>
-<span><span class="co">#&gt; 8   95.9965146</span></span>
-<span><span class="co">#&gt; 9   40.8601339</span></span>
-<span><span class="co">#&gt; 10  16.9000233</span></span></code></pre></div>
+<span><span class="co">#&gt; 1    8.3012851</span></span>
+<span><span class="co">#&gt; 2    1.5491911</span></span>
+<span><span class="co">#&gt; 3  186.2297729</span></span>
+<span><span class="co">#&gt; 4    0.2289472</span></span>
+<span><span class="co">#&gt; 5    0.2289472</span></span>
+<span><span class="co">#&gt; 6    0.2289472</span></span>
+<span><span class="co">#&gt; 7    0.2289472</span></span>
+<span><span class="co">#&gt; 8   98.5826739</span></span>
+<span><span class="co">#&gt; 9   41.5737875</span></span>
+<span><span class="co">#&gt; 10  17.3553123</span></span></code></pre></div>
 <p>If your study has more than one biological factor, the same approach
 still works, but you should choose a biologically coherent subset first.
 In practice, that usually means keeping one tissue, one sex, or one
@@ -443,7 +456,7 @@ dynamic patterns across conditions.</p>
 <span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">adj.P.Val</span> <span class="op">&lt;=</span> <span class="fl">0.05</span>, <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">logFC</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">deg_sig</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 8028</span></span>
+<span><span class="co">#&gt; [1] 7436</span></span>
 <span></span>
 <span><span class="co"># Use se2gene_group to classify dynamic behaviors (requires Mfuzz + e1071)</span></span>
 <span><span class="co"># Do not run clustering automatically during vignette render. If the package</span></span>

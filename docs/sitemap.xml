@@ -1,5 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/404.html</loc></url>
+<url><loc>https://yuanlizhanshi.github.io/EasyProtein/articles/complexheatmap_visualization.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/articles/index.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/articles/multiple_sample_analysis.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/articles/quick_start.html</loc></url>
@@ -11,6 +12,7 @@
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/calculate_cv.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/calc_gene_CV_by_condition.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/calc_gene_mean_by_condition.html</loc></url>
+<url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/calc_group_median_gene_cv_from_exp_file.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/catable.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/classify_timecourse_by_round.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/correlate_genes_to_target.html</loc></url>
@@ -30,6 +32,7 @@
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/launch_EasyProtein.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/limma_protein_DE.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/limma_protein_DE_pair.html</loc></url>
+<url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/normalize_feature_ids.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/plotCV_density.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/plotSE_density.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/plotSE_missing_value.html</loc></url>
@@ -55,5 +58,6 @@
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/se2raw.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/se2scale.html</loc></url>
 <url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/summarize_se_by_coldata.html</loc></url>
+<url><loc>https://yuanlizhanshi.github.io/EasyProtein/reference/temporalSignatureClustering.html</loc></url>
 </urlset>
 

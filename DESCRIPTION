@@ -40,8 +40,11 @@ Imports:
 Suggests:
     cluster,
     clusterProfiler,
+    FactoMineR,
     knitr,
     org.Hs.eg.db,
     org.Mm.eg.db,
-    rmarkdown
+    rmarkdown,
+    tidyverse,
+    uwot
 VignetteBuilder: knitr

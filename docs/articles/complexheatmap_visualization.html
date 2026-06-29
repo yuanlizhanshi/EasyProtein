@@ -127,13 +127,13 @@ unchanged.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">se_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rawdata2se.html">rawdata2se</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [rawdata2se] Reading input took 0.98 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Reading input took 1.32 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Detecting raw columns took 0.00 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Preprocessing took 2.52 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 110.67 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Stability filtering took 2.94 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Imputation took 10.09 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 1.69 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Preprocessing took 3.12 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 132.38 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Stability filtering took 3.43 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Imputation took 11.69 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 2.52 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Done took 0.00 seconds</span></span>
 <span><span class="va">se</span> <span class="op">&lt;-</span> <span class="va">se_obj</span><span class="op">$</span><span class="va">se</span></span>
 <span><span class="va">se</span></span>
@@ -609,8 +609,9 @@ identity.</p>
 <p><img src="complexheatmap_visualization_files/figure-html/row-annotation-1.png" width="768"></p>
 <p>In a real project, replace the toy <code>direction</code> labels with
 actual annotations, for example <code>DEGs_types</code>, pathway class,
-subcellular location, or cluster labels from
-<code><a href="../reference/se2gene_group.html">se2gene_group()</a></code>.</p>
+subcellular location, or cluster labels from a tissue-specific
+clustering workflow such as the case study 1
+<code>assigned_tissue</code> labels.</p>
 </div>
 <div class="section level3">
 <h3 id="cluster-heatmap-with-trend-summary-lines">11. Cluster heatmap with trend summary lines<a class="anchor" aria-label="anchor" href="#cluster-heatmap-with-trend-summary-lines"></a>
@@ -640,8 +641,9 @@ heatmap and the average trend of each cluster.</p>
 <span><span class="co">#&gt; coercion</span></span></code></pre></div>
 <p><img src="complexheatmap_visualization_files/figure-html/heatmap-withline-1.png" width="864"></p>
 <p>This plot is best used after you have a meaningful row grouping. The
-grouping can come from k-means, Mfuzz, time-course clustering, DEG
-direction, pathway sets, or any manually curated protein class.</p>
+grouping can come from k-means, tissue-specific clustering, time-course
+clustering, DEG direction, pathway sets, or any manually curated protein
+class.</p>
 </div>
 <div class="section level3">
 <h3 id="export-heatmaps">12. Export heatmaps<a class="anchor" aria-label="anchor" href="#export-heatmaps"></a>

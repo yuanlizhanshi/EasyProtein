@@ -248,9 +248,9 @@ head(
 
 If your study has more than one biological factor, the same approach still works, but you should choose a biologically coherent subset first. In practice, that usually means keeping one tissue, one sex, or one treatment context fixed before running a batch of pairwise comparisons.
 
-## 7. Result filtering and dynamic pattern analysis
+## 7. Result filtering and tissue-specific pattern clustering
 
-After running pairwise comparisons, you will typically filter results to a manageable set and then ask whether those proteins follow coherent dynamic patterns across conditions.
+After running pairwise comparisons, you will typically filter results to a manageable set. For a broad multi-tissue dataset, another useful next step is to ask whether proteins form tissue-specific expression programs. This follows the clustering strategy used in case study 1: summarize protein abundance by tissue, row-scale the tissue-level matrix, cluster proteins by their tissue-level profiles, then assign each cluster to the tissue where its average z-score is highest.
 
 ```{r result-filter, fig.width=7, fig.height=5}
 # Combine DEG lists into a single table with comparison labels
@@ -262,108 +262,108 @@ deg_sig <- deg_combined %>%
 
 nrow(deg_sig)
 
-# Use se2gene_group to classify dynamic behaviors (requires Mfuzz + e1071)
-# Do not run clustering automatically during vignette render. If the package
-# user has installed Mfuzz/Biobase/e1071 and wants to run clustering, they can
-# call `se2gene_group()` interactively. For the vignette, ensure a stable
-# `gene_group` column exists to continue plotting.
-rd_df <- as.data.frame(rowData(se_focus))
-sel <- c("gene", "gene_group", "type")
-out_df <- dplyr::select(rd_df, dplyr::any_of(sel))
-if (ncol(out_df) > 0) {
-  print(head(out_df, 10))
-} else {
-  message("Clustering not performed in this render. To enable clustering, install 'Mfuzz' and 'Biobase' and run se2gene_group(se, group_by = 'age').")
-  rowData(se_focus)$gene_group <- "ungrouped"
-  rd_df <- as.data.frame(rowData(se_focus))
-  out_df <- dplyr::select(rd_df, dplyr::any_of(sel))
-  if (ncol(out_df) > 0) print(head(out_df, 10))
+# Case study 1 clustering: tissue mean expression followed by row-wise z-score.
+tissue_mean <- calc_gene_mean_by_condition(
+  se = se,
+  assay_name = "conc",
+  method = "mean",
+  condition_col = "tissue"
+)
+
+tissue_levels <- colnames(tissue_mean)
+tissue_mean_z <- scale_mtx(tissue_mean)
+tissue_mean_z[!is.finite(tissue_mean_z)] <- 0
+
+# Cluster proteins with non-flat tissue-level profiles.
+row_var <- matrixStats::rowVars(tissue_mean_z)
+cluster_input <- tissue_mean_z[row_var > 0, , drop = FALSE]
+
+hc <- stats::hclust(stats::dist(cluster_input), method = "ward.D2")
+k <- min(24, max(8, length(tissue_levels) * 2))
+cluster_id <- stats::cutree(hc, k = k)
+
+cluster_df <- tibble::tibble(
+  gene = names(cluster_id),
+  cluster = paste0("C", cluster_id)
+)
+
+cluster_summary <- lapply(split(cluster_df$gene, cluster_df$cluster), function(genes) {
+  means <- colMeans(tissue_mean_z[genes, , drop = FALSE], na.rm = TRUE)
+  ord <- order(means, decreasing = TRUE)
+  data.frame(
+    cluster = unique(cluster_df$cluster[match(genes[1], cluster_df$gene)]),
+    assigned_tissue = names(means)[ord[1]],
+    top_mean_z = means[ord[1]],
+    second_mean_z = means[ord[2]],
+    specificity_score = means[ord[1]] - means[ord[2]],
+    cluster_size = length(genes),
+    stringsAsFactors = FALSE
+  )
+}) %>%
+  dplyr::bind_rows()
+
+specific_clusters <- cluster_summary %>%
+  dplyr::filter(specificity_score >= 0.5, top_mean_z > 0) %>%
+  dplyr::arrange(factor(assigned_tissue, levels = tissue_levels), dplyr::desc(specificity_score))
+
+tissue_specific <- cluster_df %>%
+  dplyr::inner_join(specific_clusters, by = "cluster") %>%
+  dplyr::mutate(
+    gene_symbol = gene,
+    assigned_tissue_mean_expression = tissue_mean[cbind(gene, assigned_tissue)],
+    assigned_tissue_mean_z = tissue_mean_z[cbind(gene, assigned_tissue)]
+  ) %>%
+  dplyr::arrange(factor(assigned_tissue, levels = tissue_levels), cluster, dplyr::desc(assigned_tissue_mean_z))
+
+if (nrow(tissue_specific) == 0) {
+  stop("No tissue-specific clusters passed the specificity rule.")
 }
+
+head(cluster_summary)
+head(tissue_specific)
 ```
 
-`se2gene_group()` uses per-comparison logFCs and clustering to propose dynamic groups (Up/Down/Stable/Low). This helps prioritize proteins that follow consistent trends instead of isolated significant hits.
+The resulting `tissue_specific` table links each protein to a tissue-enriched cluster. The `specificity_score` is the difference between the highest and second-highest cluster mean z-score, so higher values indicate a clearer tissue preference.
 
 ## 8. Heatmaps and trend visualization
 
-Visual summaries are essential for communicating multi-group patterns. Below we show a heatmap of clustered genes and a trend plot for DEG clusters.
+Visual summaries are essential for communicating multi-group patterns. Below we show a heatmap of representative tissue-specific proteins using the case study 1 cluster labels.
 
 ```{r heatmap-trends, fig.width=8, fig.height=6, eval = FALSE}
-# Prepare z-scaled matrix for heatmap
-z_df <- se2scale(se_focus, rescale = TRUE)
-z_mtx <- as.matrix(z_df[,-1])
-rownames(z_mtx) <- z_df$gene
+# Select representative proteins from each assigned tissue.
+display_genes <- tissue_specific %>%
+  dplyr::group_by(assigned_tissue) %>%
+  dplyr::slice_max(order_by = assigned_tissue_mean_z, n = 40, with_ties = FALSE) %>%
+  dplyr::ungroup() %>%
+  dplyr::pull(gene)
 
-# Select genes labelled as DEGs (be robust if `type` is missing or non-atomic)
-rd_df2 <- as.data.frame(rowData(se_focus))
-deg_genes <- character(0)
-if ("type" %in% colnames(rd_df2)) {
-  # Safely coerce possibly non-atomic/list entries to a single character per row
-  type_vec <- vapply(rd_df2$type, FUN = function(x) {
-    if (is.null(x)) return(NA_character_)
-    if (length(x) == 0) return(NA_character_)
-    if (is.atomic(x) && length(x) == 1) return(as.character(x))
-    return(paste(unlist(x), collapse = ";"))
-  }, FUN.VALUE = character(1), USE.NAMES = FALSE)
-  if ("gene" %in% colnames(rd_df2)) {
-    deg_genes <- rd_df2$gene[!is.na(type_vec) & type_vec == "DEGs"]
-  } else {
-    deg_genes <- character(0)
-  }
-} else {
-  deg_genes <- character(0)
-}
+display_genes <- intersect(display_genes, rownames(se))
+sample_z <- scale_mtx(SummarizedExperiment::assay(se, "conc")[display_genes, , drop = FALSE])
+sample_z[!is.finite(sample_z)] <- 0
 
-if (length(deg_genes) > 1) {
-  sel_genes <- intersect(rownames(z_mtx), deg_genes)
-  z_sel <- z_mtx[sel_genes, , drop = FALSE]
-  # build row_split aligned to selected rows
-  rd <- as.data.frame(rowData(se_focus))
-  # ensure 'type' and 'gene_group' are atomic character vectors to avoid downstream filter errors
-  if ("type" %in% colnames(rd)) {
-    rd$type <- vapply(rd$type, function(x) {
-      if (is.null(x)) return(NA_character_)
-      if (length(x) == 0) return(NA_character_)
-      if (is.atomic(x) && length(x) == 1) return(as.character(x))
-      return(paste(unlist(x), collapse = ";"))
-    }, FUN.VALUE = character(1), USE.NAMES = FALSE)
-    rowData(se_focus)$type <- rd$type
-  }
-  if ("gene_group" %in% colnames(rd)) {
-    rd$gene_group <- vapply(rd$gene_group, function(x) {
-      if (is.null(x)) return(NA_character_)
-      if (length(x) == 0) return(NA_character_)
-      if (is.atomic(x) && length(x) == 1) return(as.character(x))
-      return(paste(unlist(x), collapse = ";"))
-    }, FUN.VALUE = character(1), USE.NAMES = FALSE)
-    rowData(se_focus)$gene_group <- rd$gene_group
-  }
-  row_split <- rd$gene_group[match(rownames(z_sel), rd$gene)]
-  ht <- plot_heatmap_withline(
-    mat = z_sel,
-    column_split = se_focus$age,
-    row_split = row_split
-  )
-  print(ht)
-}
+row_split <- tissue_specific$assigned_tissue[match(rownames(sample_z), tissue_specific$gene)]
+row_split <- factor(row_split, levels = tissue_levels)
 
-# Trend plot (mfuzz / cluster-level trends)
-if (requireNamespace("ggplot2", quietly = TRUE)) {
-  p_trend <- plot_deg_trends(se_focus, group_by = "age")
-  print(p_trend)
-}
+ht <- plot_heatmap_withline(
+  mat = sample_z,
+  column_split = se$tissue,
+  row_split = row_split
+)
+print(ht)
 ```
-Note: The heatmap and trend plotting code is disabled during vignette rendering to avoid requiring optional packages (Mfuzz/Biobase/ComplexHeatmap). To run these plots locally, set the chunk option `eval=TRUE` and ensure the necessary packages are installed.
+Note: The heatmap code is disabled during vignette rendering to keep the article compact. To run it locally, set the chunk option `eval=TRUE` and ensure ComplexHeatmap is installed.
 
-These visualizations let you inspect whether DEGs form coherent clusters, whether clusters correspond to biological hypotheses, and whether clusters are driven by outliers or consistent group-level changes.
+These visualizations let you inspect whether tissue-specific proteins form coherent clusters, whether clusters correspond to biological hypotheses, and whether clusters are driven by outliers or consistent group-level changes.
 
 ## 9. Functional enrichment and biological interpretation
 
-To move from proteins to biology, perform pathway and GO enrichment on sets of interest (for example, cluster members or up/down lists). `enrichment_analysis()` is a light wrapper that can use `clusterProfiler` if installed.
+To move from proteins to biology, perform pathway and GO enrichment on sets of interest, such as proteins assigned to a tissue-specific cluster. `enrichment_analysis()` is a light wrapper that can use `clusterProfiler` if installed.
 
 ```{r enrichment, eval = FALSE}
-# Example: take genes from a specific cluster
-cluster_genes <- rowData(se_focus) %>% as.data.frame() %>%
-  dplyr::filter(gene_group == "1") %>%
+# Example: take genes from one tissue-specific program.
+example_tissue <- specific_clusters$assigned_tissue[1]
+cluster_genes <- tissue_specific %>%
+  dplyr::filter(assigned_tissue == example_tissue) %>%
   dplyr::pull(gene)
 
 if (length(cluster_genes) > 0) {
@@ -395,9 +395,9 @@ saveRDS(se_focus, file = "results/se_focus_heart_male.rds")
 # Export DEG tables
 purrr::iwalk(deg_list, ~ write.csv(.x, file = paste0("results/DEGs_", .y, ".csv"), row.names = FALSE))
 
-# Save cluster gene lists
-cluster_df <- as.data.frame(rowData(se_focus))
-write.csv(cluster_df, file = "results/gene_groups.csv", row.names = FALSE)
+# Save tissue-specific cluster gene lists
+write.csv(tissue_specific, file = "results/tissue_specific_gene_clusters.csv", row.names = FALSE)
+write.csv(cluster_summary, file = "results/tissue_specific_cluster_summary.csv", row.names = FALSE)
 ```
 
 

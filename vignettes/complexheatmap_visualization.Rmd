@@ -451,7 +451,8 @@ ht_row_anno
 
 In a real project, replace the toy `direction` labels with actual annotations,
 for example `DEGs_types`, pathway class, subcellular location, or cluster labels
-from `se2gene_group()`.
+from a tissue-specific clustering workflow such as the case study 1
+`assigned_tissue` labels.
 
 ## 11. Cluster heatmap with trend summary lines
 
@@ -473,8 +474,8 @@ ht_line
 ```
 
 This plot is best used after you have a meaningful row grouping. The grouping
-can come from k-means, Mfuzz, time-course clustering, DEG direction, pathway
-sets, or any manually curated protein class.
+can come from k-means, tissue-specific clustering, time-course clustering, DEG
+direction, pathway sets, or any manually curated protein class.
 
 ## 12. Export heatmaps
 

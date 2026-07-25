@@ -125,13 +125,13 @@ into a single analysis object so they can be compared consistently.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">se_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rawdata2se.html">rawdata2se</a></span><span class="op">(</span><span class="va">exp_file</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [rawdata2se] Reading input took 1.23 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Reading input took 1.00 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Detecting raw columns took 0.00 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Preprocessing took 2.92 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 128.41 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Stability filtering took 3.34 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Imputation took 11.80 seconds</span></span>
-<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 2.14 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Preprocessing took 2.49 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Missing-value filtering took 109.08 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Stability filtering took 3.53 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Imputation took 8.67 seconds</span></span>
+<span><span class="co">#&gt; [rawdata2se] Building SummarizedExperiment took 1.72 seconds</span></span>
 <span><span class="co">#&gt; [rawdata2se] Done took 0.00 seconds</span></span>
 <span><span class="va">se</span> <span class="op">&lt;-</span> <span class="va">se_obj</span><span class="op">$</span><span class="va">se</span></span>
 <span><span class="va">se</span></span>
@@ -577,10 +577,34 @@ proteins using the case study 1 cluster labels.</p>
 <span>  column_split <span class="op">=</span> <span class="va">se</span><span class="op">$</span><span class="va">tissue</span>,</span>
 <span>  row_split <span class="op">=</span> <span class="va">row_split</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ht</span><span class="op">)</span></span></code></pre></div>
-<p>Note: The heatmap code is disabled during vignette rendering to keep
-the article compact. To run it locally, set the chunk option
-<code>eval=TRUE</code> and ensure ComplexHeatmap is installed.</p>
+<span><span class="co">#&gt; The automatically generated colors map from the 1^st and 99^th of the</span></span>
+<span><span class="co">#&gt; values in the matrix. There are outliers in the matrix whose patterns</span></span>
+<span><span class="co">#&gt; might be hidden by this color mapping. You can manually set the color</span></span>
+<span><span class="co">#&gt; to `col` argument.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Use `suppressMessages()` to turn off this message.</span></span>
+<span><span class="fu">ComplexHeatmap</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ComplexHeatmap/man/draw-dispatch.html" class="external-link">draw</a></span><span class="op">(</span><span class="va">ht</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span>
+<span><span class="co">#&gt; Warning in panel_fun(index[ind], names(align_to)[ai]): NAs introduced by</span></span>
+<span><span class="co">#&gt; coercion</span></span></code></pre></div>
+<p><img src="multiple_sample_analysis_files/figure-html/heatmap-trends-1.png" width="768"></p>
 <p>These visualizations let you inspect whether tissue-specific proteins
 form coherent clusters, whether clusters correspond to biological
 hypotheses, and whether clusters are driven by outliers or consistent

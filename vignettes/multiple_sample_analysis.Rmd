@@ -329,7 +329,7 @@ The resulting `tissue_specific` table links each protein to a tissue-enriched cl
 
 Visual summaries are essential for communicating multi-group patterns. Below we show a heatmap of representative tissue-specific proteins using the case study 1 cluster labels.
 
-```{r heatmap-trends, fig.width=8, fig.height=6, eval = FALSE}
+```{r heatmap-trends, fig.width=8, fig.height=6, eval = TRUE}
 # Select representative proteins from each assigned tissue.
 display_genes <- tissue_specific %>%
   dplyr::group_by(assigned_tissue) %>%
@@ -349,9 +349,8 @@ ht <- plot_heatmap_withline(
   column_split = se$tissue,
   row_split = row_split
 )
-print(ht)
+ComplexHeatmap::draw(ht)
 ```
-Note: The heatmap code is disabled during vignette rendering to keep the article compact. To run it locally, set the chunk option `eval=TRUE` and ensure ComplexHeatmap is installed.
 
 These visualizations let you inspect whether tissue-specific proteins form coherent clusters, whether clusters correspond to biological hypotheses, and whether clusters are driven by outliers or consistent group-level changes.
 

@@ -225,6 +225,149 @@ calc_group_median_gene_cv_from_exp_file <- function(
 }
 
 
+.impute_raw_matrix <- function(
+    mat,
+    condition,
+    low_prob = 0.001,
+    return_log2 = FALSE,
+    seed = 1,
+    enable_impute_with_replicate = TRUE
+) {
+  set.seed(seed)
+  cond_levels <- sort(unique(condition))
+  cond_cols <- split(seq_len(ncol(mat)), condition)[as.character(cond_levels)]
+
+  out_log_full <- matrix(
+    NA_real_,
+    nrow = nrow(mat),
+    ncol = ncol(mat),
+    dimnames = list(rownames(mat), colnames(mat))
+  )
+  shifts <- numeric(length(cond_cols))
+  rng_cells <- list()
+
+  for (bi in seq_along(cond_cols)) {
+    cols <- cond_cols[[bi]]
+    sub <- mat[, cols, drop = FALSE]
+
+    min_pos <- suppressWarnings(min(sub, na.rm = TRUE))
+    shift <- if (is.finite(min_pos) && min_pos > 0) 0 else (abs(min_pos) + 1)
+    mat_log <- log2(sub + shift)
+
+    col_quant <- apply(mat_log, 2, function(v) {
+      v2 <- v[is.finite(v)]
+      if (length(v2)) {
+        stats::quantile(v2, probs = low_prob, na.rm = TRUE)
+      } else {
+        NA_real_
+      }
+    })
+    col_mins <- apply(mat_log, 2, function(v) {
+      v2 <- v[is.finite(v)]
+      if (length(v2)) min(v2, na.rm = TRUE) else NA_real_
+    })
+
+    cond_low_log <- suppressWarnings(
+      stats::quantile(as.numeric(mat_log), probs = low_prob, na.rm = TRUE)
+    )
+    if (!is.finite(cond_low_log)) cond_low_log <- -20
+
+    n_reps <- ncol(mat_log)
+    miss_cnt <- rowSums(is.na(mat_log))
+    out_log <- mat_log
+    na_idx_all <- which(is.na(mat_log), arr.ind = TRUE)
+
+    if (enable_impute_with_replicate) {
+      take_mean <- which(miss_cnt > 0 & miss_cnt < n_reps / 2)
+      if (length(take_mean) > 0) {
+        row_means <- rowMeans(mat_log[take_mean, , drop = FALSE], na.rm = TRUE)
+        cells <- na_idx_all[na_idx_all[, 1] %in% take_mean, , drop = FALSE]
+        out_log[cells] <- row_means[match(cells[, 1], take_mean)]
+      }
+    }
+
+    take_low <- which(
+      miss_cnt > 0 &
+        (!enable_impute_with_replicate | miss_cnt >= n_reps / 2)
+    )
+    if (length(take_low) > 0) {
+      n_obs <- n_reps - miss_cnt
+      cells <- na_idx_all[na_idx_all[, 1] %in% take_low, , drop = FALSE]
+      cells <- cells[order(cells[, 1], cells[, 2]), , drop = FALSE]
+
+      if (enable_impute_with_replicate) {
+        zero_obs <- take_low[n_obs[take_low] == 0]
+        if (length(zero_obs) > 0) {
+          zcells <- cells[cells[, 1] %in% zero_obs, , drop = FALSE]
+          out_log[zcells] <- cond_low_log
+          cells <- cells[!(cells[, 1] %in% zero_obs), , drop = FALSE]
+        }
+      }
+
+      if (nrow(cells) > 0) {
+        q1 <- col_quant[cells[, 2]]
+        m1 <- col_mins[cells[, 2]]
+        bad_qm <- !is.finite(q1) | !is.finite(m1)
+        lo <- pmin(m1, q1)
+        hi <- pmax(m1, q1)
+        use_quantile <- !bad_qm &
+          (!is.finite(lo) | !is.finite(hi) | lo == hi)
+        use_random <- !(bad_qm | use_quantile)
+
+        out_log[cells[bad_qm, , drop = FALSE]] <- cond_low_log
+        out_log[cells[use_quantile, , drop = FALSE]] <- q1[use_quantile]
+
+        if (any(use_random)) {
+          random_cells <- cells[use_random, , drop = FALSE]
+          random_lo <- lo[use_random]
+          random_hi <- hi[use_random]
+          for (k in seq_len(nrow(random_cells))) {
+            rng_cells[[length(rng_cells) + 1]] <- list(
+              block = bi,
+              row = random_cells[k, 1],
+              col_local = random_cells[k, 2],
+              lo = random_lo[k],
+              hi = random_hi[k]
+            )
+          }
+        }
+      }
+    }
+
+    out_log_full[, cols] <- out_log
+    shifts[bi] <- shift
+  }
+
+  if (length(rng_cells) > 0) {
+    random_values <- stats::runif(length(rng_cells))
+    for (k in seq_along(rng_cells)) {
+      cell <- rng_cells[[k]]
+      out_log_full[cell$row, cond_cols[[cell$block]][cell$col_local]] <-
+        cell$lo + random_values[k] * (cell$hi - cell$lo)
+    }
+  }
+
+  if (return_log2) return(out_log_full)
+
+  out_linear <- out_log_full
+  for (bi in seq_along(cond_cols)) {
+    cols <- cond_cols[[bi]]
+    out_linear[, cols] <- pmax(2^out_log_full[, cols, drop = FALSE] - shifts[bi], 0)
+  }
+  out_linear
+}
+
+
+.scale_matrix_by_row <- function(mtx) {
+  row_means <- rowMeans(mtx)
+  centered <- sweep(mtx, 1, row_means, "-")
+  row_sds <- sqrt(rowSums(centered^2) / (ncol(mtx) - 1))
+  out <- centered / row_sds
+  colnames(out) <- colnames(mtx)
+  out
+}
+
+
 #' Construct a SummarizedExperiment object from raw expression table
 #'
 #' This function reads a raw expression table, performs feature-level
@@ -364,34 +507,13 @@ rawdata2se <- function(
 
   single_rep <- all(table(obs$condition) <= 1)
 
-  rawdata_df <- rawdata_mtx %>%
-    tibble::rownames_to_column("feature") %>%
-    tidyr::pivot_longer(
-      cols = -feature,
-      names_to = "sample",
-      values_to = "raw_value"
-    ) %>%
-    dplyr::left_join(obs, by = "sample")
+  mat_raw <- as.matrix(rawdata_mtx)
 
   progress("Preprocessing")
 
   if (single_rep) {
-
-    rawdata_impute_df <- impute_low1pct_or_median_raw(
-      rawdata_df,
-      id_col = "feature"
-    )
-
-    rawdata_impute_df_wide <- rawdata_impute_df %>%
-      tidyr::pivot_wider(
-        id_cols = feature,
-        names_from = sample,
-        values_from = raw_value
-      )
-
-    mat <- as.matrix(rawdata_impute_df_wide[, -1])
-    rownames(mat) <- rawdata_impute_df_wide$feature
-    mat <- mat[, obs$sample]
+    mat <- .impute_raw_matrix(mat_raw, obs$condition)
+    mat <- mat[sort(rownames(mat), method = "radix"), , drop = FALSE]
 
     cpm_mtx <- edgeR::cpm(mat)
     cpm_mtx[!is.finite(cpm_mtx)] <- NA
@@ -403,7 +525,7 @@ rawdata2se <- function(
         raw_intensity = rawdata_mtx[rownames(mat), colnames(mat)],
         intensity = mat,
         conc = cpm_mtx,
-        zscale = scale_mtx(cpm_mtx)
+        zscale = .scale_matrix_by_row(cpm_mtx)
       ),
       rowData = S4Vectors::DataFrame(var[rownames(mat), , drop = FALSE]),
       colData = S4Vectors::DataFrame(obs[colnames(mat), ])
@@ -418,56 +540,59 @@ rawdata2se <- function(
     ))
   }
 
-  rawdata_df <- rawdata_df %>%
-    dplyr::group_by(feature, condition) %>%
-    dplyr::mutate(
-      med_value = median(raw_value, na.rm = TRUE),
-      fc = if_else(
-        raw_value / med_value < 1,
-        med_value / raw_value,
-        raw_value / med_value
-      )
-    ) %>%
-    dplyr::ungroup()
+  condition <- obs$condition
+  condition_levels <- sort(unique(condition))
+  condition_columns <- split(seq_along(condition), condition)[condition_levels]
 
   if (enable_detect_outlier_gene) {
-    rawdata_df$raw_value[rawdata_df$fc > fc_threshold] <- NA
+    median_matrix <- matrix(
+      NA_real_,
+      nrow = nrow(mat_raw),
+      ncol = length(condition_levels)
+    )
+    for (g in seq_along(condition_levels)) {
+      median_matrix[, g] <- matrixStats::rowMedians(
+        mat_raw[, condition_columns[[g]], drop = FALSE],
+        na.rm = TRUE
+      )
+    }
+    median_per_sample <- median_matrix[
+      ,
+      match(condition, condition_levels),
+      drop = FALSE
+    ]
+    ratio <- mat_raw / median_per_sample
+    fold_change <- ifelse(ratio < 1, 1 / ratio, ratio)
+    fold_change[is.na(ratio)] <- NA_real_
+    mat_raw[fold_change > fc_threshold] <- NA
   }
 
-  missing_feature <- rawdata_df %>%
-    dplyr::group_by(feature, condition) %>%
-    dplyr::summarise(
-      frac_NA = mean(is.na(raw_value)),
-      .groups = "drop"
-    ) %>%
-    dplyr::mutate(valid = frac_NA <= frac_NA_threshold) %>%
-    dplyr::group_by(feature) %>%
-    dplyr::summarise(n_valid_groups = sum(valid), .groups = "drop") %>%
-    dplyr::filter(n_valid_groups < min_valid_groups)
+  fraction_missing <- matrix(
+    NA_real_,
+    nrow = nrow(mat_raw),
+    ncol = length(condition_levels)
+  )
+  for (g in seq_along(condition_levels)) {
+    fraction_missing[, g] <- rowMeans(
+      is.na(mat_raw[, condition_columns[[g]], drop = FALSE])
+    )
+  }
+  n_valid_groups <- rowSums(fraction_missing <= frac_NA_threshold)
+  missing_feature <- rownames(mat_raw)[n_valid_groups < min_valid_groups]
 
-  rawdata_df <- rawdata_df %>%
-    dplyr::filter(!feature %in% missing_feature$feature)
+  keep_feature <- !(rownames(mat_raw) %in% missing_feature)
+  mat_raw <- mat_raw[keep_feature, , drop = FALSE]
+  rawdata_mtx <- rawdata_mtx[keep_feature, , drop = FALSE]
 
   missing_gene_df <- rawdata %>%
-    dplyr::filter(feature %in% missing_feature$feature)
+    dplyr::filter(feature %in% missing_feature)
 
   progress("Missing-value filtering")
 
-  rawdata_cv_wide <- rawdata_df %>%
-    tidyr::pivot_wider(
-      id_cols = feature,
-      names_from = sample,
-      values_from = raw_value
-    )
-
-  raw_cv_mtx <- as.matrix(rawdata_cv_wide[, -1, drop = FALSE])
-  rownames(raw_cv_mtx) <- rawdata_cv_wide$feature
-  raw_cv_mtx <- raw_cv_mtx[, obs$sample, drop = FALSE]
-
   cv_se <- SummarizedExperiment::SummarizedExperiment(
-    assays = list(raw_intensity = raw_cv_mtx),
-    rowData = S4Vectors::DataFrame(var[rownames(raw_cv_mtx), , drop = FALSE]),
-    colData = S4Vectors::DataFrame(obs[colnames(raw_cv_mtx), ])
+    assays = list(raw_intensity = mat_raw),
+    rowData = S4Vectors::DataFrame(var[rownames(mat_raw), , drop = FALSE]),
+    colData = S4Vectors::DataFrame(obs[colnames(mat_raw), ])
   )
 
   cv_long_df <- calc_gene_CV_by_condition(cv_se, assay_name = "raw_intensity")
@@ -489,29 +614,18 @@ rawdata2se <- function(
       tidyr::pivot_wider(names_from = condition, values_from = CV)
   }
 
-  rawdata_df <- rawdata_df %>%
-    dplyr::filter(!feature %in% un_stable_cv_df$feature)
+  keep_stable <- !(rownames(mat_raw) %in% un_stable_cv_df$feature)
+  mat_raw <- mat_raw[keep_stable, , drop = FALSE]
+  rawdata_mtx <- rawdata_mtx[keep_stable, , drop = FALSE]
 
   un_stable_gene_df <- rawdata %>%
     dplyr::filter(feature %in% un_stable_cv_df$feature)
 
   progress("Stability filtering")
 
-  rawdata_impute_df <- impute_low1pct_or_median_raw(
-    rawdata_df,
-    id_col = "feature"
-  )
-
-  rawdata_impute_df_wide <- rawdata_impute_df %>%
-    tidyr::pivot_wider(
-      id_cols = feature,
-      names_from = sample,
-      values_from = raw_value
-    )
-
-  mat <- as.matrix(rawdata_impute_df_wide[, -1])
-  rownames(mat) <- rawdata_impute_df_wide$feature
-  mat <- mat[, obs$sample]
+  mat <- .impute_raw_matrix(mat_raw, condition)
+  mat <- mat[sort(rownames(mat), method = "radix"), , drop = FALSE]
+  mat <- mat[, obs$sample, drop = FALSE]
 
   cpm_mtx <- edgeR::cpm(mat)
   cpm_mtx[!is.finite(cpm_mtx)] <- NA
@@ -523,7 +637,7 @@ rawdata2se <- function(
       raw_intensity = rawdata_mtx[rownames(mat), colnames(mat)],
       intensity = mat,
       conc = cpm_mtx,
-      zscale = scale_mtx(cpm_mtx)
+      zscale = .scale_matrix_by_row(cpm_mtx)
     ),
     rowData = S4Vectors::DataFrame(var[rownames(mat), , drop = FALSE]),
     colData = S4Vectors::DataFrame(obs[colnames(mat), ])
